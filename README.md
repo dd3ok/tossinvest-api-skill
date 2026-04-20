@@ -72,10 +72,11 @@ python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
 python3 scripts/theme.py --tag kr --tics-id 289 --include-details --company-ranking marketcap
 python3 scripts/indices.py --code KGG01P --include-chart --include-fx-chart --include-exchange-rates --format json
+python3 scripts/indices.py --code KGG01P --include-mini-chart --include-related-etfs --include-net-buying --net-buying-from 2026-04-20
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type bond
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type commodity
-python3 scripts/indices.py --code RFU.GCv1 --include-chart
-python3 scripts/indices.py --code KR1BENCH0010 --include-chart
+python3 scripts/indices.py --code RFU.GCv1 --include-chart --chart-preset daily
+python3 scripts/indices.py --code KR1BENCH0010 --include-chart --chart-preset quarter
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart heavy_soar --market us --duration 1d
 python3 scripts/dashboard_ranking.py --kind investors --side sell
@@ -111,6 +112,14 @@ This skill is for read-only public-looking web API discovery and lookup.
 Validation tests are kept local and are intentionally not included in the published skill.
 
 ## Changelog
+
+### v0.1.11
+
+- Added `--chart-preset intraday|quarter|daily` to `scripts/indices.py`.
+- Added read-only index widget options: `--include-mini-chart`,
+  `--include-related-etfs`, and `--include-net-buying`.
+- Documented index/indicator chart, mini-chart, related ETF, and net-buying
+  response shapes.
 
 ### v0.1.10
 

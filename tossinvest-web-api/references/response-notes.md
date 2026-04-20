@@ -24,6 +24,25 @@ or unrelated dashboard refreshes, not a stock technical-indicator data API. Use
 they calculate from candle `close` prices and annotate the output with
 `source=local-calculation-from-c-chart-candles`.
 
+## Index And Indicator Shapes
+
+| Endpoint | Observed `result` shape |
+|---|---|
+| `/api/v2/index-infos/{indexCode}` | Object: `code`, `name`, `logoImageUrl`, `priceFeedType`, optional trading-window fields such as `tradingStartAt`, `tradingEndAt`, and `isMarketOpen`; commodity responses can include `helperText` and `indexUnitDto` |
+| `/api/v1/index-prices/{indexCode}` | Object: `open`, `high`, `low`, `close`, `base`, `changeType`, `high52w`, `low52w`, and related price fields |
+| `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Object: `code`, trading window metadata, and `candles[]`; direct checks on 2026-04-20 returned candles for `KGG01P`, `RFU.GCv1`, `KR1BENCH0010`, and `ROB.US10YT-RR` |
+| `wts-cert-api /api/v3/dashboard/wts/overview/indicator/mini-chart` | Object: `indexMap`; public-looking overview mini-chart metadata |
+| `/api/v3/dashboard/wts/overview/indicator/{indexCode}/related-etfs` | Object: `indexCode`, `etfs[]`; empty POST body accepted in verification |
+| `/api/v1/stock-infos/index/net-buying/range` | Object: `code`, `step`, `nextDate`, `investorActivityAmounts[]` |
+| `/api/v1/stock-infos/index/net-buying/daily` | Object: `code`, `nextDate`, `investorActivityAmounts[]` |
+
+`scripts/indices.py` has chart presets for these verified r-chart windows:
+`intraday=1d/min:5`, `quarter=3m/day:1`, and `daily=1y/day:1`. The script uses
+`--securities-type auto` by default: dotted codes such as `RFU.GCv1` and
+`ROB.US10YT-RR` infer `us-s`; non-dotted codes such as `KGG01P` and
+`KR1BENCH0010` infer `kr-s`. Preserve the original case for dotted indicator
+codes.
+
 ## Analytics Shapes
 
 | Endpoint | Observed `result` shape |

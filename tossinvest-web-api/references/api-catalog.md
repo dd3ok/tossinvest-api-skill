@@ -115,6 +115,10 @@ Observed from `/indices/KGG01P` and the index/FX dashboard widgets. These are ma
 | FX chart | GET | `/api/v1/r-chart/fx/EXCHANGE_RATE/{range}/{step}` | Query includes `last=false`, `useAdjustedRate=true`, `currency=USD` |
 | Overview indicators v3 | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator` | Returned `leftSection`, `rightSection`, `indicators`, `landingUrl`; public-looking but cert host |
 | Overview indicator by type | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/{type}` | Query: `market`; observed `type` values include `index`, `bond`, and `commodity`, each returning `majorIndicatorInfos[]` |
+| Overview indicator mini-chart | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator/mini-chart` | Returned `indexMap`; public-looking but cert host |
+| Related ETFs | POST | `/api/v3/dashboard/wts/overview/indicator/{indexCode}/related-etfs` | Empty JSON body accepted; returned `indexCode`, `etfs[]` |
+| Index net buying range | GET | `/api/v1/stock-infos/index/net-buying/range` | Query: `code`, `range`, `from`, `count`; returned `investorActivityAmounts[]` |
+| Index net buying daily | GET | `/api/v1/stock-infos/index/net-buying/daily` | Query: `code`, `from`, `count`; returned `investorActivityAmounts[]` |
 | Exchange rates widget | GET | `/api/v1/dashboard/wts/overview/exchange-rates` | Returned `exchangeRates[]` |
 
 Examples:
@@ -126,6 +130,10 @@ GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:5?sess
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/us-s/RFU.GCv1/1d/min:5?session=main&investMode=krx&last=false
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KR1BENCH0010/1d/min:5?session=main&investMode=krx&last=false
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/fx/EXCHANGE_RATE/1d/min:5?last=false&useAdjustedRate=true&currency=USD
+GET https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator/mini-chart
+POST https://wts-info-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator/KGG01P/related-etfs
+GET https://wts-info-api.tossinvest.com/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=week&from=2026-04-20&count=5
+GET https://wts-info-api.tossinvest.com/api/v1/stock-infos/index/net-buying/daily?code=KGG01P&count=35&from=2026-04-20
 GET https://wts-info-api.tossinvest.com/api/v1/dashboard/wts/overview/exchange-rates
 GET https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator
 GET https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/bond?market=kr
@@ -153,6 +161,12 @@ payload. The browser also called chart endpoints for checked indicator pages:
 `KR1BENCH0010/1d/min:5` and `ROB.US10YT-RR` under `us-s`. `scripts/indices.py`
 uses `--securities-type auto` by default: dotted indicator codes infer `us-s`,
 and other codes infer `kr-s`.
+
+`scripts/indices.py` chart presets map to the verified windows
+`intraday=1d/min:5`, `quarter=3m/day:1`, and `daily=1y/day:1`. The script can
+also fetch the verified mini-chart, related ETF, and index net-buying widgets
+with `--include-mini-chart`, `--include-related-etfs`, and
+`--include-net-buying`.
 
 ## Analytics APIs
 
