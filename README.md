@@ -6,8 +6,9 @@ Codex skill for exploring and using read-only TossInvest web APIs observed from
 The current skill focuses on stock information workflows: stock summaries,
 quotes/ticks, filings, news, financial statements, investor trading trends,
 themes/TICS, stock candle charts with local technical-indicator calculation,
-market indices, dashboard rankings, feed/news discovery, screener counts, and
-RSI/price/technical screener result lookups.
+market indices, dashboard rankings, feed/news discovery, screener counts,
+public-looking screener metadata, and RSI/price/technical screener result
+lookups.
 
 ## Install
 
@@ -79,8 +80,10 @@ python3 scripts/dashboard_ranking.py --kind investors --side sell
 python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
+python3 scripts/screener_count.py --nation kr --include-common-presets --include-search-modal
 python3 scripts/screener_count.py --nation kr --price-filter new-high-52w-within-20d --include-results --sort market-cap --size 5
 python3 scripts/screener_count.py --nation kr --price-filter price-change-5d-up-5 --technical-filter price-ma-cross-up --include-results --sort volume --size 5
+python3 scripts/screener_count.py --nation kr --price-filter new-low-52w-within-20d --technical-filter bollinger-lower-down --include-results --sort volume --size 5
 python3 scripts/screener_count.py --nation kr --technical-filter price-ma-cross-up --include-results --sort market-cap --size 5
 python3 scripts/screener_count.py --nation kr --technical-filter bollinger-lower-down --include-results --page 1 --size 5
 python3 scripts/screener_count.py --nation kr --filters-file examples/filters/price-momentum-and-ma.json --include-results --sort market-cap --size 5
@@ -106,6 +109,16 @@ This skill is for read-only public-looking web API discovery and lookup.
 Validation tests are kept local and are intentionally not included in the published skill.
 
 ## Changelog
+
+### Unreleased
+
+- Added `--include-common-presets` and `--include-search-modal` to
+  `scripts/screener_count.py` for public-looking screener metadata.
+- Re-checked bond, commodity, TICS, FX/index, and screener combination
+  read-only endpoints on 2026-04-20 without cookies, session files, or raw HAR
+  storage.
+- Added eval prompts for FX/index widgets, market indicators, TICS details, and
+  screener metadata routing.
 
 ### v0.1.8
 

@@ -30,12 +30,38 @@ Expected behavior:
 - Covers both `kr` and `us` markets where requested.
 
 ```text
+Use $tossinvest-web-api to fetch KOSPI index price, chart, USD/KRW FX chart, exchange-rate widgets, and bond/commodity market indicators for KGG01P.
+```
+
+Expected behavior:
+- Uses `scripts/indices.py`.
+- Fetches index chart with `--include-chart`, FX chart with `--include-fx-chart`, exchange-rate widget with `--include-exchange-rates`, and market indicators with `--include-indicators --indicator-type bond` / `commodity` as separate calls if needed.
+- Notes that bond/commodity indicator endpoints live on `wts-cert-api` and should be treated as public-looking metadata only.
+
+```text
+Use $tossinvest-web-api to inspect theme/TICS 289 details, related themes, news, fluctuations, and company rankings.
+```
+
+Expected behavior:
+- Uses `scripts/theme.py --tics-id 289 --include-details` with relevant `--company-ranking` options.
+- Summarizes theme metadata and ranking groups instead of dumping raw JSON.
+
+```text
 Use $tossinvest-web-api to find Korean stocks where TossInvest screener RSI is oversold.
 ```
 
 Expected behavior:
 - Uses `scripts/screener_count.py --nation kr --rsi oversold`.
 - Treats `wts-cert-api` as sensitive and does not use cookies or authentication headers.
+
+```text
+Use $tossinvest-web-api to inspect public TossInvest screener preset metadata and then find Korean stocks near a 52-week low that crossed below the lower Bollinger Band.
+```
+
+Expected behavior:
+- Uses `scripts/screener_count.py --include-common-presets --include-search-modal` for metadata.
+- Uses `scripts/screener_count.py --nation kr --price-filter new-low-52w-within-20d --technical-filter bollinger-lower-down --include-results`.
+- Does not describe screener Bollinger filters as locally calculated chart indicators; distinguishes them from `stock_chart.py` local RSI/MACD/Bollinger calculations over `c-chart` candles.
 
 ```text
 Use $tossinvest-web-api to compare A005930 investor trading trend from 2026-01-01 through 2026-01-31.

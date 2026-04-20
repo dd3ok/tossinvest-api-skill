@@ -31,7 +31,7 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 | Market indices, FX charts, exchange-rate widgets, bond indicators, commodity indicators | `scripts/indices.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Home rankings, top100 by amount/volume/surge/decline | `scripts/dashboard_ranking.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Recommended feed and news discovery | `scripts/feed.py` | [references/api-catalog.md](references/api-catalog.md) |
-| Screener counts, RSI filters, price/technical presets | `scripts/screener_count.py` | [examples/filters](examples/filters) |
+| Screener counts, filter metadata, RSI filters, price/technical presets | `scripts/screener_count.py` | [examples/filters](examples/filters) |
 | New endpoint capture or undocumented page analysis | Browser network capture, bundled JavaScript inspection | [references/capture-workflow.md](references/capture-workflow.md), [references/safety-rules.md](references/safety-rules.md) |
 
 ## Workflow
@@ -59,7 +59,7 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 - `scripts/indices.py`: Fetches market index info, price, optional index/FX charts, exchange-rate widgets, and index/bond/commodity indicator lists.
 - `scripts/dashboard_ranking.py`: Fetches dashboard overview rankings, home live-chart top100 rankings, and domestic investor buy/sell ranking widgets.
 - `scripts/feed.py`: Fetches recommended feed payloads and dashboard news categories.
-- `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`, with optional RSI, price-condition, and technical-analysis filter presets plus paged/sorted results; uses `wts-cert-api`, so keep sensitive-host caution.
+- `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`, optional common preset/search modal metadata, RSI, price-condition, and technical-analysis filter presets plus paged/sorted results; uses `wts-cert-api`, so keep sensitive-host caution.
 - `scripts/pension_fund_trend.py`: Fetches pension-fund net-buy history from `fixed-trading-trend`; supports `--from/--to`, `--year`, `--all-history`, JSON/CSV output, `--output`, summary metadata, and optional reference gross-buy values from recent `trading-trend` rows.
 
 ## Script Examples
@@ -82,8 +82,10 @@ python3 scripts/dashboard_ranking.py --kind investors --side sell
 python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
+python3 scripts/screener_count.py --nation kr --include-common-presets --include-search-modal
 python3 scripts/screener_count.py --nation kr --price-filter new-high-52w-within-20d --include-results --sort market-cap --size 5
 python3 scripts/screener_count.py --nation kr --price-filter price-change-5d-up-5 --technical-filter price-ma-cross-up --include-results --sort volume --size 5
+python3 scripts/screener_count.py --nation kr --price-filter new-low-52w-within-20d --technical-filter bollinger-lower-down --include-results --sort volume --size 5
 python3 scripts/screener_count.py --nation kr --technical-filter price-ma-cross-up --include-results --sort market-cap --size 5
 python3 scripts/screener_count.py --nation kr --technical-filter volume-ma-cross-up --technical-filter bollinger-lower-down --include-results --sort volume --page 1 --size 5
 python3 scripts/screener_count.py --nation kr --filters-file examples/filters/new-high-momentum.json --include-results --sort market-cap --size 5
@@ -100,8 +102,10 @@ Use prompts like these after installing the skill:
 - `Use $tossinvest-web-api to compare A005930 investor trading trend from 2026-01-01 through 2026-01-31.`
 - `Use $tossinvest-web-api to fetch comprehensive financial statement and valuation data for A005930.`
 - `Use $tossinvest-web-api to fetch KOSPI index price, chart, and index-related news for KGG01P.`
+- `Use $tossinvest-web-api to fetch KOSPI index price, chart, USD/KRW FX chart, and exchange-rate widgets for KGG01P.`
 - `Use $tossinvest-web-api to fetch domestic and US top100 live-chart rankings by trading amount, volume, surge, and decline.`
 - `Use $tossinvest-web-api to find Korean stocks where TossInvest screener RSI is oversold.`
+- `Use $tossinvest-web-api to inspect public TossInvest screener preset metadata and search modal fields.`
 - `Use $tossinvest-web-api to find Korean stocks where price crosses above the 20-day moving average.`
 - `Use $tossinvest-web-api to find Korean stocks near a 52-week high with recent price momentum.`
 - `Use $tossinvest-web-api to inspect TossInvest feed/news discovery APIs from /feed/news.`

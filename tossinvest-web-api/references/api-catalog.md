@@ -132,10 +132,13 @@ GET https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/
 
 Direct checks on 2026-04-20 returned public-looking bond indicators such as
 Korean and US Treasury yields, and commodity indicators such as gold, silver,
-WTI, natural gas, copper, and wheat. `exchange-rate`/`exchange` were not accepted
-as indicator types in direct checks; use the separate exchange-rates widget for
-FX lists. `scripts/indices.py --include-fx-chart` fetches the FX r-chart, and
-`scripts/indices.py --include-exchange-rates` fetches the exchange-rates widget.
+WTI, natural gas, copper, and wheat. The v3 overview indicator endpoint returned
+`leftSection`, `rightSection`, `indicators`, and `landingUrl`; the v1 `bond` and
+`commodity` endpoints returned `majorIndicatorInfos[]`. `exchange-rate`/`exchange`
+were not accepted as indicator types in direct checks; use the separate
+exchange-rates widget for FX lists. `scripts/indices.py --include-fx-chart`
+fetches the FX r-chart, and `scripts/indices.py --include-exchange-rates`
+fetches the exchange-rates widget.
 
 ## Analytics APIs
 
@@ -301,6 +304,8 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Related themes | GET | `/api/v1/tics/{ticsId}/related` | Related categories for a theme page |
 | Theme news | GET | `/api/v2/news/tics/{ticsId}` | Query can include `size`; related news for a theme |
 | Theme fluctuations | GET | `/api/v2/tics/{ticsId}/fluctuations` | Theme fluctuation/history data |
+
+Direct checks on 2026-04-20 for `scripts/theme.py --tag kr --include-all --tics-id 289 --include-details --company-ranking marketcap --company-ranking revenue --company-ranking operating-margin` returned `ranking`, `allThemes`, `details`, `related`, `news`, `fluctuations`, and all three requested company ranking groups.
 
 Observed `ticsRanking` values:
 
@@ -477,7 +482,8 @@ Most screener endpoints currently live under `wts-cert-api`. They can return pub
 
 | Purpose | Method | URL/path | Params and notes |
 |---|---:|---|---|
-| Common screener presets | GET | `https://wts-cert-api.tossinvest.com/api/v2/screener/presets/common?useCustom=true` | Returned preset definitions in verification |
+| Common screener presets | GET | `https://wts-cert-api.tossinvest.com/api/v2/screener/presets/common?useCustom=true` | Returned 11 preset definitions in 2026-04-20 verification; `scripts/screener_count.py --include-common-presets` fetches this metadata |
+| Screener search modal | GET | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen/search/modal` | Returned 3 modal groups in 2026-04-20 verification; `scripts/screener_count.py --include-search-modal` fetches this metadata |
 | Screener base filters | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | Body depends on selected filters; returns `basedAt` in observed bundle |
 | Screener range filters | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | Body depends on selected filters |
 | Screener result count | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body shape `{ "filters": [], "nation": "kr" }` or `"us"` returned counts in verification; RSI, selected price, and selected technical filters accepted `conditions[]` |
@@ -491,6 +497,15 @@ Content-Type: application/json
 
 {"filters":[],"nation":"kr"}
 ```
+
+Combination checks on 2026-04-20, with no cookies or auth headers, returned
+result rows for:
+
+- `--rsi oversold --include-results --size 5`
+- `--price-filter price-change-5d-up-5 --technical-filter price-ma-cross-up --include-results --sort volume --size 5`
+- `--price-filter new-high-52w-within-20d --technical-filter ma-align-positive --technical-filter volume-ma-cross-up --include-results --sort market-cap --size 5`
+- `--price-filter new-low-52w-within-20d --technical-filter bollinger-lower-down --include-results --sort volume --size 5`
+- `--nation us --rsi overbought --include-results --size 5`
 
 ## Cert And Status Helpers
 

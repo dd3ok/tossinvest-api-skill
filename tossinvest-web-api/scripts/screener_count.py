@@ -193,6 +193,17 @@ def build_count_body(nation: str, filters: list[dict[str, Any]] | None = None) -
     return {"filters": filters or [], "nation": normalize_nation(nation)}
 
 
+def build_common_presets_path(use_custom: bool = True) -> str:
+    return api.build_path(
+        "/api/v2/screener/presets/common",
+        {"useCustom": use_custom},
+    )
+
+
+def build_search_modal_path() -> str:
+    return "/api/v2/screener/screen/search/modal"
+
+
 def build_rsi_filter(mode: str) -> dict[str, Any]:
     normalized = mode.strip().lower()
     if normalized == "oversold":
@@ -306,6 +317,14 @@ def fetch_screener_results(
     )
 
 
+def fetch_common_presets(use_custom: bool = True) -> Any:
+    return api.get_result(build_common_presets_path(use_custom), base_url=CERT_URL)
+
+
+def fetch_search_modal() -> Any:
+    return api.get_result(build_search_modal_path(), base_url=CERT_URL)
+
+
 def load_filters(path: str | None) -> list[dict[str, Any]]:
     if path is None:
         return []
@@ -335,6 +354,21 @@ def main() -> int:
         "--include-results",
         action="store_true",
         help="Also fetch the first page from /api/v2/screener/screen",
+    )
+    parser.add_argument(
+        "--include-common-presets",
+        action="store_true",
+        help="Also fetch public-looking common screener preset metadata",
+    )
+    parser.add_argument(
+        "--no-custom-presets",
+        action="store_true",
+        help="Use useCustom=false when --include-common-presets is set",
+    )
+    parser.add_argument(
+        "--include-search-modal",
+        action="store_true",
+        help="Also fetch public-looking screener search modal metadata",
     )
     parser.add_argument(
         "--technical-filter",
@@ -382,6 +416,10 @@ def main() -> int:
             args.page,
             sort,
         )
+    if args.include_common_presets:
+        payload["commonPresets"] = fetch_common_presets(not args.no_custom_presets)
+    if args.include_search_modal:
+        payload["searchModal"] = fetch_search_modal()
     api.emit_output(api.render_json(payload), args.output)
     return 0
 
