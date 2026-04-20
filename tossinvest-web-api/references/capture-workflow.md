@@ -10,6 +10,8 @@ Use this workflow when adding or verifying TossInvest web API endpoints.
    - Include selected `wts-api.tossinvest.com` bootstrapping calls when needed for context.
    - Include selected `wts-cert-api.tossinvest.com` only when the endpoint is visible page metadata.
    - Exclude logs, Sentry, CDN refresh checks, static assets, and images.
+   - Exclude guest/session/bootstrap, following/subscription, personalization, login, account, and order calls unless documenting that they are out of scope without endpoint details.
+   - Keep only APIs that help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, or screener questions.
 5. Normalize endpoint paths:
    - Replace stock/product codes with `{productCode}`.
    - Replace company codes with `{companyCode}`.

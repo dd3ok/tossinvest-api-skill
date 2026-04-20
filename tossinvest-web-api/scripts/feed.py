@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch read-only TossInvest feed and dashboard-news payloads."""
+"""Fetch read-only TossInvest public market feed and dashboard-news payloads."""
 
 from __future__ import annotations
 
@@ -12,13 +12,9 @@ import tossinvest_api as api
 FEED_PATHS = {
     "recommended": "/api/v3/feed/recommend/posts",
     "recommended-ranking": "/api/v4/feed/recommend/ranking-posts",
-    "subscription": "/api/v3/feed/subscription/posts",
 }
 
 NEWS_TYPES = {
-    "PERSONALIZED",
-    "PERSONALIZE_HOLD",
-    "PERSONALIZE_WATCH",
     "ALL_HIGHLIGHT",
     "HOT",
     "SOARING_STOCK",
@@ -30,8 +26,6 @@ def build_feed_path(kind: str, last_recommend_id: str | None) -> str:
     if kind not in FEED_PATHS:
         raise ValueError(f"unknown feed kind: {kind}")
     params: dict[str, Any] = {}
-    if kind == "subscription":
-        params["filterType"] = "COMMENT"
     if last_recommend_id is not None and kind.startswith("recommended"):
         params["lastRecommendId"] = last_recommend_id
     return api.build_path(FEED_PATHS[kind], params)

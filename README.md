@@ -3,7 +3,8 @@
 Codex skill for exploring and using read-only TossInvest web APIs observed from
 [tossinvest.com](https://www.tossinvest.com).
 
-The current skill focuses on stock information workflows: stock summaries,
+The current skill collects only read-only APIs that help with stock information
+workflows: stock summaries,
 quotes/ticks, filings, news, financial statements, investor trading trends,
 themes/TICS, stock candle charts with local technical-indicator calculation,
 market indices, dashboard rankings, feed/news discovery, screener counts,
@@ -104,6 +105,10 @@ Validation tests are kept local and are intentionally not included in the publis
 
 - Added conservative endpoint status labels to the API catalog:
   `script-backed`, `observed`, `needs-recheck`, and `excluded`.
+- Tightened catalog scope so non-stock bootstrapping, telemetry, guest/session,
+  following/subscription, personalization, login, account, and order calls are
+  not collected as APIs.
+- Removed following/subscription and personalized news choices from `feed.py`.
 
 ### v0.1.12
 

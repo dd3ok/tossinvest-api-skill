@@ -7,7 +7,9 @@ Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
 
-This catalog is for read-only stock information workflows. Re-verify endpoints before depending on them because TossInvest web APIs are undocumented and may change without notice.
+This catalog is for read-only stock-information workflows. Include endpoints only when they help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, or screener questions. Do not collect page bootstrapping, telemetry, login/certificate, guest/session, account, order, following/subscription, or personalization endpoints as cataloged APIs.
+
+Re-verify endpoints before depending on them because TossInvest web APIs are undocumented and may change without notice.
 
 ## Contents
 
@@ -24,8 +26,7 @@ This catalog is for read-only stock information workflows. Re-verify endpoints b
 - [Feed And News APIs](#feed-and-news-apis)
 - [Screener APIs](#screener-apis)
 - [Cert And Status Helpers](#cert-and-status-helpers)
-- [WTS Context APIs](#wts-context-apis)
-- [Excluded Telemetry](#excluded-telemetry)
+- [Excluded Non-Stock Calls](#excluded-non-stock-calls)
 - [Known Observed Pages](#known-observed-pages)
 
 ## Verification Status
@@ -44,7 +45,7 @@ Endpoint status values are conservative confidence labels, not stability guarant
 | Host | Observed purpose | Usage guidance |
 |---|---|---|
 | `wts-info-api.tossinvest.com` | Stock info, prices, quotes/ticks, chart, analytics, financial statements, consensus, dividends, investor trading trend, filings, news, themes | Primary read-only host |
-| `wts-api.tossinvest.com` | WTS init, time, trading hours, system status, guest/login bootstrap | Use as page context only |
+| `wts-api.tossinvest.com` | Time, trading hours, system status, guest/login bootstrap | Do not catalog unless the response directly helps explain market status or trading-hour context |
 | `wts-cert-api.tossinvest.com` | Red flags, trading status, dashboard ranking, comments, some authenticated data | Treat as sensitive unless clearly public page metadata |
 | `cdn-api.tossinvest.com` | Deployment refresh checks | Exclude from data catalog |
 | `log.tossinvest.com` | Telemetry and performance logs | Exclude |
@@ -57,7 +58,6 @@ Endpoint status values are conservative confidence labels, not stability guarant
 | `productCode` | `A005930`, `A000660` | TossInvest stock/product code used by stock detail APIs |
 | `companyCode` | `005930`, `000660` | Company code used by some `/companies/` APIs |
 | `codes` | `A005930,A000660` | Comma-separated product code list |
-| `subjectId` | `KR7005930003` | Community/comment subject id, observed in comments APIs |
 
 Use `productCode` for stock pages and prices. Strip the leading `A` only where the observed endpoint uses `companyCode`.
 
@@ -350,7 +350,6 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Home live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Body maps URL params to `id={live-chart}`, `tag={market}`, `duration`; returns `products[]`, usually 100 rows |
 | Realtime investor rankings | `script-backed` | GET | `/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Observed under `wts-cert-api`; public-looking ranking widget, but keep sensitive-host caution |
 | Economic calendar | `observed` | GET | `/api/v1/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
-| Reasoning content interest | `needs-recheck` | GET | `/api/v2/reasoning-contents/interest` | Discovery/personalization content |
 | Screener modal | `script-backed` | GET | `/api/v2/screener/screen/search/modal` | Screener modal data |
 | Screener filter ranges | `observed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | Observed in bundle for numeric filter metadata; keep sensitive-host caution |
 | Screener filter bases | `observed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | Observed in bundle for base filter metadata; keep sensitive-host caution |
@@ -508,21 +507,18 @@ Example price moving-average cross filter:
 
 ## Feed And News APIs
 
-Observed from `/feed/recommended` and `/feed/news`. These endpoints can be useful as market/news discovery signals, but community feeds are less directly stock-information focused than company news or TICS news.
+Observed from `/feed/recommended` and `/feed/news`. Keep only feed endpoints that can help with public market or stock-news discovery. Do not catalog followings, subscriptions, or account-personalized feed endpoints.
 
 | Purpose | Status | Method | URL/path | Params/body and notes |
 |---|---|---:|---|---|
 | Recommended feed posts | `script-backed` | GET | `/api/v3/feed/recommend/posts` | Optional `lastRecommendId`; returned `feeds[]` and `key.lastRecommendId` |
 | Recommended ranking feed posts | `script-backed` | GET | `/api/v4/feed/recommend/ranking-posts` | Optional `lastRecommendId`; feature-flagged replacement for recommended feed |
-| Subscription feed posts | `script-backed` | GET | `/api/v3/feed/subscription/posts` | Query: `filterType=COMMENT`; returned `feeds[]`, `key.actedAt`, `key.lastCommentId`, `key.lastTradeHistoryId` |
-| Feed followings | `needs-recheck` | GET | `https://wts-cert-api.tossinvest.com/api/v2/feed/subscription/followings` | Returned `followings[]`; empty for non-authenticated verification |
 | Dashboard/news tab feed | `script-backed` | POST | `/api/v1/dashboard/wts/news` | Body `{ "type": "HOT" }` etc.; result includes `type`, `title`, `news[]` |
 | News detail | `script-backed` | GET | `/api/v2/news/{newsId}` | Detail payload for a selected news item |
 
-Observed dashboard news `type` values:
+Cataloged public-looking dashboard news `type` values:
 
 ```text
-PERSONALIZED, PERSONALIZE_HOLD, PERSONALIZE_WATCH,
 ALL_HIGHLIGHT, HOT, SOARING_STOCK, INDEX
 ```
 
@@ -583,31 +579,14 @@ These endpoints were observed during public page loads but live under `wts-cert-
 
 The `/stocks/{code}/order` bundle also references order prepare/create/correct/cancel, account, orderable amount, and trading mutation APIs. Exclude them from this skill.
 
-## WTS Context APIs
+## Excluded Non-Stock Calls
 
-Use these to understand page bootstrapping, not as stock data sources.
+Do not collect these as cataloged APIs, even if they appear in browser network traffic:
 
-| Purpose | Status | Method | URL |
-|---|---|---:|---|
-| WTS init | `needs-recheck` | GET | `https://wts-api.tossinvest.com/api/v3/init?tabId={tabId}` |
-| Server time | `observed` | GET | `https://wts-api.tossinvest.com/api/v1/time` |
-| Domestic downtime recipes | `observed` | GET | `https://wts-api.tossinvest.com/api/v1/system-down-recipes?type=domestic` |
-| Integrated trading hours | `observed` | GET | `https://wts-api.tossinvest.com/api/v2/system/trading-hours/integrated` |
-| Certificate init | `excluded` | POST | `https://wts-api.tossinvest.com/api/v2/login/wts/toss/cert-init` |
-| Login info bootstrap | `excluded` | POST | `https://wts-api.tossinvest.com/api/v3/login/wts/toss/login-info` |
-| Guest upsert | `needs-recheck` | POST | `https://wts-api.tossinvest.com/api/v1/tuba/wts/guests/upsert` |
-| Guest variables | `needs-recheck` | POST | `https://wts-api.tossinvest.com/api/v1/tuba/wts/guests/independent-variables` |
-
-## Excluded Telemetry
-
-Do not catalog these as data APIs:
-
-```text
-GET  https://cdn-api.tossinvest.com/wts/shouldRefresh/{deploymentId}
-POST https://log.tossinvest.com/api/v1/perf-log/bulk
-POST https://log.tossinvest.com/api/v2/log/bulk
-POST https://sentry-public.tossinvest.com/api/5/envelope/...
-```
+- Telemetry, Sentry, logging, deployment refresh, images, fonts, and static assets.
+- Login, certificate, authentication, account, balance, holding, transfer, order, orderable-amount, order mutation, and session-storage calls.
+- Guest bootstrap/upsert, experiment variables, tab/session initialization, and other page bootstrapping calls that do not directly return stock or market information.
+- Following/subscription feeds, personalized interest/reasoning content, comments-only feeds, or account-personalized discovery surfaces.
 
 ## Known Observed Pages
 
