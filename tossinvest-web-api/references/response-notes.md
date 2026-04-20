@@ -2,6 +2,17 @@
 
 Most checked endpoints returned JSON with a top-level `result` key. Do not assume this for every endpoint; verify the response shape before writing client code or documentation.
 
+## Contents
+
+- [Stock And Price Shapes](#stock-and-price-shapes)
+- [Index And Indicator Shapes](#index-and-indicator-shapes)
+- [Analytics Shapes](#analytics-shapes)
+- [Filings And News Shapes](#filings-and-news-shapes)
+- [Discovery And Screener Shapes](#discovery-and-screener-shapes)
+- [Financial POST Shapes](#financial-post-shapes)
+- [Transaction Status Shapes](#transaction-status-shapes)
+- [Pension-Fund Trend Notes](#pension-fund-trend-notes)
+
 ## Stock And Price Shapes
 
 | Endpoint | Observed `result` shape |

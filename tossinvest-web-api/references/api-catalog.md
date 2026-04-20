@@ -8,6 +8,24 @@ Primary data host: `https://wts-info-api.tossinvest.com`
 
 This catalog is for read-only stock information workflows. Re-verify endpoints before depending on them because TossInvest web APIs are undocumented and may change without notice.
 
+## Contents
+
+- [Host Map](#host-map)
+- [Identifier Conventions](#identifier-conventions)
+- [Stock Summary APIs](#stock-summary-apis)
+- [Chart APIs](#chart-apis)
+- [Index And Market Indicator APIs](#index-and-market-indicator-apis)
+- [Analytics APIs](#analytics-apis)
+- [Filings And News APIs](#filings-and-news-apis)
+- [Transaction Status APIs](#transaction-status-apis)
+- [Dashboard And Discovery APIs](#dashboard-and-discovery-apis)
+- [Feed And News APIs](#feed-and-news-apis)
+- [Screener APIs](#screener-apis)
+- [Cert And Status Helpers](#cert-and-status-helpers)
+- [WTS Context APIs](#wts-context-apis)
+- [Excluded Telemetry](#excluded-telemetry)
+- [Known Observed Pages](#known-observed-pages)
+
 ## Host Map
 
 | Host | Observed purpose | Usage guidance |

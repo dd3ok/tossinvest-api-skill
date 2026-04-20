@@ -1,4 +1,4 @@
 interface:
   display_name: "TossInvest Web API"
-  short_description: "Query TossInvest read-only stock APIs"
-  default_prompt: "Use $tossinvest-web-api to query TossInvest read-only stock information APIs."
+  short_description: "Query TossInvest/토스증권 read-only stock APIs"
+  default_prompt: "Use $tossinvest-web-api to query TossInvest/토스증권 read-only stock information APIs and network-call notes."

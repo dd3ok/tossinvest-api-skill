@@ -2,6 +2,12 @@
 
 Use these prompts after installing the skill to check whether another agent selects the skill, uses the bundled scripts, and respects the safety boundaries. These are manual smoke scenarios, not published Python tests.
 
+## Contents
+
+- [Lookup Scenarios](#lookup-scenarios)
+- [Discovery Scenarios](#discovery-scenarios)
+- [Safety Scenarios](#safety-scenarios)
+
 ## Lookup Scenarios
 
 ```text
