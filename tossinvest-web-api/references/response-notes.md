@@ -52,13 +52,24 @@ they calculate from candle `close` prices and annotate the output with
 | `/api/v1/tics/all` | Object: `baseDateTime`, `ticsItems[]` |
 | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Object: ranking metadata such as `rankingId`, `info`, `type`, and ranking rows |
 | `/api/v2/news/tics/{ticsId}` | Object: `pagingParam`, `body[]`, `lastPage` |
-| `wts-cert-api /api/v1/screener/screen/count` | Number count for body `{ "filters": [], "nation": "kr" }` or `"us"`; also accepted `RSI_범위` number-range filters in verification |
-| `wts-cert-api /api/v2/screener/screen` | Object: `totalCount`, `page`, `lastPage`, `stocks[]`; body requires `pagingParam.size` in addition to `filters[]` and `nation` |
+| `wts-cert-api /api/v1/screener/screen/count` | Number count for body `{ "filters": [], "nation": "kr" }` or `"us"`; also accepted `RSI_범위` and selected technical-analysis `conditions[]` filters in verification |
+| `wts-cert-api /api/v2/screener/screen` | Object: `totalCount`, `page`, `lastPage`, `stocks[]`, `columns[]`; body requires `pagingParam.size` in addition to `filters[]` and `nation`; `pagingParam.number` worked for page selection; observed `sort` shape uses `column`, `label`, `order` |
 
 The checked RSI screen uses filter id `RSI_범위` with condition id
 `NUMBER_RANGE_DEFAULT` and type `NUMBER_RANGE`. Oversold-style requests use
 `to: 30` with `includeTo: true`; overbought-style requests use `from: 70` with
 `includeFrom: true`.
+
+The checked technical screens use these type strings: `PRICE_MOVING_AVERAGE_CROSS_ARRAY`,
+`MOVING_AVERAGE_CROSS_ARRAY`, `MOVING_AVERAGE_ALIGN_ARRAY`, and
+`PRICE_BOLLINGER_BAND_CROSS_ARRAY`. Direct checks on 2026-04-20 accepted
+`conditions[]` bodies for price moving-average cross, moving-average cross,
+volume moving-average cross, moving-average alignment, and Bollinger Band cross.
+
+For sorting, guessed shapes such as `{id, order}` returned HTTP 400. A Playwright
+capture of the screener page showed the working shape
+`{"column":"C_시가총액","label":"시가총액","order":"DESC"}`. Direct checks accepted
+that shape for market capitalization, volume, and analyst-rating columns.
 
 ## Financial POST Shapes
 

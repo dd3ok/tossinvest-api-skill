@@ -7,7 +7,7 @@ The current skill focuses on stock information workflows: stock summaries,
 quotes/ticks, filings, news, financial statements, investor trading trends,
 themes/TICS, stock candle charts with local technical-indicator calculation,
 market indices, dashboard rankings, feed/news discovery, screener counts, and
-RSI-based screener result lookups.
+RSI/technical screener result lookups.
 
 ## Install
 
@@ -77,6 +77,8 @@ python3 scripts/dashboard_ranking.py --kind investors --side sell
 python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
+python3 scripts/screener_count.py --nation kr --technical-filter price-ma-cross-up --include-results --sort market-cap --size 5
+python3 scripts/screener_count.py --nation kr --technical-filter bollinger-lower-down --include-results --page 1 --size 5
 ```
 
 ## Safety

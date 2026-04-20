@@ -282,7 +282,7 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Screener filter ranges | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | Observed in bundle for numeric filter metadata; keep sensitive-host caution |
 | Screener filter bases | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | Observed in bundle for base filter metadata; keep sensitive-host caution |
 | Screener count | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body includes `filters[]` and `nation`; returns a number |
-| Screener results | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body requires `pagingParam.size`; returns `totalCount`, `page`, `lastPage`, `stocks[]` |
+| Screener results | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body requires `pagingParam.size`; accepts `pagingParam.number` and observed `sort`; returns `totalCount`, `page`, `lastPage`, `stocks[]` |
 | Theme list | GET | `/api/v1/tics/all` | Observed result includes `baseDateTime`, `ticsItems[]` |
 | Theme ranking by tag | GET | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Observed tags include market-style values such as `kr`/`us`; result contains ranking metadata and rows |
 | Theme details | GET | `/api/v1/tics/{ticsId}/details` | Returned `id`, `title`, `summary`, `description`, `companyCount`, `etfCount`, `stocks[]` |
@@ -353,7 +353,55 @@ Content-Type: application/json
 Use `to: 30` / `includeTo: true` for an oversold-style screen and
 `from: 70` / `includeFrom: true` for an overbought-style screen. Direct checks on
 2026-04-20 returned counts for both `kr` and `us`. The results endpoint accepted
-the same `filters[]` plus `pagingParam: {"size": 5}` and returned stock rows.
+the same `filters[]` plus `pagingParam: {"number": 1, "size": 5}` and returned
+stock rows.
+
+Observed sort shape from Playwright capture and direct API checks:
+
+```text
+{
+  "sort": {
+    "column": "C_시가총액",
+    "label": "시가총액",
+    "order": "DESC"
+  }
+}
+```
+
+The checked sortable columns were `C_시가총액` / `시가총액`, `C_거래량` /
+`거래량`, and `C_애널리스트평점` / `애널리스트 분석`. Other sort columns should be
+captured from current browser traffic before use.
+
+Observed technical-analysis screener filter IDs:
+
+| Preset area | Filter id | Condition id | Type | Verified default value |
+|---|---|---|---|---|
+| Price moving-average cross | `CUSTOM_주가_이동평균선_돌파` | `주가_이동평균선_돌파` | `PRICE_MOVING_AVERAGE_CROSS_ARRAY` | `period=20`, `within=5`, `crossDirection=upward/downward` |
+| Moving-average cross | `CUSTOM_이동평균선_돌파` | `이동평균선_돌파` | `MOVING_AVERAGE_CROSS_ARRAY` | `shortPeriod=5`, `longPeriod=20`, `within=5`, `crossDirection=upward/downward` |
+| Volume moving-average cross | `CUSTOM_거래량_이동평균선_돌파` | `이동평균선_돌파` | `MOVING_AVERAGE_CROSS_ARRAY` | `shortPeriod=5`, `longPeriod=20`, `within=5`, `crossDirection=upward/downward` |
+| Moving-average alignment | `CUSTOM_이동평균선_배열` | `이동평균선_배열` | `MOVING_AVERAGE_ALIGN_ARRAY` | `shortPeriod=5`, `midPeriod=20`, `longPeriod=60`, `within=5`, `alignType=positive/negative` |
+| Price Bollinger Band cross | `CUSTOM_주가_볼린저밴드_돌파` | `주가_볼린저밴드_돌파` | `PRICE_BOLLINGER_BAND_CROSS_ARRAY` | `within=5`, `crossBand=upper/lower`, `crossDirection=upward/downward` |
+
+Example price moving-average cross filter:
+
+```text
+{
+  "id": "CUSTOM_주가_이동평균선_돌파",
+  "conditions": [
+    {
+      "id": "주가_이동평균선_돌파",
+      "type": "PRICE_MOVING_AVERAGE_CROSS_ARRAY",
+      "value": [
+        {
+          "period": 20,
+          "within": 5,
+          "crossDirection": "upward"
+        }
+      ]
+    }
+  ]
+}
+```
 
 ## Feed And News APIs
 
@@ -393,8 +441,8 @@ Most screener endpoints currently live under `wts-cert-api`. They can return pub
 | Common screener presets | GET | `https://wts-cert-api.tossinvest.com/api/v2/screener/presets/common?useCustom=true` | Returned preset definitions in verification |
 | Screener base filters | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | Body depends on selected filters; returns `basedAt` in observed bundle |
 | Screener range filters | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | Body depends on selected filters |
-| Screener result count | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body shape `{ "filters": [], "nation": "kr" }` or `"us"` returned counts in verification |
-| Screener results | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body includes `pagingParam`, `filters`, `sort`, and `nation`; verify exact sort/filter schema before use |
+| Screener result count | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body shape `{ "filters": [], "nation": "kr" }` or `"us"` returned counts in verification; RSI and selected technical filters accepted `conditions[]` |
+| Screener results | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body includes `pagingParam`, `filters`, `sort`, and `nation`; `pagingParam.number/size` and selected sortable columns worked in verification |
 
 Examples:
 

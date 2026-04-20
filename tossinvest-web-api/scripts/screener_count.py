@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch read-only TossInvest screener result counts."""
+"""Fetch read-only TossInvest screener counts and optional result pages."""
 
 from __future__ import annotations
 
@@ -14,6 +14,97 @@ import tossinvest_api as api
 CERT_URL = "https://wts-cert-api.tossinvest.com"
 RSI_FILTER_ID = "RSI_범위"
 NUMBER_RANGE_CONDITION_ID = "NUMBER_RANGE_DEFAULT"
+SORT_COLUMNS = {
+    "market-cap": {"column": "C_시가총액", "label": "시가총액"},
+    "volume": {"column": "C_거래량", "label": "거래량"},
+    "analyst-rating": {"column": "C_애널리스트평점", "label": "애널리스트 분석"},
+}
+TECHNICAL_PRESETS = {
+    "price-ma-cross-up": {
+        "filter_id": "CUSTOM_주가_이동평균선_돌파",
+        "condition_id": "주가_이동평균선_돌파",
+        "type": "PRICE_MOVING_AVERAGE_CROSS_ARRAY",
+        "value": [{"period": 20, "within": 5, "crossDirection": "upward"}],
+    },
+    "price-ma-cross-down": {
+        "filter_id": "CUSTOM_주가_이동평균선_돌파",
+        "condition_id": "주가_이동평균선_돌파",
+        "type": "PRICE_MOVING_AVERAGE_CROSS_ARRAY",
+        "value": [{"period": 20, "within": 5, "crossDirection": "downward"}],
+    },
+    "ma-cross-up": {
+        "filter_id": "CUSTOM_이동평균선_돌파",
+        "condition_id": "이동평균선_돌파",
+        "type": "MOVING_AVERAGE_CROSS_ARRAY",
+        "value": [
+            {"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "upward"}
+        ],
+    },
+    "ma-cross-down": {
+        "filter_id": "CUSTOM_이동평균선_돌파",
+        "condition_id": "이동평균선_돌파",
+        "type": "MOVING_AVERAGE_CROSS_ARRAY",
+        "value": [
+            {"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "downward"}
+        ],
+    },
+    "volume-ma-cross-up": {
+        "filter_id": "CUSTOM_거래량_이동평균선_돌파",
+        "condition_id": "이동평균선_돌파",
+        "type": "MOVING_AVERAGE_CROSS_ARRAY",
+        "value": [
+            {"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "upward"}
+        ],
+    },
+    "volume-ma-cross-down": {
+        "filter_id": "CUSTOM_거래량_이동평균선_돌파",
+        "condition_id": "이동평균선_돌파",
+        "type": "MOVING_AVERAGE_CROSS_ARRAY",
+        "value": [
+            {"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "downward"}
+        ],
+    },
+    "ma-align-positive": {
+        "filter_id": "CUSTOM_이동평균선_배열",
+        "condition_id": "이동평균선_배열",
+        "type": "MOVING_AVERAGE_ALIGN_ARRAY",
+        "value": [
+            {
+                "shortPeriod": 5,
+                "midPeriod": 20,
+                "longPeriod": 60,
+                "within": 5,
+                "alignType": "positive",
+            }
+        ],
+    },
+    "ma-align-negative": {
+        "filter_id": "CUSTOM_이동평균선_배열",
+        "condition_id": "이동평균선_배열",
+        "type": "MOVING_AVERAGE_ALIGN_ARRAY",
+        "value": [
+            {
+                "shortPeriod": 5,
+                "midPeriod": 20,
+                "longPeriod": 60,
+                "within": 5,
+                "alignType": "negative",
+            }
+        ],
+    },
+    "bollinger-upper-up": {
+        "filter_id": "CUSTOM_주가_볼린저밴드_돌파",
+        "condition_id": "주가_볼린저밴드_돌파",
+        "type": "PRICE_BOLLINGER_BAND_CROSS_ARRAY",
+        "value": [{"within": 5, "crossBand": "upper", "crossDirection": "upward"}],
+    },
+    "bollinger-lower-down": {
+        "filter_id": "CUSTOM_주가_볼린저밴드_돌파",
+        "condition_id": "주가_볼린저밴드_돌파",
+        "type": "PRICE_BOLLINGER_BAND_CROSS_ARRAY",
+        "value": [{"within": 5, "crossBand": "lower", "crossDirection": "downward"}],
+    },
+}
 
 
 def normalize_nation(nation: str) -> str:
@@ -47,18 +138,55 @@ def build_rsi_filter(mode: str) -> dict[str, Any]:
     }
 
 
+def build_technical_filter(preset: str) -> dict[str, Any]:
+    try:
+        config = TECHNICAL_PRESETS[preset.strip().lower()]
+    except KeyError as exc:
+        choices = ", ".join(sorted(TECHNICAL_PRESETS))
+        raise ValueError(f"technical preset must be one of: {choices}") from exc
+    return {
+        "id": config["filter_id"],
+        "conditions": [
+            {
+                "id": config["condition_id"],
+                "type": config["type"],
+                "value": config["value"],
+            }
+        ],
+    }
+
+
+def build_sort(sort_key: str, order: str = "desc") -> dict[str, Any]:
+    try:
+        column = SORT_COLUMNS[sort_key.strip().lower()]
+    except KeyError as exc:
+        choices = ", ".join(sorted(SORT_COLUMNS))
+        raise ValueError(f"sort must be one of: {choices}") from exc
+    normalized_order = order.strip().upper()
+    if normalized_order not in {"ASC", "DESC"}:
+        raise ValueError("sort order must be 'asc' or 'desc'")
+    return {**column, "order": normalized_order}
+
+
 def build_screen_body(
     nation: str,
     filters: list[dict[str, Any]] | None = None,
     size: int = 20,
+    page: int = 1,
+    sort: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if size < 1:
         raise ValueError("size must be greater than 0")
-    return {
+    if page < 1:
+        raise ValueError("page must be greater than 0")
+    body = {
         "filters": filters or [],
         "nation": normalize_nation(nation),
-        "pagingParam": {"size": size},
+        "pagingParam": {"number": page, "size": size},
     }
+    if sort is not None:
+        body["sort"] = sort
+    return body
 
 
 def fetch_screener_count(
@@ -82,8 +210,10 @@ def fetch_screener_results(
     nation: str,
     filters: list[dict[str, Any]] | None = None,
     size: int = 20,
+    page: int = 1,
+    sort: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    body = build_screen_body(nation, filters, size)
+    body = build_screen_body(nation, filters, size, page, sort)
     return api.get_result(
         "/api/v2/screener/screen",
         method="POST",
@@ -122,6 +252,24 @@ def main() -> int:
         action="store_true",
         help="Also fetch the first page from /api/v2/screener/screen",
     )
+    parser.add_argument(
+        "--technical-filter",
+        action="append",
+        choices=sorted(TECHNICAL_PRESETS),
+        help="Add a built-in technical screener filter preset; can be repeated",
+    )
+    parser.add_argument(
+        "--sort",
+        choices=sorted(SORT_COLUMNS),
+        help="Sort result rows by an observed sortable column",
+    )
+    parser.add_argument(
+        "--sort-order",
+        choices=["asc", "desc"],
+        default="desc",
+        help="Sort direction when --sort is used",
+    )
+    parser.add_argument("--page", type=int, default=1, help="Result page number when used")
     parser.add_argument("--size", type=int, default=20, help="Result page size when used")
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
@@ -129,9 +277,18 @@ def main() -> int:
     filters = load_filters(args.filters_file)
     if args.rsi:
         filters.append(build_rsi_filter(args.rsi))
+    for preset in args.technical_filter or []:
+        filters.append(build_technical_filter(preset))
     payload = fetch_screener_count(args.nation, filters)
     if args.include_results:
-        payload["results"] = fetch_screener_results(args.nation, filters, args.size)
+        sort = build_sort(args.sort, args.sort_order) if args.sort else None
+        payload["results"] = fetch_screener_results(
+            args.nation,
+            filters,
+            args.size,
+            args.page,
+            sort,
+        )
     api.emit_output(api.render_json(payload), args.output)
     return 0
 
