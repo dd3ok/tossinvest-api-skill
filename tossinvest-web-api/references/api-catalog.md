@@ -123,6 +123,7 @@ Examples:
 GET https://wts-info-api.tossinvest.com/api/v2/index-infos/KGG01P
 GET https://wts-info-api.tossinvest.com/api/v1/index-prices/KGG01P
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:5?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/fx/EXCHANGE_RATE/1d/min:5?last=false&useAdjustedRate=true&currency=USD
 GET https://wts-info-api.tossinvest.com/api/v1/dashboard/wts/overview/exchange-rates
 GET https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator
 GET https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/bond?market=kr
@@ -133,7 +134,8 @@ Direct checks on 2026-04-20 returned public-looking bond indicators such as
 Korean and US Treasury yields, and commodity indicators such as gold, silver,
 WTI, natural gas, copper, and wheat. `exchange-rate`/`exchange` were not accepted
 as indicator types in direct checks; use the separate exchange-rates widget for
-FX lists. `scripts/indices.py --include-exchange-rates` fetches that widget.
+FX lists. `scripts/indices.py --include-fx-chart` fetches the FX r-chart, and
+`scripts/indices.py --include-exchange-rates` fetches the exchange-rates widget.
 
 ## Analytics APIs
 

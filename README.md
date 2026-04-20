@@ -70,7 +70,7 @@ python3 scripts/news.py --code A005930 --size 5
 python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
 python3 scripts/theme.py --tag kr --tics-id 289 --include-details --company-ranking marketcap
-python3 scripts/indices.py --code KGG01P --include-chart --include-exchange-rates --format json
+python3 scripts/indices.py --code KGG01P --include-chart --include-fx-chart --include-exchange-rates --format json
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type bond
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type commodity
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
@@ -104,3 +104,21 @@ This skill is for read-only public-looking web API discovery and lookup.
 - [`tossinvest-web-api/examples/filters/`](tossinvest-web-api/examples/filters): example screener filter JSON files for `--filters-file`
 
 Validation tests are kept local and are intentionally not included in the published skill.
+
+## Changelog
+
+### v0.1.8
+
+- Added `--include-fx-chart` to `scripts/indices.py` for the USD/KRW FX r-chart endpoint.
+
+### v0.1.7
+
+- Added `--include-exchange-rates` to `scripts/indices.py` for the public-looking dashboard exchange-rates widget.
+- Documented verified bond and commodity dashboard indicator types.
+- Added `--format json` aliases to JSON-only lookup scripts.
+- Improved skill discovery metadata, OpenAI UI prompt text, and chart/indices help descriptions.
+
+### v0.1.6
+
+- Improved skill discovery metadata for TossInvest/토스증권 unofficial read-only API workflows.
+- Added explicit task routing, when-not-to-use boundaries, and manual eval prompts.

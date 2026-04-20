@@ -33,6 +33,17 @@ def build_index_chart_path(
     )
 
 
+def build_fx_chart_path(chart_range: str, step: str, currency: str) -> str:
+    return api.build_path(
+        f"/api/v1/r-chart/fx/EXCHANGE_RATE/{chart_range}/{step}",
+        {
+            "last": False,
+            "useAdjustedRate": True,
+            "currency": currency.strip().upper(),
+        },
+    )
+
+
 def build_indicator_path(indicator_type: str, market: str | None) -> str:
     return api.build_path(
         f"/api/v1/dashboard/wts/overview/indicator/{indicator_type}",
@@ -52,8 +63,12 @@ def fetch_index_payload(
     step: str,
     invest_mode: str,
     include_chart: bool,
+    include_fx_chart: bool,
     include_indicators: bool,
     include_exchange_rates: bool,
+    fx_chart_range: str,
+    fx_step: str,
+    fx_currency: str,
     indicator_type: str,
     market: str | None,
 ) -> dict[str, Any]:
@@ -65,6 +80,10 @@ def fetch_index_payload(
     if include_chart:
         payload["chart"] = api.get_result(
             build_index_chart_path(code, securities_type, chart_range, step, invest_mode)
+        )
+    if include_fx_chart:
+        payload["fxChart"] = api.get_result(
+            build_fx_chart_path(fx_chart_range, fx_step, fx_currency)
         )
     if include_indicators:
         payload["indicators"] = api.get_result(
@@ -78,7 +97,10 @@ def fetch_index_payload(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Fetch TossInvest index details, price, optional chart, and indicator lists."
+        description=(
+            "Fetch TossInvest index details, price, optional index/FX charts, "
+            "exchange-rate widgets, and indicator lists."
+        )
     )
     parser.add_argument("--code", default="KGG01P", help="TossInvest index code")
     parser.add_argument(
@@ -90,6 +112,14 @@ def main() -> int:
     parser.add_argument("--step", default="min:5")
     parser.add_argument("--invest-mode", default="krx")
     parser.add_argument("--include-chart", action="store_true")
+    parser.add_argument(
+        "--include-fx-chart",
+        action="store_true",
+        help="Also fetch the FX exchange-rate r-chart",
+    )
+    parser.add_argument("--fx-range", default="1d", help="FX r-chart range")
+    parser.add_argument("--fx-step", default="min:5", help="FX r-chart step")
+    parser.add_argument("--fx-currency", default="USD", help="FX r-chart currency")
     parser.add_argument("--include-indicators", action="store_true")
     parser.add_argument(
         "--include-exchange-rates",
@@ -113,8 +143,12 @@ def main() -> int:
         step=args.step,
         invest_mode=args.invest_mode,
         include_chart=args.include_chart,
+        include_fx_chart=args.include_fx_chart,
         include_indicators=args.include_indicators,
         include_exchange_rates=args.include_exchange_rates,
+        fx_chart_range=args.fx_range,
+        fx_step=args.fx_step,
+        fx_currency=args.fx_currency,
         indicator_type=args.indicator_type,
         market=args.market,
     )
