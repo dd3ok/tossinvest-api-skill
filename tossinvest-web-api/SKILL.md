@@ -24,7 +24,7 @@ Use this skill to inspect TossInvest web pages and work with read-only internal 
 
 - `scripts/stock_summary.py`: Fetches stock metadata, price detail, and optional overview for a product code.
 - `scripts/quote.py`: Fetches quote-book data from v3 quotes and optional intraday ticks.
-- `scripts/stock_chart.py`: Fetches c-chart candle data and can add locally calculated Wilder RSI from close prices.
+- `scripts/stock_chart.py`: Fetches c-chart candle data and can add locally calculated RSI, SMA, EMA, MACD, and Bollinger Bands from close prices.
 - `scripts/filings.py`: Fetches company filing lists; supports JSON or CSV output.
 - `scripts/news.py`: Fetches company news lists and optional news detail payloads.
 - `scripts/financials.py`: Fetches financial statement, estimate, valuation, stability, revenue/net-profit, and operating-income endpoints.
@@ -41,7 +41,7 @@ Use this skill to inspect TossInvest web pages and work with read-only internal 
 ```bash
 python3 scripts/stock_summary.py --code A005930
 python3 scripts/quote.py --code A005930 --ticks 5
-python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14
+python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --sma-period 20 --ema-period 20 --macd --bollinger-period 20
 python3 scripts/filings.py --code A005930 --size 5
 python3 scripts/news.py --code A005930 --size 5
 python3 scripts/financials.py --code A005930 --kind comprehensive
@@ -61,7 +61,7 @@ python3 scripts/pension_fund_trend.py --code A005930 --year 2026 --summary-only
 Use prompts like these after installing the skill:
 
 - `Use $tossinvest-web-api to get a compact stock summary and current quote for A005930.`
-- `Use $tossinvest-web-api to fetch daily candles and calculate RSI 14 for A005930.`
+- `Use $tossinvest-web-api to fetch daily candles and calculate RSI 14, MACD, and Bollinger Bands for A005930.`
 - `Use $tossinvest-web-api to fetch recent filings and company news for A005930.`
 - `Use $tossinvest-web-api to compare A005930 investor trading trend from 2026-01-01 through 2026-01-31.`
 - `Use $tossinvest-web-api to fetch comprehensive financial statement and valuation data for A005930.`
@@ -77,6 +77,6 @@ Prefer bundled scripts for direct lookups. Re-read [references/safety-rules.md](
 - Never use, install, or run `tossctl`.
 - Never use, install, or run `tossinvest-cli`.
 - Never call trading mutation APIs.
-- Do not describe RSI or other technical indicators as TossInvest API fields unless a current endpoint is verified; `stock_chart.py --rsi-period` calculates RSI locally from `c-chart` candles.
+- Do not describe TradingView chart studies such as RSI/MACD/Bollinger as TossInvest API fields unless a current endpoint is verified; chart studies are displayed by TradingView client logic over `c-chart` candles, and `stock_chart.py` calculates supported indicators locally.
 - Never store raw cookies, tokens, account numbers, session files, storage state, or raw HAR captures.
 - Treat undocumented APIs as unstable and re-verify them with current browser traffic.

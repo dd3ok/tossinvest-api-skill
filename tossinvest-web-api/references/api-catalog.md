@@ -93,10 +93,14 @@ Observed candle keys:
 dt, base, open, high, low, close, volume, amount
 ```
 
-RSI/MACD/Bollinger-style technical indicator endpoints were not observed in the
-`/stocks/A005930/order` bundles checked on 2026-04-20. Treat RSI as a local
-calculation from `c-chart` candles unless a current network capture shows a
-dedicated indicator endpoint.
+The `/stocks/A005930/order` chart's `+` button has `aria-label="보조지표"`.
+Playwright verification on 2026-04-20 showed that opening the menu and selecting
+`RSI` loaded icon/font/log requests only; no dedicated TossInvest RSI/MACD/
+Bollinger data endpoint was called. The page uses TradingView chart studies from
+`https://static.tossinvest.com/assets/libraries/trading-view/v27.001_251222/charting_library/`
+over the `c-chart` candle datafeed. Treat technical indicators as client-side or
+local calculations from `c-chart` candles unless a current network capture shows
+a dedicated indicator endpoint.
 
 ## Index And Market Indicator APIs
 
@@ -415,7 +419,7 @@ POST https://sentry-public.tossinvest.com/api/5/envelope/...
 | `https://www.tossinvest.com/stocks/A005930/analytics` | Analytics, financials, dividends, analyst data |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status` | Broker ranking, investor trend, program trading |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status?contentType=net-buy...` | Same transaction-status APIs; URL query appears to focus a section |
-| `https://www.tossinvest.com/stocks/A005930/order` | Price details, quote/tick, upper/lower bounds, `c-chart` stock candles, trading status; order mutations excluded; no dedicated RSI endpoint observed |
+| `https://www.tossinvest.com/stocks/A005930/order` | Price details, quote/tick, upper/lower bounds, `c-chart` stock candles, TradingView chart studies, trading status; order mutations excluded; no dedicated RSI/MACD/Bollinger data endpoint observed |
 | `https://www.tossinvest.com/?ranking-type=trending_category` | TICS rankings and TICS detail modal APIs |
 | `https://www.tossinvest.com/?ranking-type=domestic_investor_trend` | Investor buy/sell rankings from dashboard ranking APIs |
 | `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_amount` | Live-chart top100 ranking via overview ranking API |

@@ -17,9 +17,11 @@ Most checked endpoints returned JSON with a top-level `result` key. Do not assum
 | `/api/v1/c-chart/kr-s/{productCode}/{range}` | Object: `code`, `nextDateTime`, `exchangeRate`, `exchange`, `candles[]`; observed stock ranges include `min:1`, `day:1`, `week:1`, `month:1`; candle entries include OHLCV and amount fields |
 
 No dedicated RSI/MACD/Bollinger response field or endpoint was observed from
-`/stocks/A005930/order` bundles checked on 2026-04-20. Use
-`scripts/stock_chart.py --rsi-period` when RSI is needed; it calculates Wilder
-RSI locally from candle `close` prices and annotates the output with
+`/stocks/A005930/order`. Playwright verification on 2026-04-20 clicked the chart
+`+` / `보조지표` button and selected `RSI`; the new requests were icon/font/log
+or unrelated dashboard refreshes, not a stock technical-indicator data API. Use
+`scripts/stock_chart.py` indicator flags when technical indicators are needed;
+they calculate from candle `close` prices and annotate the output with
 `source=local-calculation-from-c-chart-candles`.
 
 ## Analytics Shapes
