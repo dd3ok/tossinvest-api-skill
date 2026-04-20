@@ -279,6 +279,10 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Economic calendar | GET | `/api/v1/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
 | Reasoning content interest | GET | `/api/v2/reasoning-contents/interest` | Discovery/personalization content |
 | Screener modal | GET | `/api/v2/screener/screen/search/modal` | Screener modal data |
+| Screener filter ranges | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | Observed in bundle for numeric filter metadata; keep sensitive-host caution |
+| Screener filter bases | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | Observed in bundle for base filter metadata; keep sensitive-host caution |
+| Screener count | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body includes `filters[]` and `nation`; returns a number |
+| Screener results | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body requires `pagingParam.size`; returns `totalCount`, `page`, `lastPage`, `stocks[]` |
 | Theme list | GET | `/api/v1/tics/all` | Observed result includes `baseDateTime`, `ticsItems[]` |
 | Theme ranking by tag | GET | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Observed tags include market-style values such as `kr`/`us`; result contains ranking metadata and rows |
 | Theme details | GET | `/api/v1/tics/{ticsId}/details` | Returned `id`, `title`, `summary`, `description`, `companyCount`, `etfCount`, `stocks[]` |
@@ -317,6 +321,39 @@ Content-Type: application/json
 ```
 
 For the user-provided top100 URLs checked on 2026-04-20, `market=kr`/`us` maps to `tag=kr`/`us`. The `biggest_total_amount`, `biggest_total_volume`, `heavy_soar`, and `heavy_descent` combinations returned `products[]` with 100 rows for both markets in direct response checks.
+
+Observed RSI screener filter request shape:
+
+```text
+POST https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count
+Content-Type: application/json
+
+{
+  "filters": [
+    {
+      "id": "RSI_범위",
+      "conditions": [
+        {
+          "id": "NUMBER_RANGE_DEFAULT",
+          "type": "NUMBER_RANGE",
+          "value": {
+            "from": null,
+            "to": 30,
+            "includeFrom": null,
+            "includeTo": true
+          }
+        }
+      ]
+    }
+  ],
+  "nation": "kr"
+}
+```
+
+Use `to: 30` / `includeTo: true` for an oversold-style screen and
+`from: 70` / `includeFrom: true` for an overbought-style screen. Direct checks on
+2026-04-20 returned counts for both `kr` and `us`. The results endpoint accepted
+the same `filters[]` plus `pagingParam: {"size": 5}` and returned stock rows.
 
 ## Feed And News APIs
 

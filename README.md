@@ -6,7 +6,8 @@ Codex skill for exploring and using read-only TossInvest web APIs observed from
 The current skill focuses on stock information workflows: stock summaries,
 quotes/ticks, filings, news, financial statements, investor trading trends,
 themes/TICS, stock candle charts with local technical-indicator calculation,
-market indices, dashboard rankings, feed/news discovery, and screener counts.
+market indices, dashboard rankings, feed/news discovery, screener counts, and
+RSI-based screener result lookups.
 
 ## Install
 
@@ -75,6 +76,7 @@ python3 scripts/dashboard_ranking.py --kind live-chart --live-chart heavy_soar -
 python3 scripts/dashboard_ranking.py --kind investors --side sell
 python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr
+python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 ```
 
 ## Safety

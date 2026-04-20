@@ -52,7 +52,13 @@ they calculate from candle `close` prices and annotate the output with
 | `/api/v1/tics/all` | Object: `baseDateTime`, `ticsItems[]` |
 | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Object: ranking metadata such as `rankingId`, `info`, `type`, and ranking rows |
 | `/api/v2/news/tics/{ticsId}` | Object: `pagingParam`, `body[]`, `lastPage` |
-| `wts-cert-api /api/v1/screener/screen/count` | Number count for body `{ "filters": [], "nation": "kr" }` or `"us"` |
+| `wts-cert-api /api/v1/screener/screen/count` | Number count for body `{ "filters": [], "nation": "kr" }` or `"us"`; also accepted `RSI_범위` number-range filters in verification |
+| `wts-cert-api /api/v2/screener/screen` | Object: `totalCount`, `page`, `lastPage`, `stocks[]`; body requires `pagingParam.size` in addition to `filters[]` and `nation` |
+
+The checked RSI screen uses filter id `RSI_범위` with condition id
+`NUMBER_RANGE_DEFAULT` and type `NUMBER_RANGE`. Oversold-style requests use
+`to: 30` with `includeTo: true`; overbought-style requests use `from: 70` with
+`includeFrom: true`.
 
 ## Financial POST Shapes
 
