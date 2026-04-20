@@ -9,12 +9,32 @@ from typing import Any
 import tossinvest_api as api
 
 
+COMPANY_RANKINGS = {
+    "marketcap": 1,
+    "revenue": 3,
+    "operating-margin": 4,
+}
+
+
 def build_theme_ranking_path(tag: str) -> str:
     return f"/api/v1/rankings/contents/tics_margin_depth1/tags/{tag.strip().lower()}"
 
 
+def build_theme_details_path(tics_id: str) -> str:
+    return f"/api/v1/tics/{tics_id}/details"
+
+
 def build_theme_news_path(tics_id: str, size: int) -> str:
     return api.build_path(f"/api/v2/news/tics/{tics_id}", {"size": size})
+
+
+def build_theme_company_ranking_path(tics_id: str, ranking: str) -> str:
+    if ranking not in COMPANY_RANKINGS:
+        raise ValueError(f"unknown company ranking: {ranking}")
+    return api.build_path(
+        "/api/v1/companies/tics/rankings",
+        {"ticsId": tics_id, "ticsRanking": COMPANY_RANKINGS[ranking]},
+    )
 
 
 def build_related_path(tics_id: str) -> str:
@@ -31,6 +51,8 @@ def fetch_theme_payload(
     tics_id: str | None,
     news_size: int,
     include_all: bool,
+    include_details: bool,
+    company_rankings: list[str],
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "tag": tag.strip().lower(),
@@ -40,9 +62,16 @@ def fetch_theme_payload(
         payload["allThemes"] = api.get_result("/api/v1/tics/all")
     if tics_id is not None:
         payload["ticsId"] = tics_id
+        if include_details:
+            payload["details"] = api.get_result(build_theme_details_path(tics_id))
         payload["related"] = api.get_result(build_related_path(tics_id))
         payload["news"] = api.get_result(build_theme_news_path(tics_id, news_size))
         payload["fluctuations"] = api.get_result(build_fluctuations_path(tics_id))
+        if company_rankings:
+            payload["companyRankings"] = {
+                ranking: api.get_result(build_theme_company_ranking_path(tics_id, ranking))
+                for ranking in company_rankings
+            }
     return payload
 
 
@@ -67,6 +96,18 @@ def main() -> int:
         action="store_true",
         help="Also fetch /api/v1/tics/all",
     )
+    parser.add_argument(
+        "--include-details",
+        action="store_true",
+        help="Also fetch /api/v1/tics/{id}/details when --tics-id is set",
+    )
+    parser.add_argument(
+        "--company-ranking",
+        action="append",
+        choices=sorted(COMPANY_RANKINGS),
+        default=[],
+        help="Also fetch a TICS company ranking; repeat for multiple rankings",
+    )
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
@@ -75,6 +116,8 @@ def main() -> int:
         tics_id=args.tics_id,
         news_size=args.news_size,
         include_all=args.include_all,
+        include_details=args.include_details,
+        company_rankings=args.company_ranking,
     )
     api.emit_output(api.render_json(payload), args.output)
     return 0

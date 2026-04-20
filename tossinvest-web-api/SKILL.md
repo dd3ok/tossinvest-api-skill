@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use when investigating or using TossInvest web internal read-only APIs from tossinvest.com pages, including stock detail, quote/tick data, chart, analytics, investor trading trend, broker trading ranking, filings, themes/TICS, screener counts, financial statements, consensus, dividend, and network-capture based endpoint cataloging.
+description: Use when investigating or using TossInvest web internal read-only APIs from tossinvest.com pages, including stock detail, quote/tick data, chart, analytics, investor trading trend, broker trading ranking, filings, themes/TICS, screener counts, financial statements, consensus, dividend, market indices, dashboard rankings, feed/news discovery, and network-capture based endpoint cataloging.
 ---
 
 # TossInvest Web API
@@ -29,6 +29,9 @@ Use this skill to inspect TossInvest web pages and work with read-only internal 
 - `scripts/financials.py`: Fetches financial statement, estimate, valuation, stability, revenue/net-profit, and operating-income endpoints.
 - `scripts/trading_trend.py`: Fetches investor, program, fixed-window, accumulated, broker-ranking, and credit trend endpoints.
 - `scripts/theme.py`: Fetches theme/TICS rankings and optional related themes, news, and fluctuation data.
+- `scripts/indices.py`: Fetches market index info, price, optional chart, and indicator lists.
+- `scripts/dashboard_ranking.py`: Fetches dashboard overview rankings and domestic investor buy/sell ranking widgets.
+- `scripts/feed.py`: Fetches recommended feed payloads and dashboard news categories.
 - `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`; uses `wts-cert-api`, so keep sensitive-host caution.
 - `scripts/pension_fund_trend.py`: Fetches pension-fund net-buy history from `fixed-trading-trend`; supports `--from/--to`, `--year`, `--all-history`, JSON/CSV output, `--output`, summary metadata, and optional reference gross-buy values from recent `trading-trend` rows.
 
@@ -41,7 +44,10 @@ python3 scripts/filings.py --code A005930 --size 5
 python3 scripts/news.py --code A005930 --size 5
 python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
-python3 scripts/theme.py --tag kr --include-all
+python3 scripts/theme.py --tag kr --tics-id 289 --include-details --company-ranking marketcap
+python3 scripts/indices.py --code KGG01P --include-chart
+python3 scripts/dashboard_ranking.py --kind investors --side sell
+python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr
 python3 scripts/pension_fund_trend.py --code A005930 --year 2026 --summary-only
 ```
@@ -54,6 +60,8 @@ Use prompts like these after installing the skill:
 - `Use $tossinvest-web-api to fetch recent filings and company news for A005930.`
 - `Use $tossinvest-web-api to compare A005930 investor trading trend from 2026-01-01 through 2026-01-31.`
 - `Use $tossinvest-web-api to fetch comprehensive financial statement and valuation data for A005930.`
+- `Use $tossinvest-web-api to fetch KOSPI index price, chart, and index-related news for KGG01P.`
+- `Use $tossinvest-web-api to inspect TossInvest feed/news discovery APIs from /feed/news.`
 - `Use $tossinvest-web-api to inspect TossInvest network calls for undocumented read-only stock-page endpoints.`
 
 Prefer bundled scripts for direct lookups. Re-read [references/safety-rules.md](references/safety-rules.md) before any task involving cookies, account data, HAR files, authenticated APIs, or `wts-cert-api`.

@@ -7,7 +7,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import filings
+import dashboard_ranking
+import feed
 import financials
+import indices
 import news
 import quote
 import screener_count
@@ -62,6 +65,70 @@ class ThemeScriptTests(unittest.TestCase):
         self.assertEqual(
             theme.build_theme_news_path("42", 3),
             "/api/v2/news/tics/42?size=3",
+        )
+
+    def test_build_theme_details_path_uses_tics_id(self):
+        self.assertEqual(
+            theme.build_theme_details_path("289"),
+            "/api/v1/tics/289/details",
+        )
+
+    def test_build_theme_company_ranking_path_maps_marketcap(self):
+        self.assertEqual(
+            theme.build_theme_company_ranking_path("289", "marketcap"),
+            "/api/v1/companies/tics/rankings?ticsId=289&ticsRanking=1",
+        )
+
+
+class IndicesScriptTests(unittest.TestCase):
+    def test_build_index_chart_path_keeps_step_and_encodes_query(self):
+        self.assertEqual(
+            indices.build_index_chart_path("KGG01P", "kr-s", "1d", "min:5", "krx"),
+            "/api/v1/r-chart/kr-s/KGG01P/1d/min:5?session=main&investMode=krx&last=false",
+        )
+
+    def test_build_index_info_path_uses_index_code(self):
+        self.assertEqual(indices.build_index_info_path("KGG01P"), "/api/v2/index-infos/KGG01P")
+
+
+class DashboardRankingScriptTests(unittest.TestCase):
+    def test_build_overview_ranking_body_defaults_filters(self):
+        self.assertEqual(
+            dashboard_ranking.build_overview_ranking_body(
+                "biggest_market_amount", "all", "realtime", None
+            ),
+            {
+                "id": "biggest_market_amount",
+                "tag": "all",
+                "duration": "realtime",
+                "filters": [],
+            },
+        )
+
+    def test_build_investor_rankings_path_includes_size(self):
+        self.assertEqual(
+            dashboard_ranking.build_investor_rankings_path(100),
+            "/api/v1/dashboard/wts/overview/rankings/by-investors?size=100",
+        )
+
+
+class FeedScriptTests(unittest.TestCase):
+    def test_build_feed_path_for_recommended_ranking(self):
+        self.assertEqual(
+            feed.build_feed_path("recommended-ranking", None),
+            "/api/v4/feed/recommend/ranking-posts",
+        )
+
+    def test_build_feed_path_for_subscription_posts(self):
+        self.assertEqual(
+            feed.build_feed_path("subscription", None),
+            "/api/v3/feed/subscription/posts?filterType=COMMENT",
+        )
+
+    def test_build_news_body_requires_index_code_for_index_news(self):
+        self.assertEqual(
+            feed.build_news_body("INDEX", "KGG01P"),
+            {"type": "INDEX", "indexCode": "KGG01P"},
         )
 
 

@@ -2,6 +2,7 @@
 
 Base observation date: 2026-04-16
 Additional bundle/API check: 2026-04-20 against `buildId=SUN83tZwsh5murULLiDPr`
+Additional page check: 2026-04-20 for `/stocks/A005930/order`, home ranking variants, `/indices/KGG01P`, `/feed/recommended`, and `/feed/news`
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
 
@@ -87,6 +88,30 @@ Observed candle keys:
 
 ```text
 dt, base, open, high, low, close, volume, amount
+```
+
+## Index And Market Indicator APIs
+
+Observed from `/indices/KGG01P` and the index/FX dashboard widgets. These are market context APIs rather than single-stock APIs, but they are useful alongside stock lookups.
+
+| Purpose | Method | URL/path | Params and notes |
+|---|---:|---|---|
+| Index info | GET | `/api/v2/index-infos/{indexCode}` | Returned `code`, `name`, `logoImageUrl`, `priceFeedType`, `tradingStartAt`, `tradingEndAt`, `isMarketOpen` for `KGG01P` |
+| Index price | GET | `/api/v1/index-prices/{indexCode}` | Returned `open`, `high`, `low`, `close`, `volume`, `value`, `base`, `tradeTime` |
+| Index/market chart | GET | `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Query: `session=main`, `investMode=krx`, `last=false`; example `kr-s/KGG01P/1d/min:5` |
+| USD/KRW product exchange rate | GET | `/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW` | Observed in index/FX bundle |
+| FX chart | GET | `/api/v1/r-chart/fx/EXCHANGE_RATE/{range}/{step}` | Query includes `last=false`, `useAdjustedRate=true`, `currency=USD` |
+| Overview indicators v3 | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator` | Returned `leftSection`, `rightSection`, `indicators`, `landingUrl`; public-looking but cert host |
+| Overview indicator by type | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/{type}` | Query: `market`; `type=index` returned `majorIndicatorInfos[]` |
+| Exchange rates widget | GET | `/api/v1/dashboard/wts/overview/exchange-rates` | Returned `exchangeRates[]` |
+
+Examples:
+
+```text
+GET https://wts-info-api.tossinvest.com/api/v2/index-infos/KGG01P
+GET https://wts-info-api.tossinvest.com/api/v1/index-prices/KGG01P
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:5?session=main&investMode=krx&last=false
+GET https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator
 ```
 
 ## Analytics APIs
@@ -243,10 +268,48 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Screener modal | GET | `/api/v2/screener/screen/search/modal` | Screener modal data |
 | Theme list | GET | `/api/v1/tics/all` | Observed result includes `baseDateTime`, `ticsItems[]` |
 | Theme ranking by tag | GET | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Observed tags include market-style values such as `kr`/`us`; result contains ranking metadata and rows |
+| Theme details | GET | `/api/v1/tics/{ticsId}/details` | Returned `id`, `title`, `summary`, `description`, `companyCount`, `etfCount`, `stocks[]` |
 | Theme company ranking | GET | `/api/v1/companies/tics/rankings?ticsId={ticsId}&ticsRanking={ranking}` | Ranking data for a theme/category |
 | Related themes | GET | `/api/v1/tics/{ticsId}/related` | Related categories for a theme page |
 | Theme news | GET | `/api/v2/news/tics/{ticsId}` | Query can include `size`; related news for a theme |
 | Theme fluctuations | GET | `/api/v2/tics/{ticsId}/fluctuations` | Theme fluctuation/history data |
+
+Observed `ticsRanking` values:
+
+| Value | Meaning observed in UI |
+|---:|---|
+| `1` | Market capitalization |
+| `3` | Revenue |
+| `4` | Operating margin |
+
+## Feed And News APIs
+
+Observed from `/feed/recommended` and `/feed/news`. These endpoints can be useful as market/news discovery signals, but community feeds are less directly stock-information focused than company news or TICS news.
+
+| Purpose | Method | URL/path | Params/body and notes |
+|---|---:|---|---|
+| Recommended feed posts | GET | `/api/v3/feed/recommend/posts` | Optional `lastRecommendId`; returned `feeds[]` and `key.lastRecommendId` |
+| Recommended ranking feed posts | GET | `/api/v4/feed/recommend/ranking-posts` | Optional `lastRecommendId`; feature-flagged replacement for recommended feed |
+| Subscription feed posts | GET | `/api/v3/feed/subscription/posts` | Query: `filterType=COMMENT`; returned `feeds[]`, `key.actedAt`, `key.lastCommentId`, `key.lastTradeHistoryId` |
+| Feed followings | GET | `https://wts-cert-api.tossinvest.com/api/v2/feed/subscription/followings` | Returned `followings[]`; empty for non-authenticated verification |
+| Dashboard/news tab feed | POST | `/api/v1/dashboard/wts/news` | Body `{ "type": "HOT" }` etc.; result includes `type`, `title`, `news[]` |
+| News detail | GET | `/api/v2/news/{newsId}` | Detail payload for a selected news item |
+
+Observed dashboard news `type` values:
+
+```text
+PERSONALIZED, PERSONALIZE_HOLD, PERSONALIZE_WATCH,
+ALL_HIGHLIGHT, HOT, SOARING_STOCK, INDEX
+```
+
+`INDEX` requires `indexCode`, for example:
+
+```text
+POST https://wts-info-api.tossinvest.com/api/v1/dashboard/wts/news
+Content-Type: application/json
+
+{"type":"INDEX","indexCode":"KGG01P"}
+```
 
 ## Screener APIs
 
@@ -283,6 +346,8 @@ These endpoints were observed during public page loads but live under `wts-cert-
 | Economic calendar | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/calendar/economic-events` |
 | Investor rankings | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` |
 
+The `/stocks/{code}/order` bundle also references order prepare/create/correct/cancel, account, orderable amount, and trading mutation APIs. Exclude them from this skill.
+
 ## WTS Context APIs
 
 Use these to understand page bootstrapping, not as stock data sources.
@@ -317,3 +382,9 @@ POST https://sentry-public.tossinvest.com/api/5/envelope/...
 | `https://www.tossinvest.com/stocks/A005930/analytics` | Analytics, financials, dividends, analyst data |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status` | Broker ranking, investor trend, program trading |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status?contentType=net-buy...` | Same transaction-status APIs; URL query appears to focus a section |
+| `https://www.tossinvest.com/stocks/A005930/order` | Quote/tick, upper/lower bounds, trading status; order mutations excluded |
+| `https://www.tossinvest.com/?ranking-type=trending_category` | TICS rankings and TICS detail modal APIs |
+| `https://www.tossinvest.com/?ranking-type=domestic_investor_trend` | Investor buy/sell rankings from dashboard ranking APIs |
+| `https://www.tossinvest.com/indices/KGG01P` | Index info, price, chart, indicator/news widgets |
+| `https://www.tossinvest.com/feed/recommended` | Recommended community/feed posts |
+| `https://www.tossinvest.com/feed/news` | Dashboard news categories and news detail |
