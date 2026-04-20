@@ -33,7 +33,7 @@ Use this skill to inspect TossInvest web pages and work with read-only internal 
 - `scripts/indices.py`: Fetches market index info, price, optional chart, and indicator lists.
 - `scripts/dashboard_ranking.py`: Fetches dashboard overview rankings, home live-chart top100 rankings, and domestic investor buy/sell ranking widgets.
 - `scripts/feed.py`: Fetches recommended feed payloads and dashboard news categories.
-- `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`, with optional RSI and technical-analysis filter presets plus paged/sorted results; uses `wts-cert-api`, so keep sensitive-host caution.
+- `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`, with optional RSI, price-condition, and technical-analysis filter presets plus paged/sorted results; uses `wts-cert-api`, so keep sensitive-host caution.
 - `scripts/pension_fund_trend.py`: Fetches pension-fund net-buy history from `fixed-trading-trend`; supports `--from/--to`, `--year`, `--all-history`, JSON/CSV output, `--output`, summary metadata, and optional reference gross-buy values from recent `trading-trend` rows.
 
 ## Script Examples
@@ -54,8 +54,11 @@ python3 scripts/dashboard_ranking.py --kind investors --side sell
 python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
+python3 scripts/screener_count.py --nation kr --price-filter new-high-52w-within-20d --include-results --sort market-cap --size 5
+python3 scripts/screener_count.py --nation kr --price-filter price-change-5d-up-5 --technical-filter price-ma-cross-up --include-results --sort volume --size 5
 python3 scripts/screener_count.py --nation kr --technical-filter price-ma-cross-up --include-results --sort market-cap --size 5
 python3 scripts/screener_count.py --nation kr --technical-filter volume-ma-cross-up --technical-filter bollinger-lower-down --include-results --sort volume --page 1 --size 5
+python3 scripts/screener_count.py --nation kr --filters-file examples/filters/new-high-momentum.json --include-results --sort market-cap --size 5
 python3 scripts/pension_fund_trend.py --code A005930 --year 2026 --summary-only
 ```
 
@@ -72,10 +75,13 @@ Use prompts like these after installing the skill:
 - `Use $tossinvest-web-api to fetch domestic and US top100 live-chart rankings by trading amount, volume, surge, and decline.`
 - `Use $tossinvest-web-api to find Korean stocks where TossInvest screener RSI is oversold.`
 - `Use $tossinvest-web-api to find Korean stocks where price crosses above the 20-day moving average.`
+- `Use $tossinvest-web-api to find Korean stocks near a 52-week high with recent price momentum.`
 - `Use $tossinvest-web-api to inspect TossInvest feed/news discovery APIs from /feed/news.`
 - `Use $tossinvest-web-api to inspect TossInvest network calls for undocumented read-only stock-page endpoints.`
 
 Prefer bundled scripts for direct lookups. Re-read [references/safety-rules.md](references/safety-rules.md) before any task involving cookies, account data, HAR files, authenticated APIs, or `wts-cert-api`.
+
+Use [examples/filters](examples/filters) as starting JSON bodies for `--filters-file` when combining multiple screener filters.
 
 ## Hard Rules
 

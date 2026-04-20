@@ -1,0 +1,38 @@
+[
+  {
+    "id": "주가등락률",
+    "conditions": [
+      {
+        "id": "기간_선택_DAY_TO_MONTH",
+        "type": "PERIOD",
+        "value": "DAY_5"
+      },
+      {
+        "id": "NUMBER_RANGE_DEFAULT",
+        "type": "NUMBER_RANGE",
+        "value": {
+          "from": 0.05,
+          "to": null,
+          "includeFrom": true,
+          "includeTo": null
+        }
+      }
+    ]
+  },
+  {
+    "id": "CUSTOM_주가_이동평균선_돌파",
+    "conditions": [
+      {
+        "id": "주가_이동평균선_돌파",
+        "type": "PRICE_MOVING_AVERAGE_CROSS_ARRAY",
+        "value": [
+          {
+            "period": 20,
+            "within": 5,
+            "crossDirection": "upward"
+          }
+        ]
+      }
+    ]
+  }
+]

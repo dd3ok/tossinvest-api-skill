@@ -7,7 +7,7 @@ The current skill focuses on stock information workflows: stock summaries,
 quotes/ticks, filings, news, financial statements, investor trading trends,
 themes/TICS, stock candle charts with local technical-indicator calculation,
 market indices, dashboard rankings, feed/news discovery, screener counts, and
-RSI/technical screener result lookups.
+RSI/price/technical screener result lookups.
 
 ## Install
 
@@ -77,8 +77,11 @@ python3 scripts/dashboard_ranking.py --kind investors --side sell
 python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
+python3 scripts/screener_count.py --nation kr --price-filter new-high-52w-within-20d --include-results --sort market-cap --size 5
+python3 scripts/screener_count.py --nation kr --price-filter price-change-5d-up-5 --technical-filter price-ma-cross-up --include-results --sort volume --size 5
 python3 scripts/screener_count.py --nation kr --technical-filter price-ma-cross-up --include-results --sort market-cap --size 5
 python3 scripts/screener_count.py --nation kr --technical-filter bollinger-lower-down --include-results --page 1 --size 5
+python3 scripts/screener_count.py --nation kr --filters-file examples/filters/price-momentum-and-ma.json --include-results --sort market-cap --size 5
 ```
 
 ## Safety
@@ -94,5 +97,6 @@ This skill is for read-only public-looking web API discovery and lookup.
 - [`tossinvest-web-api/SKILL.md`](tossinvest-web-api/SKILL.md): skill entry point
 - [`tossinvest-web-api/references/api-catalog.md`](tossinvest-web-api/references/api-catalog.md): observed endpoint catalog
 - [`tossinvest-web-api/scripts/`](tossinvest-web-api/scripts): bundled lookup scripts
+- [`tossinvest-web-api/examples/filters/`](tossinvest-web-api/examples/filters): example screener filter JSON files for `--filters-file`
 
 Validation tests are kept local and are intentionally not included in the published skill.

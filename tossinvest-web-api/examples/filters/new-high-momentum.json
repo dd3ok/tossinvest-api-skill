@@ -1,0 +1,30 @@
+[
+  {
+    "id": "CUSTOM_N주_신고가_달성_경과일",
+    "conditions": [
+      {
+        "id": "WEEK_NEW_PRICE_HIT",
+        "type": "WEEK_NEW_PRICE_HIT_WITHIN",
+        "value": {
+          "numberOfWeeks": 52,
+          "within": 20
+        }
+      }
+    ]
+  },
+  {
+    "id": "주가_연속_상승",
+    "conditions": [
+      {
+        "id": "NUMBER_RANGE_DEFAULT",
+        "type": "NUMBER_RANGE",
+        "value": {
+          "from": 5,
+          "to": null,
+          "includeFrom": true,
+          "includeTo": null
+        }
+      }
+    ]
+  }
+]

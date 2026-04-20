@@ -1,0 +1,30 @@
+[
+  {
+    "id": "RSI_범위",
+    "conditions": [
+      {
+        "id": "NUMBER_RANGE_DEFAULT",
+        "type": "NUMBER_RANGE",
+        "value": {
+          "from": null,
+          "to": 30,
+          "includeFrom": null,
+          "includeTo": true
+        }
+      }
+    ]
+  },
+  {
+    "id": "CUSTOM_N주_신저가_달성_경과일",
+    "conditions": [
+      {
+        "id": "WEEK_NEW_PRICE_HIT",
+        "type": "WEEK_NEW_PRICE_HIT_WITHIN",
+        "value": {
+          "numberOfWeeks": 52,
+          "within": 20
+        }
+      }
+    ]
+  }
+]

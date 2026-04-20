@@ -19,6 +19,81 @@ SORT_COLUMNS = {
     "volume": {"column": "C_거래량", "label": "거래량"},
     "analyst-rating": {"column": "C_애널리스트평점", "label": "애널리스트 분석"},
 }
+PRICE_PRESETS = {
+    "price-change-5d-up-5": {
+        "filter_id": "주가등락률",
+        "conditions": [
+            {"id": "기간_선택_DAY_TO_MONTH", "type": "PERIOD", "value": "DAY_5"},
+            {
+                "id": NUMBER_RANGE_CONDITION_ID,
+                "type": "NUMBER_RANGE",
+                "value": {"from": 0.05, "to": None, "includeFrom": True, "includeTo": None},
+            },
+        ],
+    },
+    "price-change-20d-up-10": {
+        "filter_id": "주가등락률",
+        "conditions": [
+            {"id": "기간_선택_DAY_TO_MONTH", "type": "PERIOD", "value": "DAY_20"},
+            {
+                "id": NUMBER_RANGE_CONDITION_ID,
+                "type": "NUMBER_RANGE",
+                "value": {"from": 0.10, "to": None, "includeFrom": True, "includeTo": None},
+            },
+        ],
+    },
+    "price-change-5d-down-5": {
+        "filter_id": "주가등락률",
+        "conditions": [
+            {"id": "기간_선택_DAY_TO_MONTH", "type": "PERIOD", "value": "DAY_5"},
+            {
+                "id": NUMBER_RANGE_CONDITION_ID,
+                "type": "NUMBER_RANGE",
+                "value": {"from": None, "to": -0.05, "includeFrom": None, "includeTo": True},
+            },
+        ],
+    },
+    "consecutive-rise-5": {
+        "filter_id": "주가_연속_상승",
+        "conditions": [
+            {
+                "id": NUMBER_RANGE_CONDITION_ID,
+                "type": "NUMBER_RANGE",
+                "value": {"from": 5, "to": None, "includeFrom": True, "includeTo": None},
+            }
+        ],
+    },
+    "consecutive-fall-5": {
+        "filter_id": "주가_연속_하락",
+        "conditions": [
+            {
+                "id": NUMBER_RANGE_CONDITION_ID,
+                "type": "NUMBER_RANGE",
+                "value": {"from": 5, "to": None, "includeFrom": True, "includeTo": None},
+            }
+        ],
+    },
+    "new-high-52w-within-20d": {
+        "filter_id": "CUSTOM_N주_신고가_달성_경과일",
+        "conditions": [
+            {
+                "id": "WEEK_NEW_PRICE_HIT",
+                "type": "WEEK_NEW_PRICE_HIT_WITHIN",
+                "value": {"numberOfWeeks": 52, "within": 20},
+            }
+        ],
+    },
+    "new-low-52w-within-20d": {
+        "filter_id": "CUSTOM_N주_신저가_달성_경과일",
+        "conditions": [
+            {
+                "id": "WEEK_NEW_PRICE_HIT",
+                "type": "WEEK_NEW_PRICE_HIT_WITHIN",
+                "value": {"numberOfWeeks": 52, "within": 20},
+            }
+        ],
+    },
+}
 TECHNICAL_PRESETS = {
     "price-ma-cross-up": {
         "filter_id": "CUSTOM_주가_이동평균선_돌파",
@@ -156,6 +231,15 @@ def build_technical_filter(preset: str) -> dict[str, Any]:
     }
 
 
+def build_price_filter(preset: str) -> dict[str, Any]:
+    try:
+        config = PRICE_PRESETS[preset.strip().lower()]
+    except KeyError as exc:
+        choices = ", ".join(sorted(PRICE_PRESETS))
+        raise ValueError(f"price preset must be one of: {choices}") from exc
+    return {"id": config["filter_id"], "conditions": config["conditions"]}
+
+
 def build_sort(sort_key: str, order: str = "desc") -> dict[str, Any]:
     try:
         column = SORT_COLUMNS[sort_key.strip().lower()]
@@ -259,6 +343,12 @@ def main() -> int:
         help="Add a built-in technical screener filter preset; can be repeated",
     )
     parser.add_argument(
+        "--price-filter",
+        action="append",
+        choices=sorted(PRICE_PRESETS),
+        help="Add a built-in price-condition screener filter preset; can be repeated",
+    )
+    parser.add_argument(
         "--sort",
         choices=sorted(SORT_COLUMNS),
         help="Sort result rows by an observed sortable column",
@@ -277,6 +367,8 @@ def main() -> int:
     filters = load_filters(args.filters_file)
     if args.rsi:
         filters.append(build_rsi_filter(args.rsi))
+    for preset in args.price_filter or []:
+        filters.append(build_price_filter(preset))
     for preset in args.technical_filter or []:
         filters.append(build_technical_filter(preset))
     payload = fetch_screener_count(args.nation, filters)

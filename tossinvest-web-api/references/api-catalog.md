@@ -372,6 +372,34 @@ The checked sortable columns were `C_시가총액` / `시가총액`, `C_거래�
 `거래량`, and `C_애널리스트평점` / `애널리스트 분석`. Other sort columns should be
 captured from current browser traffic before use.
 
+Observed price-condition screener filter IDs:
+
+| Preset area | Filter id | Condition ids | Types | Verified default value |
+|---|---|---|---|---|
+| Price change | `주가등락률` | `기간_선택_DAY_TO_MONTH`, `NUMBER_RANGE_DEFAULT` | `PERIOD`, `NUMBER_RANGE` | `DAY_5` + `from=0.05`, `DAY_20` + `from=0.10`, or `DAY_5` + `to=-0.05` |
+| Consecutive rise | `주가_연속_상승` | `NUMBER_RANGE_DEFAULT` | `NUMBER_RANGE` | `from=5`, `includeFrom=true` |
+| Consecutive fall | `주가_연속_하락` | `NUMBER_RANGE_DEFAULT` | `NUMBER_RANGE` | `from=5`, `includeFrom=true` |
+| 52-week high | `CUSTOM_N주_신고가_달성_경과일` | `WEEK_NEW_PRICE_HIT` | `WEEK_NEW_PRICE_HIT_WITHIN` | `numberOfWeeks=52`, `within=20` |
+| 52-week low | `CUSTOM_N주_신저가_달성_경과일` | `WEEK_NEW_PRICE_HIT` | `WEEK_NEW_PRICE_HIT_WITHIN` | `numberOfWeeks=52`, `within=20` |
+
+Example 52-week high filter:
+
+```text
+{
+  "id": "CUSTOM_N주_신고가_달성_경과일",
+  "conditions": [
+    {
+      "id": "WEEK_NEW_PRICE_HIT",
+      "type": "WEEK_NEW_PRICE_HIT_WITHIN",
+      "value": {
+        "numberOfWeeks": 52,
+        "within": 20
+      }
+    }
+  ]
+}
+```
+
 Observed technical-analysis screener filter IDs:
 
 | Preset area | Filter id | Condition id | Type | Verified default value |
@@ -441,7 +469,7 @@ Most screener endpoints currently live under `wts-cert-api`. They can return pub
 | Common screener presets | GET | `https://wts-cert-api.tossinvest.com/api/v2/screener/presets/common?useCustom=true` | Returned preset definitions in verification |
 | Screener base filters | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | Body depends on selected filters; returns `basedAt` in observed bundle |
 | Screener range filters | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | Body depends on selected filters |
-| Screener result count | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body shape `{ "filters": [], "nation": "kr" }` or `"us"` returned counts in verification; RSI and selected technical filters accepted `conditions[]` |
+| Screener result count | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body shape `{ "filters": [], "nation": "kr" }` or `"us"` returned counts in verification; RSI, selected price, and selected technical filters accepted `conditions[]` |
 | Screener results | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body includes `pagingParam`, `filters`, `sort`, and `nation`; `pagingParam.number/size` and selected sortable columns worked in verification |
 
 Examples:

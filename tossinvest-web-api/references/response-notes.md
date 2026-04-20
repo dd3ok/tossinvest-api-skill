@@ -52,7 +52,7 @@ they calculate from candle `close` prices and annotate the output with
 | `/api/v1/tics/all` | Object: `baseDateTime`, `ticsItems[]` |
 | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Object: ranking metadata such as `rankingId`, `info`, `type`, and ranking rows |
 | `/api/v2/news/tics/{ticsId}` | Object: `pagingParam`, `body[]`, `lastPage` |
-| `wts-cert-api /api/v1/screener/screen/count` | Number count for body `{ "filters": [], "nation": "kr" }` or `"us"`; also accepted `RSI_범위` and selected technical-analysis `conditions[]` filters in verification |
+| `wts-cert-api /api/v1/screener/screen/count` | Number count for body `{ "filters": [], "nation": "kr" }` or `"us"`; also accepted `RSI_범위`, selected price-condition filters, and selected technical-analysis `conditions[]` filters in verification |
 | `wts-cert-api /api/v2/screener/screen` | Object: `totalCount`, `page`, `lastPage`, `stocks[]`, `columns[]`; body requires `pagingParam.size` in addition to `filters[]` and `nation`; `pagingParam.number` worked for page selection; observed `sort` shape uses `column`, `label`, `order` |
 
 The checked RSI screen uses filter id `RSI_범위` with condition id
@@ -70,6 +70,11 @@ For sorting, guessed shapes such as `{id, order}` returned HTTP 400. A Playwrigh
 capture of the screener page showed the working shape
 `{"column":"C_시가총액","label":"시가총액","order":"DESC"}`. Direct checks accepted
 that shape for market capitalization, volume, and analyst-rating columns.
+
+Direct checks on 2026-04-20 also accepted price-condition filters for 5-day
+price change up/down, 20-day price change up, 5-day consecutive rise/fall,
+52-week high within 20 days, and 52-week low within 20 days. These use the same
+`conditions[]` wrapper as the technical presets.
 
 ## Financial POST Shapes
 
