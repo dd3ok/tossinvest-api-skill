@@ -1,0 +1,4 @@
+interface:
+  display_name: "TossInvest Web API"
+  short_description: "Inspect TossInvest read-only web APIs"
+  default_prompt: "Use $tossinvest-web-api to inspect TossInvest stock detail, analytics, chart, and transaction-status API calls safely."
