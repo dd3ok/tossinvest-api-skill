@@ -74,7 +74,8 @@ python3 scripts/theme.py --tag kr --tics-id 289 --include-details --company-rank
 python3 scripts/indices.py --code KGG01P --include-chart --include-fx-chart --include-exchange-rates --format json
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type bond
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type commodity
-python3 scripts/indices.py --code RFU.GCv1
+python3 scripts/indices.py --code RFU.GCv1 --include-chart
+python3 scripts/indices.py --code KR1BENCH0010 --include-chart
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart heavy_soar --market us --duration 1d
 python3 scripts/dashboard_ranking.py --kind investors --side sell
@@ -110,6 +111,15 @@ This skill is for read-only public-looking web API discovery and lookup.
 Validation tests are kept local and are intentionally not included in the published skill.
 
 ## Changelog
+
+### v0.1.10
+
+- Confirmed public TossInvest index pages call read-only `r-chart` endpoints for
+  commodity and bond indicator pages without cookies, session files, or raw HAR
+  storage.
+- Added automatic `r-chart` securities-type inference for dotted overseas or
+  commodity indicator codes, so `--code RFU.GCv1 --include-chart` works without
+  manually passing `--securities-type us-s`.
 
 ### v0.1.9
 

@@ -36,7 +36,8 @@ Use $tossinvest-web-api to fetch KOSPI index price, chart, USD/KRW FX chart, exc
 Expected behavior:
 - Uses `scripts/indices.py`.
 - Fetches index chart with `--include-chart`, FX chart with `--include-fx-chart`, exchange-rate widget with `--include-exchange-rates`, and market indicators with `--include-indicators --indicator-type bond` / `commodity` as separate calls if needed.
-- Preserves case-sensitive dotted indicator codes when fetching a selected commodity or bond code, for example `scripts/indices.py --code RFU.GCv1`.
+- Preserves case-sensitive dotted indicator codes when fetching a selected commodity or bond code, for example `scripts/indices.py --code RFU.GCv1 --include-chart`.
+- Uses the default `--securities-type auto` behavior unless a current capture shows a more specific value is needed.
 - Notes that bond/commodity indicator endpoints live on `wts-cert-api` and should be treated as public-looking metadata only.
 
 ```text

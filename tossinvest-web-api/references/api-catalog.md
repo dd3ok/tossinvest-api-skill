@@ -123,6 +123,8 @@ Examples:
 GET https://wts-info-api.tossinvest.com/api/v2/index-infos/KGG01P
 GET https://wts-info-api.tossinvest.com/api/v1/index-prices/KGG01P
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:5?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/us-s/RFU.GCv1/1d/min:5?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KR1BENCH0010/1d/min:5?session=main&investMode=krx&last=false
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/fx/EXCHANGE_RATE/1d/min:5?last=false&useAdjustedRate=true&currency=USD
 GET https://wts-info-api.tossinvest.com/api/v1/dashboard/wts/overview/exchange-rates
 GET https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator
@@ -140,14 +142,17 @@ exchange-rates widget for FX lists. `scripts/indices.py --include-fx-chart`
 fetches the FX r-chart, and `scripts/indices.py --include-exchange-rates`
 fetches the exchange-rates widget.
 
-Additional direct checks on 2026-04-20 showed that bond and commodity indicator
-codes such as `KR1BENCH0010`, `ROB.US10YT-RR`, `RFU.GCv1`, and `RFU.CLv1` are
-accepted by the same index info and price endpoints. Dotted codes can be
-case-sensitive, so preserve the code exactly as returned by the indicator
-payload. `scripts/indices.py --code RFU.GCv1` fetches gold info/price. The
-generic `r-chart/{securitiesType}/{code}` path returned 400 for checked
-bond/commodity securities-type guesses, so do not assume candle charts exist for
-those indicator codes without a fresh capture.
+Additional Playwright checks on 2026-04-20 used a browser context with no stored
+cookies or session state and no HAR capture. They showed that bond and commodity
+indicator codes such as `KR1BENCH0010`, `ROB.US10YT-RR`, `RFU.GCv1`, and
+`RFU.CLv1` are accepted by the same index info and price endpoints. Dotted codes
+can be case-sensitive, so preserve the code exactly as returned by the indicator
+payload. The browser also called chart endpoints for checked indicator pages:
+`RFU.GCv1` used `r-chart/us-s/RFU.GCv1/1d/min:5`, and `KR1BENCH0010` used
+`r-chart/kr-s/KR1BENCH0010/3m/day:1`; direct checks also returned candles for
+`KR1BENCH0010/1d/min:5` and `ROB.US10YT-RR` under `us-s`. `scripts/indices.py`
+uses `--securities-type auto` by default: dotted indicator codes infer `us-s`,
+and other codes infer `kr-s`.
 
 ## Analytics APIs
 

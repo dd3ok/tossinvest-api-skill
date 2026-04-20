@@ -19,6 +19,15 @@ def normalize_index_code(code: str) -> str:
     return value.upper()
 
 
+def infer_securities_type(code: str, securities_type: str) -> str:
+    normalized = securities_type.strip().lower()
+    if normalized != "auto":
+        return normalized
+    if "." in normalize_index_code(code):
+        return "us-s"
+    return "kr-s"
+
+
 def build_index_info_path(code: str) -> str:
     return f"/api/v2/index-infos/{normalize_index_code(code)}"
 
@@ -34,8 +43,12 @@ def build_index_chart_path(
     step: str,
     invest_mode: str,
 ) -> str:
+    resolved_securities_type = infer_securities_type(code, securities_type)
     return api.build_path(
-        f"/api/v1/r-chart/{securities_type}/{normalize_index_code(code)}/{chart_range}/{step}",
+        (
+            f"/api/v1/r-chart/{resolved_securities_type}/"
+            f"{normalize_index_code(code)}/{chart_range}/{step}"
+        ),
         {"session": "main", "investMode": invest_mode, "last": False},
     )
 
@@ -113,8 +126,8 @@ def main() -> int:
     parser.add_argument("--code", default="KGG01P", help="TossInvest index code")
     parser.add_argument(
         "--securities-type",
-        default="kr-s",
-        help="Observed r-chart securitiesType, e.g. kr-s or us-s",
+        default="auto",
+        help="Observed r-chart securitiesType, e.g. auto, kr-s, or us-s",
     )
     parser.add_argument("--range", dest="chart_range", default="1d")
     parser.add_argument("--step", default="min:5")
