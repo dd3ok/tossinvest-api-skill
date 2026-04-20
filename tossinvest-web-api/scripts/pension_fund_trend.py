@@ -12,35 +12,19 @@ import csv
 import io
 import json
 import urllib.parse
-import urllib.request
 from datetime import date
 from pathlib import Path
 
+import tossinvest_api as api
 
-BASE_URL = "https://wts-info-api.tossinvest.com"
 DEFAULT_HISTORY_START = "2019-04-01"
-
-
-def request_json(path: str) -> dict:
-    req = urllib.request.Request(
-        BASE_URL + path,
-        headers={
-            "Accept": "application/json, text/plain, */*",
-            "Origin": "https://www.tossinvest.com",
-            "Referer": "https://www.tossinvest.com/",
-            "User-Agent": "Mozilla/5.0 tossinvest-web-api-skill/1.0",
-        },
-        method="GET",
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
 
 
 def fixed_trend(product_code: str, start: str, end: str) -> list[dict]:
     query = urllib.parse.urlencode(
         {"productCode": product_code, "from": start, "to": end}
     )
-    payload = request_json(
+    payload = api.request_json(
         f"/api/v1/stock-infos/trade/trend/fixed-trading-trend?{query}"
     )
     result = payload.get("result")
@@ -84,7 +68,7 @@ def fetch_history(
 
 def recent_gross_buy(product_code: str, size: int) -> dict[str, int | None]:
     query = urllib.parse.urlencode({"productCode": product_code, "size": size})
-    payload = request_json(
+    payload = api.request_json(
         f"/api/v1/stock-infos/trade/trend/trading-trend?{query}"
     )
     result = payload.get("result")

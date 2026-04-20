@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+"""Fetch read-only TossInvest theme/TICS discovery data."""
+
+from __future__ import annotations
+
+import argparse
+from typing import Any
+
+import tossinvest_api as api
+
+
+def build_theme_ranking_path(tag: str) -> str:
+    return f"/api/v1/rankings/contents/tics_margin_depth1/tags/{tag.strip().lower()}"
+
+
+def build_theme_news_path(tics_id: str, size: int) -> str:
+    return api.build_path(f"/api/v2/news/tics/{tics_id}", {"size": size})
+
+
+def build_related_path(tics_id: str) -> str:
+    return f"/api/v1/tics/{tics_id}/related"
+
+
+def build_fluctuations_path(tics_id: str) -> str:
+    return f"/api/v2/tics/{tics_id}/fluctuations"
+
+
+def fetch_theme_payload(
+    *,
+    tag: str,
+    tics_id: str | None,
+    news_size: int,
+    include_all: bool,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "tag": tag.strip().lower(),
+        "ranking": api.get_result(build_theme_ranking_path(tag)),
+    }
+    if include_all:
+        payload["allThemes"] = api.get_result("/api/v1/tics/all")
+    if tics_id is not None:
+        payload["ticsId"] = tics_id
+        payload["related"] = api.get_result(build_related_path(tics_id))
+        payload["news"] = api.get_result(build_theme_news_path(tics_id, news_size))
+        payload["fluctuations"] = api.get_result(build_fluctuations_path(tics_id))
+    return payload
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Fetch TossInvest theme/TICS rankings and optional theme details."
+    )
+    parser.add_argument(
+        "--tag",
+        default="kr",
+        help="Theme ranking tag observed in TossInvest, commonly kr or us",
+    )
+    parser.add_argument("--tics-id", help="Also fetch details for this TICS id")
+    parser.add_argument(
+        "--news-size",
+        type=int,
+        default=5,
+        help="Number of theme news items to request when --tics-id is set",
+    )
+    parser.add_argument(
+        "--include-all",
+        action="store_true",
+        help="Also fetch /api/v1/tics/all",
+    )
+    parser.add_argument("--output", help="Write JSON output to a file")
+    args = parser.parse_args()
+
+    payload = fetch_theme_payload(
+        tag=args.tag,
+        tics_id=args.tics_id,
+        news_size=args.news_size,
+        include_all=args.include_all,
+    )
+    api.emit_output(api.render_json(payload), args.output)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

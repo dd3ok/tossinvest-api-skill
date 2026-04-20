@@ -11,6 +11,8 @@ Most checked endpoints returned JSON with a top-level `result` key. Do not assum
 | `/api/v2/stock-infos/{productCode}` | Object: `code`, `guid`, `symbol`, `isinCode`, `status`, `name`, `englishName`, `market`, `companyCode`, `companyName` |
 | `/api/v2/stock-infos/code-or-symbol/{productCode}` | Same shape as `/api/v2/stock-infos/{productCode}` |
 | `/api/v3/stock-prices/details?productCodes={codes}` | List: `code`, `exchange`, `tradeDateTime`, `open`, `high`, `low`, `close`, `volume`, `value`, `base`, `changeType`, `currency` |
+| `/api/v3/stock-prices/{productCode}/quotes` | Object: `close`, quote price/volume ladder fields such as `offerPrices`, `offerVolumes`, `bidPrices`, `bidVolumes` |
+| `/api/v2/stock-prices/{productCode}/ticks` | List: intraday rows with `time`, `code`, `price`, `base`, `volume`, `tradeType`, `cumulativeVolume` |
 | `/api/v2/stock-prices/{productCode}/upper-lower` | Object: `date`, `upperLimit`, `lowerLimit` |
 | `/api/v1/c-chart/kr-s/{productCode}/day:1` | Object: `code`, `nextDateTime`, `exchangeRate`, `exchange`, `candles[]`; candle entries include OHLCV and amount fields |
 
@@ -26,6 +28,22 @@ Most checked endpoints returned JSON with a top-level `result` key. Do not assum
 | `/api/v1/stock-detail/ui/wts/{productCode}/analyst-reports` | Object: `analystReportGroups[]` |
 | `/api/v1/stock-detail/ui/wts/{productCode}/investment-indicators` | Object: `indicatorSections[]` |
 | `/api/v1/stock-infos/dividend/{productCode}/summary` | List: `exDate`, `paymentDate`, `currency`, `ratio`, `cash`, `cashKrw`, `yieldRatio`, `ttmYieldRatio` |
+
+## Filings And News Shapes
+
+| Endpoint | Observed `result` shape |
+|---|---|
+| `/api/v1/stock-detail/companies/{companyCode}/filings` | Object: `pagingParam`, `body[]`, `lastPage` |
+| `/api/v2/news/companies/{companyCode}` | Object: `pagingParam`, `body[]`, `lastPage` |
+
+## Discovery And Screener Shapes
+
+| Endpoint | Observed `result` shape |
+|---|---|
+| `/api/v1/tics/all` | Object: `baseDateTime`, `ticsItems[]` |
+| `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Object: ranking metadata such as `rankingId`, `info`, `type`, and ranking rows |
+| `/api/v2/news/tics/{ticsId}` | Object: `pagingParam`, `body[]`, `lastPage` |
+| `wts-cert-api /api/v1/screener/screen/count` | Number count for body `{ "filters": [], "nation": "kr" }` or `"us"` |
 
 ## Financial POST Shapes
 
