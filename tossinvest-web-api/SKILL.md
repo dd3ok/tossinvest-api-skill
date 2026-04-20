@@ -46,6 +46,18 @@ python3 scripts/screener_count.py --nation kr
 python3 scripts/pension_fund_trend.py --code A005930 --year 2026 --summary-only
 ```
 
+## Usage Prompts
+
+Use prompts like these after installing the skill:
+
+- `Use $tossinvest-web-api to get a compact stock summary and current quote for A005930.`
+- `Use $tossinvest-web-api to fetch recent filings and company news for A005930.`
+- `Use $tossinvest-web-api to compare A005930 investor trading trend from 2026-01-01 through 2026-01-31.`
+- `Use $tossinvest-web-api to fetch comprehensive financial statement and valuation data for A005930.`
+- `Use $tossinvest-web-api to inspect TossInvest network calls for undocumented read-only stock-page endpoints.`
+
+Prefer bundled scripts for direct lookups. Re-read [references/safety-rules.md](references/safety-rules.md) before any task involving cookies, account data, HAR files, authenticated APIs, or `wts-cert-api`.
+
 ## Hard Rules
 
 - Never use, install, or run `tossctl`.
