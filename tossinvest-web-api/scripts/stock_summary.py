@@ -59,6 +59,7 @@ def main() -> int:
         action="store_true",
         help="Skip /overview request and return only info plus price",
     )
+    api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 

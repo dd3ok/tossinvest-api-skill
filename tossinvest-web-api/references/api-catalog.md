@@ -114,7 +114,7 @@ Observed from `/indices/KGG01P` and the index/FX dashboard widgets. These are ma
 | USD/KRW product exchange rate | GET | `/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW` | Observed in index/FX bundle |
 | FX chart | GET | `/api/v1/r-chart/fx/EXCHANGE_RATE/{range}/{step}` | Query includes `last=false`, `useAdjustedRate=true`, `currency=USD` |
 | Overview indicators v3 | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator` | Returned `leftSection`, `rightSection`, `indicators`, `landingUrl`; public-looking but cert host |
-| Overview indicator by type | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/{type}` | Query: `market`; `type=index` returned `majorIndicatorInfos[]` |
+| Overview indicator by type | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/{type}` | Query: `market`; observed `type` values include `index`, `bond`, and `commodity`, each returning `majorIndicatorInfos[]` |
 | Exchange rates widget | GET | `/api/v1/dashboard/wts/overview/exchange-rates` | Returned `exchangeRates[]` |
 
 Examples:
@@ -123,8 +123,17 @@ Examples:
 GET https://wts-info-api.tossinvest.com/api/v2/index-infos/KGG01P
 GET https://wts-info-api.tossinvest.com/api/v1/index-prices/KGG01P
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:5?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/dashboard/wts/overview/exchange-rates
 GET https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator
+GET https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/bond?market=kr
+GET https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/commodity?market=kr
 ```
+
+Direct checks on 2026-04-20 returned public-looking bond indicators such as
+Korean and US Treasury yields, and commodity indicators such as gold, silver,
+WTI, natural gas, copper, and wheat. `exchange-rate`/`exchange` were not accepted
+as indicator types in direct checks; use the separate exchange-rates widget for
+FX lists. `scripts/indices.py --include-exchange-rates` fetches that widget.
 
 ## Analytics APIs
 

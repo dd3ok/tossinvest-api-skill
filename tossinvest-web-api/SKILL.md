@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use when a user asks to inspect, catalog, or call unofficial read-only TossInvest/토스증권 web internal APIs for stock prices, quotes, charts, financials, rankings, screeners, news, filings, themes, indices, investor trends, or tossinvest.com network traffic.
+description: Use when a user asks to inspect, catalog, or call unofficial read-only TossInvest/토스증권 web internal APIs/내부 API for stock information/주식 정보, prices, quotes, charts, financials, rankings, screeners, news, filings, themes, indices, investor trends, or tossinvest.com network calls/네트워크 호출.
 ---
 
 # TossInvest Web API
@@ -28,7 +28,7 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 | Financial statements, estimates, valuation, dividend | `scripts/financials.py` | [references/response-notes.md](references/response-notes.md) |
 | Investor trading trend, broker ranking, pension fund | `scripts/trading_trend.py`, `scripts/pension_fund_trend.py` | [references/response-notes.md](references/response-notes.md) |
 | Theme, TICS, related-theme ranking | `scripts/theme.py` | [references/api-catalog.md](references/api-catalog.md) |
-| Market indices, exchange-rate pages, bonds, commodities | `scripts/indices.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Market indices, exchange-rate widgets, bond indicators, commodity indicators | `scripts/indices.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Home rankings, top100 by amount/volume/surge/decline | `scripts/dashboard_ranking.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Recommended feed and news discovery | `scripts/feed.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Screener counts, RSI filters, price/technical presets | `scripts/screener_count.py` | [examples/filters](examples/filters) |
@@ -56,7 +56,7 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 - `scripts/financials.py`: Fetches financial statement, estimate, valuation, stability, revenue/net-profit, and operating-income endpoints.
 - `scripts/trading_trend.py`: Fetches investor, program, fixed-window, accumulated, broker-ranking, and credit trend endpoints.
 - `scripts/theme.py`: Fetches theme/TICS rankings and optional related themes, news, and fluctuation data.
-- `scripts/indices.py`: Fetches market index info, price, optional chart, and indicator lists.
+- `scripts/indices.py`: Fetches market index info, price, optional chart, exchange-rate widgets, and index/bond/commodity indicator lists.
 - `scripts/dashboard_ranking.py`: Fetches dashboard overview rankings, home live-chart top100 rankings, and domestic investor buy/sell ranking widgets.
 - `scripts/feed.py`: Fetches recommended feed payloads and dashboard news categories.
 - `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`, with optional RSI, price-condition, and technical-analysis filter presets plus paged/sorted results; uses `wts-cert-api`, so keep sensitive-host caution.
@@ -73,7 +73,9 @@ python3 scripts/news.py --code A005930 --size 5
 python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
 python3 scripts/theme.py --tag kr --tics-id 289 --include-details --company-ranking marketcap
-python3 scripts/indices.py --code KGG01P --include-chart
+python3 scripts/indices.py --code KGG01P --include-chart --include-exchange-rates --format json
+python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type bond
+python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type commodity
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart heavy_soar --market us --duration 1d
 python3 scripts/dashboard_ranking.py --kind investors --side sell

@@ -6,6 +6,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import argparse
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -91,6 +92,15 @@ def find_by_code(rows: list[dict[str, Any]], code: str) -> dict[str, Any] | None
 
 def render_json(payload: Any) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
+
+
+def add_json_format_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--format",
+        choices=["json"],
+        default="json",
+        help="Output format; only json is supported",
+    )
 
 
 def render_csv(rows: list[dict[str, Any]]) -> str:

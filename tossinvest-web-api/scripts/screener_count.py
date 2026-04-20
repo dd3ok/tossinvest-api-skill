@@ -361,6 +361,7 @@ def main() -> int:
     )
     parser.add_argument("--page", type=int, default=1, help="Result page number when used")
     parser.add_argument("--size", type=int, default=20, help="Result page size when used")
+    api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 

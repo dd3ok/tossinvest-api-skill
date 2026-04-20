@@ -137,6 +137,7 @@ def main() -> int:
     parser.add_argument("--filter", dest="filters", action="append")
     parser.add_argument("--investor-size", type=int, default=100)
     parser.add_argument("--side", choices=["buy", "sell"], default="buy")
+    api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 

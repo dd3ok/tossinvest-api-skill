@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch stock candle chart data and optional local RSI from TossInvest APIs."""
+"""Fetch stock candle chart data and optional local indicators from TossInvest APIs."""
 
 from __future__ import annotations
 
@@ -218,7 +218,10 @@ def fetch_chart(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Fetch TossInvest c-chart candles and optionally add local RSI."
+        description=(
+            "Fetch TossInvest c-chart candles and optionally add local RSI, "
+            "SMA, EMA, MACD, and Bollinger Bands."
+        )
     )
     parser.add_argument("--code", default="A005930", help="TossInvest product code")
     parser.add_argument(
@@ -288,6 +291,7 @@ def main() -> int:
     parser.add_argument("--macd-fast", type=int, default=12, help="MACD fast EMA period")
     parser.add_argument("--macd-slow", type=int, default=26, help="MACD slow EMA period")
     parser.add_argument("--macd-signal", type=int, default=9, help="MACD signal EMA period")
+    api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 

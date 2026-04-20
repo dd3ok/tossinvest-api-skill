@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch read-only TossInvest index, bond, commodity, and FX dashboard data."""
+"""Fetch read-only TossInvest index and market-indicator dashboard data."""
 
 from __future__ import annotations
 
@@ -40,6 +40,10 @@ def build_indicator_path(indicator_type: str, market: str | None) -> str:
     )
 
 
+def build_exchange_rates_path() -> str:
+    return "/api/v1/dashboard/wts/overview/exchange-rates"
+
+
 def fetch_index_payload(
     *,
     code: str,
@@ -49,6 +53,7 @@ def fetch_index_payload(
     invest_mode: str,
     include_chart: bool,
     include_indicators: bool,
+    include_exchange_rates: bool,
     indicator_type: str,
     market: str | None,
 ) -> dict[str, Any]:
@@ -66,6 +71,8 @@ def fetch_index_payload(
             build_indicator_path(indicator_type, market),
             base_url=CERT_BASE_URL,
         )
+    if include_exchange_rates:
+        payload["exchangeRates"] = api.get_result(build_exchange_rates_path())
     return payload
 
 
@@ -84,8 +91,18 @@ def main() -> int:
     parser.add_argument("--invest-mode", default="krx")
     parser.add_argument("--include-chart", action="store_true")
     parser.add_argument("--include-indicators", action="store_true")
-    parser.add_argument("--indicator-type", default="index")
-    parser.add_argument("--market", default="kr")
+    parser.add_argument(
+        "--include-exchange-rates",
+        action="store_true",
+        help="Also fetch the public-looking dashboard exchange-rates widget",
+    )
+    parser.add_argument(
+        "--indicator-type",
+        default="index",
+        help="Observed dashboard indicator type, e.g. index, bond, or commodity",
+    )
+    parser.add_argument("--market", default="kr", help="Indicator market query value")
+    api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
@@ -97,6 +114,7 @@ def main() -> int:
         invest_mode=args.invest_mode,
         include_chart=args.include_chart,
         include_indicators=args.include_indicators,
+        include_exchange_rates=args.include_exchange_rates,
         indicator_type=args.indicator_type,
         market=args.market,
     )

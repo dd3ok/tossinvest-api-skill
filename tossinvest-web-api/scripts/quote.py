@@ -81,6 +81,7 @@ def main() -> int:
         metavar="COUNT",
         help="Also fetch this many intraday tick rows",
     )
+    api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
