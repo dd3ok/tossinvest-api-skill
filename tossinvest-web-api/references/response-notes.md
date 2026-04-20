@@ -35,6 +35,7 @@ Most checked endpoints returned JSON with a top-level `result` key. Do not assum
 |---|---|
 | `/api/v1/stock-detail/companies/{companyCode}/filings` | Object: `pagingParam`, `body[]`, `lastPage` |
 | `/api/v2/news/companies/{companyCode}` | Object: `pagingParam`, `body[]`, `lastPage` |
+| `/api/v2/news/{newsId}` | News detail object; verify exact keys per current response before transforming |
 
 ## Discovery And Screener Shapes
 
@@ -85,6 +86,9 @@ Observed result keys:
 | `/api/v1/stock-infos/trade/trend/trading-trend` | Object: `pagingParam`, `body[]`, `lastPage`; body entries include investor buy/sell/net volume fields |
 | `/api/v1/stock-infos/trade/trend/program-trading` | Object: `pagingParam`, `body[]`, `lastPage`; body entries include arbitrage, non-arbitrage, and total buy/sell/net quantities |
 | `/api/v1/stock-infos/trade/trend/fixed-trading-trend` | List: date-bounded investor buy/sell/net volume rows |
+| `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend` | List: date-bounded accumulated net investor-volume rows |
+| `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend/detail` | Object: accumulated net investor-volume fields by detail category |
+| `/api/v1/mds/info/credit` | Object: `pagingParam`, `body[]`, `lastPage`; verify each `/mds/info/{type}` variant separately |
 
 ## Pension-Fund Trend Notes
 

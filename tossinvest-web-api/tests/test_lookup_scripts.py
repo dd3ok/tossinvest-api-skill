@@ -7,10 +7,13 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import filings
+import financials
+import news
 import quote
 import screener_count
 import stock_summary
 import theme
+import trading_trend
 
 
 class QuoteScriptTests(unittest.TestCase):
@@ -67,6 +70,44 @@ class ScreenerCountScriptTests(unittest.TestCase):
         self.assertEqual(
             screener_count.build_count_body("KR"),
             {"filters": [], "nation": "kr"},
+        )
+
+
+class NewsScriptTests(unittest.TestCase):
+    def test_build_company_news_path_uses_company_code(self):
+        self.assertEqual(
+            news.build_company_news_path("A005930", 3),
+            "/api/v2/news/companies/005930?size=3",
+        )
+
+
+class FinancialsScriptTests(unittest.TestCase):
+    def test_build_financial_path_selects_company_endpoint(self):
+        self.assertEqual(
+            financials.build_financial_path("005930", "comprehensive"),
+            "/api/v2/companies/A005930/financial-statements/comprehensive",
+        )
+
+    def test_build_financial_path_selects_stock_info_endpoint(self):
+        self.assertEqual(
+            financials.build_financial_path("A005930", "valuation"),
+            "/api/v2/stock-infos/evaluation/A005930",
+        )
+
+
+class TradingTrendScriptTests(unittest.TestCase):
+    def test_build_trend_path_for_recent_investor_trend(self):
+        self.assertEqual(
+            trading_trend.build_trend_path("005930", "investor", 20, None, None),
+            "/api/v1/stock-infos/trade/trend/trading-trend?productCode=A005930&size=20",
+        )
+
+    def test_build_trend_path_for_fixed_window(self):
+        self.assertEqual(
+            trading_trend.build_trend_path(
+                "A005930", "fixed", None, "2026-01-01", "2026-01-31"
+            ),
+            "/api/v1/stock-infos/trade/trend/fixed-trading-trend?productCode=A005930&from=2026-01-01&to=2026-01-31",
         )
 
 

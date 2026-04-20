@@ -25,6 +25,9 @@ Use this skill to inspect TossInvest web pages and work with read-only internal 
 - `scripts/stock_summary.py`: Fetches stock metadata, price detail, and optional overview for a product code.
 - `scripts/quote.py`: Fetches quote-book data from v3 quotes and optional intraday ticks.
 - `scripts/filings.py`: Fetches company filing lists; supports JSON or CSV output.
+- `scripts/news.py`: Fetches company news lists and optional news detail payloads.
+- `scripts/financials.py`: Fetches financial statement, estimate, valuation, stability, revenue/net-profit, and operating-income endpoints.
+- `scripts/trading_trend.py`: Fetches investor, program, fixed-window, accumulated, broker-ranking, and credit trend endpoints.
 - `scripts/theme.py`: Fetches theme/TICS rankings and optional related themes, news, and fluctuation data.
 - `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`; uses `wts-cert-api`, so keep sensitive-host caution.
 - `scripts/pension_fund_trend.py`: Fetches pension-fund net-buy history from `fixed-trading-trend`; supports `--from/--to`, `--year`, `--all-history`, JSON/CSV output, `--output`, summary metadata, and optional reference gross-buy values from recent `trading-trend` rows.
@@ -35,6 +38,9 @@ Use this skill to inspect TossInvest web pages and work with read-only internal 
 python3 scripts/stock_summary.py --code A005930
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/filings.py --code A005930 --size 5
+python3 scripts/news.py --code A005930 --size 5
+python3 scripts/financials.py --code A005930 --kind comprehensive
+python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
 python3 scripts/theme.py --tag kr --include-all
 python3 scripts/screener_count.py --nation kr
 python3 scripts/pension_fund_trend.py --code A005930 --year 2026 --summary-only
