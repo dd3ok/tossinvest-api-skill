@@ -101,7 +101,7 @@ Validation tests are kept local and are intentionally not included in the publis
 
 ## Changelog
 
-### Unreleased
+### v0.1.13
 
 - Added conservative endpoint status labels to the API catalog:
   `script-backed`, `observed`, `needs-recheck`, and `excluded`.
