@@ -100,6 +100,11 @@ Validation tests are kept local and are intentionally not included in the publis
 
 ## Changelog
 
+### Unreleased
+
+- Added conservative endpoint status labels to the API catalog:
+  `script-backed`, `observed`, `needs-recheck`, and `excluded`.
+
 ### v0.1.12
 
 - Slimmed `SKILL.md` command examples to improve progressive disclosure.
