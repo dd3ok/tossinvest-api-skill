@@ -90,12 +90,14 @@ This skill is for read-only public-looking web API discovery and lookup.
 
 - Do not use it for order placement, account actions, or trading mutations.
 - Do not store cookies, tokens, account numbers, session files, or raw HAR files.
+- Stop if a `wts-cert-api` endpoint requires authentication, cookies, account identifiers, or personal data.
 - Treat undocumented TossInvest APIs as unstable and re-check current browser traffic before relying on them.
 
 ## Skill Contents
 
 - [`tossinvest-web-api/SKILL.md`](tossinvest-web-api/SKILL.md): skill entry point
 - [`tossinvest-web-api/references/api-catalog.md`](tossinvest-web-api/references/api-catalog.md): observed endpoint catalog
+- [`tossinvest-web-api/references/eval-prompts.md`](tossinvest-web-api/references/eval-prompts.md): manual smoke prompts for skill selection, script routing, and safety refusals
 - [`tossinvest-web-api/scripts/`](tossinvest-web-api/scripts): bundled lookup scripts
 - [`tossinvest-web-api/examples/filters/`](tossinvest-web-api/examples/filters): example screener filter JSON files for `--filters-file`
 

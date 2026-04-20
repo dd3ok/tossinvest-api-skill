@@ -1,13 +1,38 @@
 ---
 name: tossinvest-web-api
-description: Use when investigating or using TossInvest web internal read-only APIs from tossinvest.com pages, including stock detail, quote/tick data, chart, analytics, investor trading trend, broker trading ranking, filings, themes/TICS, screener counts, financial statements, consensus, dividend, market indices, dashboard rankings, feed/news discovery, and network-capture based endpoint cataloging.
+description: Use when a user asks to inspect, catalog, or call unofficial read-only TossInvest/토스증권 web internal APIs for stock prices, quotes, charts, financials, rankings, screeners, news, filings, themes, indices, investor trends, or tossinvest.com network traffic.
 ---
 
 # TossInvest Web API
 
 ## Overview
 
-Use this skill to inspect TossInvest web pages and work with read-only internal API endpoints observed from browser network traffic. Do not use `tossctl` or `tossinvest-cli`.
+Use this skill to inspect TossInvest web pages and work with unofficial read-only internal API endpoints observed from browser network traffic. Do not use `tossctl` or `tossinvest-cli`.
+
+## When Not To Use
+
+- Do not use this skill as an official broker API or trading API.
+- Do not use it for order placement, order amendment, order cancellation, login, authentication, account balance, holdings, transfer, certificate, or any account-impacting workflow.
+- Do not use it to provide personalized investment advice, buy/sell recommendations, or portfolio decisions.
+- Stop if the requested data requires login cookies, authorization headers, account identifiers, personal financial data, raw HAR storage, or session storage.
+- Do not perform bulk scraping, rate-limit bypass, anti-bot bypass, or attempts to access data that is not visible in public TossInvest web pages.
+
+## Task Routing
+
+| User intent | Prefer | Reference |
+| --- | --- | --- |
+| Stock summary, metadata, overview | `scripts/stock_summary.py` | [references/response-notes.md](references/response-notes.md) |
+| Current quote, order book, intraday ticks | `scripts/quote.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Candles, RSI, SMA, EMA, MACD, Bollinger Bands | `scripts/stock_chart.py` | [references/response-notes.md](references/response-notes.md) |
+| Filings or company news | `scripts/filings.py`, `scripts/news.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Financial statements, estimates, valuation, dividend | `scripts/financials.py` | [references/response-notes.md](references/response-notes.md) |
+| Investor trading trend, broker ranking, pension fund | `scripts/trading_trend.py`, `scripts/pension_fund_trend.py` | [references/response-notes.md](references/response-notes.md) |
+| Theme, TICS, related-theme ranking | `scripts/theme.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Market indices, exchange-rate pages, bonds, commodities | `scripts/indices.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Home rankings, top100 by amount/volume/surge/decline | `scripts/dashboard_ranking.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Recommended feed and news discovery | `scripts/feed.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Screener counts, RSI filters, price/technical presets | `scripts/screener_count.py` | [examples/filters](examples/filters) |
+| New endpoint capture or undocumented page analysis | Browser network capture, bundled JavaScript inspection | [references/capture-workflow.md](references/capture-workflow.md), [references/safety-rules.md](references/safety-rules.md) |
 
 ## Workflow
 
@@ -18,7 +43,8 @@ Use this skill to inspect TossInvest web pages and work with read-only internal 
 5. Read [references/api-catalog.md](references/api-catalog.md) for known endpoint patterns.
 6. Read [references/capture-workflow.md](references/capture-workflow.md) when adding new endpoints.
 7. Read [references/safety-rules.md](references/safety-rules.md) before handling HAR files, cookies, account data, authenticated APIs, or order-related endpoints.
-8. For pension-fund investor trend checks, prefer `netPensionFundBuyVolume`; use `pensionFundBuyVolume` only as a reference gross-buy field unless re-verified against the current UI.
+8. For any `wts-cert-api.tossinvest.com` request, continue only if the endpoint is public-looking page metadata and no cookie, authorization header, account identifier, or personal data is required.
+9. For pension-fund investor trend checks, prefer `netPensionFundBuyVolume`; use `pensionFundBuyVolume` only as a reference gross-buy field unless re-verified against the current UI.
 
 ## Bundled Scripts
 
@@ -83,11 +109,15 @@ Prefer bundled scripts for direct lookups. Re-read [references/safety-rules.md](
 
 Use [examples/filters](examples/filters) as starting JSON bodies for `--filters-file` when combining multiple screener filters.
 
+Use [references/eval-prompts.md](references/eval-prompts.md) to smoke-test skill selection, script routing, and safety refusals after changing or reinstalling the skill.
+
 ## Hard Rules
 
 - Never use, install, or run `tossctl`.
 - Never use, install, or run `tossinvest-cli`.
 - Never call trading mutation APIs.
+- Never call login, certificate mutation, account, holding, balance, transfer, order placement, order amendment, or order cancellation APIs.
 - Do not describe TradingView chart studies such as RSI/MACD/Bollinger as TossInvest API fields unless a current endpoint is verified; chart studies are displayed by TradingView client logic over `c-chart` candles, and `stock_chart.py` calculates supported indicators locally.
 - Never store raw cookies, tokens, account numbers, session files, storage state, or raw HAR captures.
+- Stop when a `wts-cert-api` endpoint requires authentication, cookies, account identifiers, or personal data; do not try to work around access controls.
 - Treat undocumented APIs as unstable and re-verify them with current browser traffic.
