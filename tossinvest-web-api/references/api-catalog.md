@@ -140,6 +140,15 @@ exchange-rates widget for FX lists. `scripts/indices.py --include-fx-chart`
 fetches the FX r-chart, and `scripts/indices.py --include-exchange-rates`
 fetches the exchange-rates widget.
 
+Additional direct checks on 2026-04-20 showed that bond and commodity indicator
+codes such as `KR1BENCH0010`, `ROB.US10YT-RR`, `RFU.GCv1`, and `RFU.CLv1` are
+accepted by the same index info and price endpoints. Dotted codes can be
+case-sensitive, so preserve the code exactly as returned by the indicator
+payload. `scripts/indices.py --code RFU.GCv1` fetches gold info/price. The
+generic `r-chart/{securitiesType}/{code}` path returned 400 for checked
+bond/commodity securities-type guesses, so do not assume candle charts exist for
+those indicator codes without a fresh capture.
+
 ## Analytics APIs
 
 Observed from `/stocks/A005930/analytics`.

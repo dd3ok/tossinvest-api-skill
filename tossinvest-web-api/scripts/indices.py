@@ -12,12 +12,19 @@ import tossinvest_api as api
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 
 
+def normalize_index_code(code: str) -> str:
+    value = code.strip()
+    if "." in value:
+        return value
+    return value.upper()
+
+
 def build_index_info_path(code: str) -> str:
-    return f"/api/v2/index-infos/{code.strip().upper()}"
+    return f"/api/v2/index-infos/{normalize_index_code(code)}"
 
 
 def build_index_price_path(code: str) -> str:
-    return f"/api/v1/index-prices/{code.strip().upper()}"
+    return f"/api/v1/index-prices/{normalize_index_code(code)}"
 
 
 def build_index_chart_path(
@@ -28,7 +35,7 @@ def build_index_chart_path(
     invest_mode: str,
 ) -> str:
     return api.build_path(
-        f"/api/v1/r-chart/{securities_type}/{code.strip().upper()}/{chart_range}/{step}",
+        f"/api/v1/r-chart/{securities_type}/{normalize_index_code(code)}/{chart_range}/{step}",
         {"session": "main", "investMode": invest_mode, "last": False},
     )
 
@@ -72,8 +79,9 @@ def fetch_index_payload(
     indicator_type: str,
     market: str | None,
 ) -> dict[str, Any]:
+    normalized_code = normalize_index_code(code)
     payload: dict[str, Any] = {
-        "code": code.strip().upper(),
+        "code": normalized_code,
         "info": api.get_result(build_index_info_path(code)),
         "price": api.get_result(build_index_price_path(code)),
     }

@@ -76,6 +76,7 @@ python3 scripts/theme.py --tag kr --tics-id 289 --include-details --company-rank
 python3 scripts/indices.py --code KGG01P --include-chart --include-fx-chart --include-exchange-rates --format json
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type bond
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type commodity
+python3 scripts/indices.py --code RFU.GCv1
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart heavy_soar --market us --duration 1d
 python3 scripts/dashboard_ranking.py --kind investors --side sell
