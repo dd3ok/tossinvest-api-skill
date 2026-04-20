@@ -262,6 +262,7 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Exchange rates | GET | `/api/v1/dashboard/wts/overview/exchange-rates` | FX/overview data |
 | Trading info | GET | `/api/v1/dashboard/wts/overview/trading-info` | Market overview data |
 | WTS news feed | GET | `/api/v1/dashboard/wts/news` | Feed/news panel data |
+| Home live-chart top100 ranking | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Body maps URL params to `id={live-chart}`, `tag={market}`, `duration`; returns `products[]`, usually 100 rows |
 | Realtime investor rankings | GET | `/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Observed under `wts-cert-api`; public-looking ranking widget, but keep sensitive-host caution |
 | Economic calendar | GET | `/api/v1/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
 | Reasoning content interest | GET | `/api/v2/reasoning-contents/interest` | Discovery/personalization content |
@@ -281,6 +282,29 @@ Observed `ticsRanking` values:
 | `1` | Market capitalization |
 | `3` | Revenue |
 | `4` | Operating margin |
+
+Observed home live-chart values from `https://www.tossinvest.com/?market={market}&live-chart={id}&duration={duration}`:
+
+| UI label | `live-chart` / request `id` | Typical `duration` | Notes |
+|---|---|---|---|
+| 토스증권 거래대금 | `biggest_total_amount` | `realtime` | Toss Securities internal trading amount ranking |
+| 토스증권 거래량 | `biggest_total_volume` | `realtime` | Toss Securities internal trading volume ranking |
+| 거래대금 | `biggest_market_amount` | `realtime` | Market trading amount ranking |
+| 거래량 | `biggest_market_volume` | `realtime` | Market trading volume ranking |
+| 급상승 | `heavy_soar` | `1d` | Market price-rise ranking |
+| 급하락 | `heavy_descent` | `1d` | Market price-decline ranking |
+| 인기 | `realtime_stock` | `realtime` | Realtime popular stock ranking |
+
+Observed request shape:
+
+```text
+POST https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking
+Content-Type: application/json
+
+{"id":"biggest_total_amount","tag":"kr","duration":"realtime","filters":[]}
+```
+
+For the user-provided top100 URLs checked on 2026-04-20, `market=kr`/`us` maps to `tag=kr`/`us`. The `biggest_total_amount`, `biggest_total_volume`, `heavy_soar`, and `heavy_descent` combinations returned `products[]` with 100 rows for both markets in direct response checks.
 
 ## Feed And News APIs
 
@@ -343,6 +367,7 @@ These endpoints were observed during public page loads but live under `wts-cert-
 | Overview indicator | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/index?market=kr` |
 | Overview indicator v3 | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator?market=kr` |
 | Overview ranking | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` |
+| Live-chart top100 ranking | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` |
 | Economic calendar | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/calendar/economic-events` |
 | Investor rankings | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` |
 
@@ -385,6 +410,14 @@ POST https://sentry-public.tossinvest.com/api/5/envelope/...
 | `https://www.tossinvest.com/stocks/A005930/order` | Quote/tick, upper/lower bounds, trading status; order mutations excluded |
 | `https://www.tossinvest.com/?ranking-type=trending_category` | TICS rankings and TICS detail modal APIs |
 | `https://www.tossinvest.com/?ranking-type=domestic_investor_trend` | Investor buy/sell rankings from dashboard ranking APIs |
+| `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_amount` | Live-chart top100 ranking via overview ranking API |
+| `https://www.tossinvest.com/?market=us&live-chart=biggest_total_amount` | Same live-chart API with `tag=us`; user-supplied typo `ttps://` should be corrected to `https://` |
+| `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_volume&duration=realtime` | Live-chart top100 ranking via overview ranking API |
+| `https://www.tossinvest.com/?market=us&live-chart=biggest_total_volume&duration=realtime` | Same live-chart API with `tag=us` |
+| `https://www.tossinvest.com/?market=kr&live-chart=heavy_soar&duration=1d` | Live-chart top100 ranking via overview ranking API |
+| `https://www.tossinvest.com/?market=us&live-chart=heavy_soar&duration=1d` | Same live-chart API with `tag=us` |
+| `https://www.tossinvest.com/?market=kr&live-chart=heavy_descent&duration=1d` | Live-chart top100 ranking via overview ranking API |
+| `https://www.tossinvest.com/?market=us&live-chart=heavy_descent&duration=1d` | Same live-chart API with `tag=us` |
 | `https://www.tossinvest.com/indices/KGG01P` | Index info, price, chart, indicator/news widgets |
 | `https://www.tossinvest.com/feed/recommended` | Recommended community/feed posts |
 | `https://www.tossinvest.com/feed/news` | Dashboard news categories and news detail |

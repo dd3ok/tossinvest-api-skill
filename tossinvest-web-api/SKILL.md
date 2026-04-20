@@ -30,7 +30,7 @@ Use this skill to inspect TossInvest web pages and work with read-only internal 
 - `scripts/trading_trend.py`: Fetches investor, program, fixed-window, accumulated, broker-ranking, and credit trend endpoints.
 - `scripts/theme.py`: Fetches theme/TICS rankings and optional related themes, news, and fluctuation data.
 - `scripts/indices.py`: Fetches market index info, price, optional chart, and indicator lists.
-- `scripts/dashboard_ranking.py`: Fetches dashboard overview rankings and domestic investor buy/sell ranking widgets.
+- `scripts/dashboard_ranking.py`: Fetches dashboard overview rankings, home live-chart top100 rankings, and domestic investor buy/sell ranking widgets.
 - `scripts/feed.py`: Fetches recommended feed payloads and dashboard news categories.
 - `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`; uses `wts-cert-api`, so keep sensitive-host caution.
 - `scripts/pension_fund_trend.py`: Fetches pension-fund net-buy history from `fixed-trading-trend`; supports `--from/--to`, `--year`, `--all-history`, JSON/CSV output, `--output`, summary metadata, and optional reference gross-buy values from recent `trading-trend` rows.
@@ -46,6 +46,8 @@ python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
 python3 scripts/theme.py --tag kr --tics-id 289 --include-details --company-ranking marketcap
 python3 scripts/indices.py --code KGG01P --include-chart
+python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
+python3 scripts/dashboard_ranking.py --kind live-chart --live-chart heavy_soar --market us --duration 1d
 python3 scripts/dashboard_ranking.py --kind investors --side sell
 python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr
@@ -61,6 +63,7 @@ Use prompts like these after installing the skill:
 - `Use $tossinvest-web-api to compare A005930 investor trading trend from 2026-01-01 through 2026-01-31.`
 - `Use $tossinvest-web-api to fetch comprehensive financial statement and valuation data for A005930.`
 - `Use $tossinvest-web-api to fetch KOSPI index price, chart, and index-related news for KGG01P.`
+- `Use $tossinvest-web-api to fetch domestic and US top100 live-chart rankings by trading amount, volume, surge, and decline.`
 - `Use $tossinvest-web-api to inspect TossInvest feed/news discovery APIs from /feed/news.`
 - `Use $tossinvest-web-api to inspect TossInvest network calls for undocumented read-only stock-page endpoints.`
 
