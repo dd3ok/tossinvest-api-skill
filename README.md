@@ -5,8 +5,8 @@ Codex skill for exploring and using read-only TossInvest web APIs observed from
 
 The current skill focuses on stock information workflows: stock summaries,
 quotes/ticks, filings, news, financial statements, investor trading trends,
-themes/TICS, market indices, dashboard rankings, feed/news discovery, and
-screener counts.
+themes/TICS, stock candle charts with local RSI calculation, market indices,
+dashboard rankings, feed/news discovery, and screener counts.
 
 ## Install
 
@@ -63,6 +63,7 @@ cd "${CODEX_HOME:-$HOME/.codex}/skills/tossinvest-web-api"
 
 python3 scripts/stock_summary.py --code A005930 --no-overview
 python3 scripts/quote.py --code A005930 --ticks 5
+python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14
 python3 scripts/filings.py --code A005930 --size 5
 python3 scripts/news.py --code A005930 --size 5
 python3 scripts/financials.py --code A005930 --kind comprehensive

@@ -67,12 +67,15 @@ Observed on home and stock detail pages.
 
 | Purpose | Method | Path | Params and notes |
 |---|---:|---|---|
-| Daily KR stock chart | GET | `/api/v1/c-chart/kr-s/{productCode}/day:1` | Query: `count`, `session=all`, `investMode=krx`, `useAdjustedRate=true`; result includes `code`, `nextDateTime`, `exchangeRate`, `exchange`, `candles[]` |
+| KR stock candle chart | GET | `/api/v1/c-chart/kr-s/{productCode}/{range}` | Observed ranges include `min:1`, `day:1`, `week:1`, `month:1`; query: `count`, `session=all`, `investMode=krx`, `useAdjustedRate=true`; result includes `code`, `nextDateTime`, `exchangeRate`, `exchange`, `candles[]` |
 
 Example:
 
 ```text
 GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/day:1?count=61&session=all&investMode=krx&useAdjustedRate=true
+GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/min:1?count=5&session=all&investMode=krx&useAdjustedRate=true
+GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/week:1?count=5&session=all&investMode=krx&useAdjustedRate=true
+GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/month:1?count=5&session=all&investMode=krx&useAdjustedRate=true
 ```
 
 Observed values:
@@ -89,6 +92,11 @@ Observed candle keys:
 ```text
 dt, base, open, high, low, close, volume, amount
 ```
+
+RSI/MACD/Bollinger-style technical indicator endpoints were not observed in the
+`/stocks/A005930/order` bundles checked on 2026-04-20. Treat RSI as a local
+calculation from `c-chart` candles unless a current network capture shows a
+dedicated indicator endpoint.
 
 ## Index And Market Indicator APIs
 
@@ -407,7 +415,7 @@ POST https://sentry-public.tossinvest.com/api/5/envelope/...
 | `https://www.tossinvest.com/stocks/A005930/analytics` | Analytics, financials, dividends, analyst data |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status` | Broker ranking, investor trend, program trading |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status?contentType=net-buy...` | Same transaction-status APIs; URL query appears to focus a section |
-| `https://www.tossinvest.com/stocks/A005930/order` | Quote/tick, upper/lower bounds, trading status; order mutations excluded |
+| `https://www.tossinvest.com/stocks/A005930/order` | Price details, quote/tick, upper/lower bounds, `c-chart` stock candles, trading status; order mutations excluded; no dedicated RSI endpoint observed |
 | `https://www.tossinvest.com/?ranking-type=trending_category` | TICS rankings and TICS detail modal APIs |
 | `https://www.tossinvest.com/?ranking-type=domestic_investor_trend` | Investor buy/sell rankings from dashboard ranking APIs |
 | `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_amount` | Live-chart top100 ranking via overview ranking API |

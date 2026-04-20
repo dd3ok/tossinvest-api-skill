@@ -14,7 +14,13 @@ Most checked endpoints returned JSON with a top-level `result` key. Do not assum
 | `/api/v3/stock-prices/{productCode}/quotes` | Object: `close`, quote price/volume ladder fields such as `offerPrices`, `offerVolumes`, `bidPrices`, `bidVolumes` |
 | `/api/v2/stock-prices/{productCode}/ticks` | List: intraday rows with `time`, `code`, `price`, `base`, `volume`, `tradeType`, `cumulativeVolume` |
 | `/api/v2/stock-prices/{productCode}/upper-lower` | Object: `date`, `upperLimit`, `lowerLimit` |
-| `/api/v1/c-chart/kr-s/{productCode}/day:1` | Object: `code`, `nextDateTime`, `exchangeRate`, `exchange`, `candles[]`; candle entries include OHLCV and amount fields |
+| `/api/v1/c-chart/kr-s/{productCode}/{range}` | Object: `code`, `nextDateTime`, `exchangeRate`, `exchange`, `candles[]`; observed stock ranges include `min:1`, `day:1`, `week:1`, `month:1`; candle entries include OHLCV and amount fields |
+
+No dedicated RSI/MACD/Bollinger response field or endpoint was observed from
+`/stocks/A005930/order` bundles checked on 2026-04-20. Use
+`scripts/stock_chart.py --rsi-period` when RSI is needed; it calculates Wilder
+RSI locally from candle `close` prices and annotates the output with
+`source=local-calculation-from-c-chart-candles`.
 
 ## Analytics Shapes
 
