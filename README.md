@@ -4,8 +4,6 @@
 
 `tossinvest.com` 주식/시장 페이지에서 브라우저 네트워크 탭으로 관찰되는 공개 read-only TossInvest/토스증권 웹 내부 API를 탐색하고 호출하기 위한 비공식 Agent Skill입니다.
 
-이 저장소는 이제 repo root가 곧 skill root입니다. `SKILL.md`, `scripts/`, `references/`, `agents/`, `examples/`, `tests/`가 모두 최상위에 있습니다.
-
 ## 구성
 
 - `SKILL.md`: 에이전트가 읽는 라우팅 규칙, 안전 규칙, 작업 흐름
