@@ -59,7 +59,7 @@ def request_json(
             "Accept": "application/json, text/plain, */*",
             "Origin": "https://www.tossinvest.com",
             "Referer": "https://www.tossinvest.com/",
-            "User-Agent": "Mozilla/5.0 tossinvest-web-api-skill/1.0",
+            "User-Agent": "Mozilla/5.0 tossinvest-api-skills-skill/1.0",
             **({"Content-Type": "application/json"} if data is not None else {}),
         },
         method=method,

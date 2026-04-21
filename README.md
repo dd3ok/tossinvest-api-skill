@@ -122,26 +122,26 @@ https://github.com/dd3ok/tossinvest-api-skills 에서 스킬을 설치해줘.
 
 ```bash
 mkdir -p ~/.agents/skills
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git ~/.agents/skills/tossinvest-web-api
+git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git ~/.agents/skills/tossinvest-api-skills
 ```
 
 이미 clone한 작업 디렉터리를 쓰고 싶다면 symlink로 노출할 수도 있습니다.
 
 ```bash
 mkdir -p ~/.agents/skills
-ln -sfn /path/to/tossinvest-api-skills ~/.agents/skills/tossinvest-web-api
+ln -sfn /path/to/tossinvest-api-skills ~/.agents/skills/tossinvest-api-skills
 ```
 
 프롬프트에서 명시적으로 호출할 수 있습니다.
 
 ```text
-$tossinvest-web-api를 사용해서 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
+$tas를 사용해서 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
 ```
 
 특정 저장소 안에서만 쓰고 싶다면 이 저장소를 아래 위치에 복사하거나 vendor 형태로 포함하세요.
 
 ```text
-.agents/skills/tossinvest-web-api/
+.agents/skills/tossinvest-api-skills/
 ```
 
 ## Claude Code 설치
@@ -152,20 +152,20 @@ Claude Code는 개인 skill 폴더와 프로젝트 skill 폴더에서 custom ski
 
 ```bash
 mkdir -p ~/.claude/skills
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git ~/.claude/skills/tossinvest-web-api
+git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git ~/.claude/skills/tossinvest-api-skills
 ```
 
 프로젝트 설치:
 
 ```bash
 mkdir -p .claude/skills
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git .claude/skills/tossinvest-web-api
+git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git .claude/skills/tossinvest-api-skills
 ```
 
 Claude는 요청이 `SKILL.md`의 `description`과 맞으면 skill을 자동으로 선택합니다. 직접 요청할 수도 있습니다.
 
 ```text
-tossinvest-web-api 스킬을 사용해서 A005930의 일봉 캔들을 조회하고 RSI 14를 계산해줘.
+tossinvest-api-skills 스킬을 사용해서 A005930의 일봉 캔들을 조회하고 RSI 14를 계산해줘.
 ```
 
 ## 프롬프트 예시
@@ -173,9 +173,9 @@ tossinvest-web-api 스킬을 사용해서 A005930의 일봉 캔들을 조회하�
 처음 써볼 때는 이런 요청이 유용합니다.
 
 ```text
-$tossinvest-web-api를 사용해서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
-$tossinvest-web-api를 사용해서 국내와 미국의 거래대금 기준 live-chart top100 랭킹을 조회해줘.
-$tossinvest-web-api를 사용해서 문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
+$tas를 사용해서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
+$tas를 사용해서 국내와 미국의 거래대금 기준 live-chart top100 랭킹을 조회해줘.
+$tas를 사용해서 문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
 ```
 
 새로운 네트워크 호출을 조사하기 전에는 [references/capture-workflow.md](references/capture-workflow.md)와 [references/safety-rules.md](references/safety-rules.md)를 먼저 확인하세요.
