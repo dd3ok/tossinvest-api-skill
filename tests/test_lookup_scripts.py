@@ -51,6 +51,12 @@ class StockChartScriptTests(unittest.TestCase):
             "/api/v1/c-chart/kr-s/A005930/day:1?count=61&session=all&investMode=krx&useAdjustedRate=true",
         )
 
+    def test_build_chart_path_rejects_unverified_selectors(self):
+        with self.assertRaisesRegex(ValueError, "securities_type must be one of"):
+            stock_chart.build_chart_path("005930", "account", "day:1", 61, "all", "krx", True)
+        with self.assertRaisesRegex(ValueError, "range_value must be one of"):
+            stock_chart.build_chart_path("005930", "kr-s", "../day:1", 61, "all", "krx", True)
+
     def test_fetch_chart_rejects_non_positive_count_before_network(self):
         with self.assertRaisesRegex(ValueError, "count must be at least 1"):
             stock_chart.fetch_chart(
@@ -175,6 +181,14 @@ class IndicesScriptTests(unittest.TestCase):
             "/api/v1/r-chart/kr-s/KGG01P/1d/min:5?session=main&investMode=krx&last=false",
         )
 
+    def test_index_builders_reject_unverified_selectors(self):
+        with self.assertRaisesRegex(ValueError, "securities_type must be one of"):
+            indices.build_index_chart_path("KGG01P", "account", "1d", "min:5", "krx")
+        with self.assertRaisesRegex(ValueError, "indicator_type must be one of"):
+            indices.build_indicator_path("account", "kr")
+        with self.assertRaisesRegex(ValueError, "net_range must be one of"):
+            indices.build_net_buying_range_path("KGG01P", "account", "2026-04-20", 5)
+
     def test_build_index_info_path_uses_index_code(self):
         self.assertEqual(indices.build_index_info_path("KGG01P"), "/api/v2/index-infos/KGG01P")
 
@@ -192,7 +206,8 @@ class IndicesScriptTests(unittest.TestCase):
         self.assertEqual(indices.infer_securities_type("RFU.GCv1", "auto"), "us-s")
         self.assertEqual(indices.infer_securities_type("ROB.US10YT-RR", "auto"), "us-s")
         self.assertEqual(indices.infer_securities_type("KR1BENCH0010", "auto"), "kr-s")
-        self.assertEqual(indices.infer_securities_type("RFU.GCv1", "commodity"), "commodity")
+        with self.assertRaisesRegex(ValueError, "securities_type must be one of"):
+            indices.infer_securities_type("RFU.GCv1", "commodity")
 
     def test_build_index_chart_path_infers_dotted_indicator_securities_type(self):
         self.assertEqual(
@@ -276,6 +291,18 @@ class DashboardRankingScriptTests(unittest.TestCase):
                 "filters": [],
             },
         )
+
+    def test_build_overview_ranking_body_rejects_unverified_selectors(self):
+        with self.assertRaisesRegex(ValueError, "ranking_id must be one of"):
+            dashboard_ranking.build_overview_ranking_body("account", "all", "realtime", None)
+        with self.assertRaisesRegex(ValueError, "tag must be one of"):
+            dashboard_ranking.build_overview_ranking_body(
+                "biggest_market_amount", "account", "realtime", None
+            )
+        with self.assertRaisesRegex(ValueError, "duration must be one of"):
+            dashboard_ranking.build_overview_ranking_body(
+                "biggest_market_amount", "all", "30d", None
+            )
 
     def test_build_investor_rankings_path_includes_size(self):
         self.assertEqual(

@@ -10,6 +10,11 @@ from typing import Any
 import tossinvest_api as api
 
 MAX_CANDLE_COUNT = 500
+ALLOWED_SECURITIES_TYPES = {"kr-s"}
+ALLOWED_RANGES = {"min:1", "day:1", "week:1", "month:1"}
+ALLOWED_SESSIONS = {"all"}
+ALLOWED_INVEST_MODES = {"krx"}
+ALLOWED_CURRENCIES = {"KRW", "USD"}
 
 
 def build_chart_path(
@@ -23,6 +28,13 @@ def build_chart_path(
     from_datetime: str | None = None,
     currency: str | None = None,
 ) -> str:
+    securities_type = _require_choice("securities_type", securities_type, ALLOWED_SECURITIES_TYPES)
+    range_value = _require_choice("range_value", range_value, ALLOWED_RANGES)
+    session = _require_optional_choice("session", session, ALLOWED_SESSIONS)
+    invest_mode = _require_optional_choice("invest_mode", invest_mode, ALLOWED_INVEST_MODES)
+    currency = _require_optional_choice(
+        "currency", currency, ALLOWED_CURRENCIES, normalize=str.upper
+    )
     return api.build_path(
         f"/api/v1/c-chart/{securities_type}/{api.normalize_product_code(code)}/{range_value}",
         {
@@ -34,6 +46,30 @@ def build_chart_path(
             "currency": currency,
         },
     )
+
+
+def _require_choice(name: str, value: str, choices: set[str]) -> str:
+    normalized = value.strip()
+    if normalized not in choices:
+        expected = ", ".join(sorted(choices))
+        raise ValueError(f"{name} must be one of: {expected}")
+    return normalized
+
+
+def _require_optional_choice(
+    name: str,
+    value: str | None,
+    choices: set[str],
+    *,
+    normalize: Any | None = None,
+) -> str | None:
+    if value is None:
+        return None
+    normalized = normalize(value.strip()) if normalize else value.strip()
+    if normalized not in choices:
+        expected = ", ".join(sorted(choices))
+        raise ValueError(f"{name} must be one of: {expected}")
+    return normalized
 
 
 def add_rsi(candles: list[dict[str, Any]], *, period: int = 14) -> list[dict[str, Any]]:
@@ -230,20 +266,28 @@ def main() -> int:
     parser.add_argument(
         "--securities-type",
         default="kr-s",
-        help="Observed c-chart securities type, e.g. kr-s for Korean stocks",
+        choices=sorted(ALLOWED_SECURITIES_TYPES),
+        help="Verified c-chart securities type",
     )
     parser.add_argument(
         "--range",
         dest="range_value",
         default="day:1",
-        help="Observed c-chart range such as min:1, day:1, week:1, month:1",
+        choices=sorted(ALLOWED_RANGES),
+        help="Verified c-chart range",
     )
     parser.add_argument("--count", type=int, default=61, help="Number of candles")
-    parser.add_argument("--session", default="all", help="Observed session query value")
+    parser.add_argument(
+        "--session",
+        default="all",
+        choices=sorted(ALLOWED_SESSIONS),
+        help="Verified session query value",
+    )
     parser.add_argument(
         "--invest-mode",
         default="krx",
-        help="Observed investMode query value, e.g. krx for Korean stocks",
+        choices=sorted(ALLOWED_INVEST_MODES),
+        help="Verified investMode query value",
     )
     parser.add_argument(
         "--no-adjusted-rate",
@@ -251,7 +295,9 @@ def main() -> int:
         help="Send useAdjustedRate=false instead of the observed default true",
     )
     parser.add_argument("--from", dest="from_datetime", help="Optional from query value")
-    parser.add_argument("--currency", help="Optional currency query value")
+    parser.add_argument(
+        "--currency", choices=sorted(ALLOWED_CURRENCIES), help="Optional currency query value"
+    )
     parser.add_argument(
         "--rsi-period",
         type=int,

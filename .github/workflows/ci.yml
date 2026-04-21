@@ -38,6 +38,18 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
+      - name: Skill layout smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          skill_dir="$(mktemp -d)/tossinvest-web-api"
+          mkdir -p "$skill_dir"
+          cp -R SKILL.md README.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
+          test -f "$skill_dir/SKILL.md"
+          test -f "$skill_dir/agents/openai.yaml"
+          test -f "$skill_dir/references/api-catalog.md"
+          python "$skill_dir/scripts/stock_summary.py" --help >/dev/null
+
       - name: Compile scripts
         shell: bash
         run: |
