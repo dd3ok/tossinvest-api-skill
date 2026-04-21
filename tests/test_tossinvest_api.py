@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import unittest
+import urllib.error
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -76,6 +77,22 @@ class TossInvestApiTests(unittest.TestCase):
                 "/api/v1/certificates/mutation",
                 base_url="https://wts-cert-api.tossinvest.com",
             )
+
+    def test_rate_limit_http_error_mentions_stop_and_reverify(self):
+        exc = urllib.error.HTTPError(
+            url="https://wts-info-api.tossinvest.com/api/v2/stock-infos/A005930",
+            code=429,
+            msg="Too Many Requests",
+            hdrs={},
+            fp=None,
+        )
+
+        message = api._http_error_message(exc, "GET", "/api/v2/stock-infos/A005930")
+
+        self.assertIn("HTTP 429", message)
+        self.assertIn("stop", message)
+        self.assertIn("rate limit", message)
+        self.assertIn("reverify", message)
 
     def test_cert_allowlist_distinguishes_exact_paths_from_prefixes(self):
         api.validate_request_target(

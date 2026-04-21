@@ -3,7 +3,7 @@
 [![TossInvest API Skills CI](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skills?sort=semver)](https://github.com/dd3ok/tossinvest-api-skills/releases/latest)
 
-`tossinvest.com` 주식/시장 페이지에서 브라우저 네트워크 탭으로 관찰되는 공개 read-only TossInvest/토스증권 웹 내부 API를 탐색하고 호출하기 위한 비공식 Agent Skill입니다. 공식 API, 증권사 API, 거래 API가 아니라 공개 웹 페이지에 이미 보이는 주식/시장 데이터를 에이전트가 안전하게 다시 조회하도록 돕는 도구입니다.
+`tossinvest.com`의 공개 주식/시장 페이지에서 관찰되는 read-only 웹 내부 API를 안전하게 탐색하고 재조회하기 위한 비공식 Agent Skill입니다. 공식 API, 증권사 API, 거래 API가 아니라 공개 웹 페이지에 이미 보이는 주식/시장 데이터를 에이전트가 다시 확인하도록 돕는 도구입니다.
 
 ## 30초 요약
 
@@ -46,9 +46,13 @@ TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식
 - 로그인, 인증, 인증서, 쿠키, authorization header, 세션 상태
 - 계좌 잔고, 보유 종목, 이체, 주문, 주문 정정, 주문 취소
 - 계좌 식별자, 개인 금융 데이터, raw HAR 저장, 접근 제어 우회
-- 대량 스크래핑, rate limit 우회, 공개 TossInvest 웹 페이지에 보이지 않는 데이터 접근
+- 공개 TossInvest 웹 페이지에 보이지 않는 데이터 접근
+- 크롤러, 배경 모니터, 대량 반복 조회처럼 동작하는 자동 수집
+- 막힌 요청이나 비정상 응답을 우회하기 위한 자동 재시도
 
 `wts-cert-api.tossinvest.com`은 현재 공개 페이지에서 public-looking metadata로 확인된 endpoint가 아니라면 민감한 host로 취급하세요. 이 API들은 문서화된 공개 API가 아니며 언제든 변경될 수 있으므로, 의존하기 전에 현재 브라우저 트래픽으로 다시 확인하는 것이 좋습니다.
+
+요청이 막히거나 로그인/확인 화면으로 이어지면 자동 재시도를 멈추고, 현재 공개 웹 페이지에서 같은 데이터가 노출되는지 먼저 다시 확인하세요. 이 프로젝트는 서비스 보호 장치나 접근 제어 흐름을 우회하지 않습니다.
 
 민감한 endpoint, privacy, credential-handling 관련 제보는 [SECURITY.md](SECURITY.md)를 먼저 확인하세요. GitHub issue에는 쿠키, token, authorization header, raw HAR, 계좌/개인 금융 데이터를 올리지 마세요.
 
