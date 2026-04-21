@@ -1,6 +1,7 @@
 # TossInvest Web API Skill
 
 [![TossInvest API Skills CI](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skills?sort=semver)](https://github.com/dd3ok/tossinvest-api-skills/releases/latest)
 
 `tossinvest.com` 주식/시장 페이지에서 브라우저 네트워크 탭으로 관찰되는 공개 read-only TossInvest/토스증권 웹 내부 API를 탐색하고 호출하기 위한 비공식 Agent Skill입니다. 공식 API, 증권사 API, 거래 API가 아니라 공개 웹 페이지에 이미 보이는 주식/시장 데이터를 에이전트가 안전하게 다시 조회하도록 돕는 도구입니다.
 
