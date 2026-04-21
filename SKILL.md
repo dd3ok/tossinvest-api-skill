@@ -1,9 +1,8 @@
 ---
 name: tossinvest-web-api
-description: Use when a user asks to inspect, catalog, or call unofficial read-only TossInvest/토스증권 web internal APIs/내부 API for stock information/주식 정보, prices, quotes, charts, financials, rankings, screeners, news, filings, themes, indices, investor trends, or tossinvest.com network calls/네트워크 호출.
+description: Use when requests mention TossInvest/토스증권 or tossinvest.com network calls for public stock and market data, including prices, charts, financials, rankings, screeners, news, filings, themes, indices, or investor trends.
 license: MIT
-metadata:
-  compatibility: Requires Python 3.10+ and network access; intended for Codex, Claude Code, and other Agent Skills-compatible tools.
+compatibility: Requires Python 3.10+ and network access; intended for Codex, Claude Code, and other Agent Skills-compatible tools.
 ---
 
 # TossInvest Web API

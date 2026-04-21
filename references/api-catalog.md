@@ -40,6 +40,10 @@ Endpoint status values are conservative confidence labels, not stability guarant
 | `needs-recheck` | Observed indirectly, feature-flagged, host-sensitive, user-context-sensitive, or otherwise requiring a fresh browser/API check before use. |
 | `excluded` | Observed but outside this skill's read-only stock-information scope. Do not call from this skill. |
 
+For duplicated families, the domain section is the source of truth. Cross-reference
+sections should not widen a status or imply that `needs-recheck` or `excluded`
+endpoints are safe to call.
+
 ## Host Map
 
 | Host | Observed purpose | Usage guidance |
@@ -350,11 +354,6 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Home live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Body maps URL params to `id={live-chart}`, `tag={market}`, `duration`; returns `products[]`, usually 100 rows |
 | Realtime investor rankings | `script-backed` | GET | `/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Observed under `wts-cert-api`; public-looking ranking widget, but keep sensitive-host caution |
 | Economic calendar | `observed` | GET | `/api/v1/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
-| Screener modal | `script-backed` | GET | `/api/v2/screener/screen/search/modal` | Screener modal data |
-| Screener filter ranges | `observed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | Observed in bundle for numeric filter metadata; keep sensitive-host caution |
-| Screener filter bases | `observed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | Observed in bundle for base filter metadata; keep sensitive-host caution |
-| Screener count | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body includes `filters[]` and `nation`; returns a number |
-| Screener results | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body requires `pagingParam.size`; accepts `pagingParam.number` and observed `sort`; returns `totalCount`, `page`, `lastPage`, `stocks[]` |
 | Theme list | `script-backed` | GET | `/api/v1/tics/all` | Observed result includes `baseDateTime`, `ticsItems[]` |
 | Theme ranking by tag | `script-backed` | GET | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Observed tags include market-style values such as `kr`/`us`; result contains ranking metadata and rows |
 | Theme details | `script-backed` | GET | `/api/v1/tics/{ticsId}/details` | Returned `id`, `title`, `summary`, `description`, `companyCount`, `etfCount`, `stocks[]` |
@@ -362,6 +361,9 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Related themes | `script-backed` | GET | `/api/v1/tics/{ticsId}/related` | Related categories for a theme page |
 | Theme news | `script-backed` | GET | `/api/v2/news/tics/{ticsId}` | Query can include `size`; related news for a theme |
 | Theme fluctuations | `script-backed` | GET | `/api/v2/tics/{ticsId}/fluctuations` | Theme fluctuation/history data |
+
+Screener endpoints are documented only in [Screener APIs](#screener-apis) to keep
+their `wts-cert-api` handling and filter-body constraints in one place.
 
 Direct checks on 2026-04-20 for `scripts/theme.py --tag kr --include-all --tics-id 289 --include-details --company-ranking marketcap --company-ranking revenue --company-ranking operating-margin` returned `ranking`, `allThemes`, `details`, `related`, `news`, `fluctuations`, and all three requested company ranking groups.
 
@@ -569,7 +571,6 @@ These endpoints were observed during public page loads but live under `wts-cert-
 | Purpose | Status | Method | URL | Sensitive-host note |
 |---|---|---:|---|---|
 | Stock red flags | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/stock-infos/{productCode}/red-flags` | Public-looking page metadata; re-check before scripting |
-| Trading status | `needs-recheck` | GET | `https://wts-cert-api.tossinvest.com/api/v3/trading/order/{productCode}/trading-status` | Order-adjacent namespace; keep unscripted unless reverified unauthenticated, no cookies, no account/orderable data |
 | Overview indicator | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/index?market=kr` | Public-looking dashboard metadata only |
 | Overview indicator v3 | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator?market=kr` | Public-looking dashboard metadata; re-check before scripting |
 | Overview ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Public-looking dashboard ranking body only |
@@ -585,6 +586,7 @@ Do not collect these as cataloged APIs, even if they appear in browser network t
 
 - Telemetry, Sentry, logging, deployment refresh, images, fonts, and static assets.
 - Login, certificate, authentication, account, balance, holding, transfer, order, orderable-amount, order mutation, and session-storage calls.
+- Order-adjacent status helpers such as `https://wts-cert-api.tossinvest.com/api/v3/trading/order/{productCode}/trading-status`; keep them unscripted unless a future safety review explicitly reclassifies them.
 - Guest bootstrap/upsert, experiment variables, tab/session initialization, and other page bootstrapping calls that do not directly return stock or market information.
 - Following/subscription feeds, personalized interest/reasoning content, comments-only feeds, or account-personalized discovery surfaces.
 
@@ -596,7 +598,7 @@ Do not collect these as cataloged APIs, even if they appear in browser network t
 | `https://www.tossinvest.com/stocks/A005930/analytics` | Analytics, financials, dividends, analyst data |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status` | Broker ranking, investor trend, program trading |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status?contentType=net-buy...` | Same transaction-status APIs; URL query appears to focus a section |
-| `https://www.tossinvest.com/stocks/A005930/order` | Price details, quote/tick, upper/lower bounds, `c-chart` stock candles, TradingView chart studies, trading status; order mutations excluded; no dedicated RSI/MACD/Bollinger data endpoint observed |
+| `https://www.tossinvest.com/stocks/A005930/order` | Price details, quote/tick, upper/lower bounds, `c-chart` stock candles, TradingView chart studies; order namespace helpers and mutations excluded; no dedicated RSI/MACD/Bollinger data endpoint observed |
 | `https://www.tossinvest.com/?ranking-type=trending_category` | TICS rankings and TICS detail modal APIs |
 | `https://www.tossinvest.com/?ranking-type=domestic_investor_trend` | Investor buy/sell rankings from dashboard ranking APIs |
 | `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_amount` | Live-chart top100 ranking via overview ranking API |

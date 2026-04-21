@@ -22,8 +22,7 @@ DEFAULT_TIMEOUT = 30
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 
 _ALLOWED_INFO_PREFIXES = ("/api/v1/", "/api/v2/", "/api/v3/", "/api/v4/")
-_ALLOWED_CERT_PREFIXES = (
-    "/api/v1/dashboard/wts/overview/indicator/",
+_ALLOWED_CERT_EXACT_PATHS = (
     "/api/v1/dashboard/wts/overview/rankings/by-investors",
     "/api/v1/screener/screen/count",
     "/api/v2/dashboard/wts/overview/ranking",
@@ -31,6 +30,7 @@ _ALLOWED_CERT_PREFIXES = (
     "/api/v2/screener/screen",
     "/api/v3/dashboard/wts/overview/indicator/mini-chart",
 )
+_ALLOWED_CERT_SUBTREE_PREFIXES = ("/api/v1/dashboard/wts/overview/indicator",)
 _DENIED_PATH_MARKERS = (
     "/account",
     "/accounts",
@@ -130,7 +130,7 @@ def validate_request_target(base_url: str, path: str) -> None:
     parsed_path = urllib.parse.urlsplit(path)
     if parsed_path.scheme or parsed_path.netloc:
         raise RuntimeError("Blocked TossInvest endpoint: path must be relative")
-    request_path = parsed_path.path
+    request_path = _validation_path(parsed_path.path)
     lowered_path = request_path.lower()
 
     for marker in _DENIED_PATH_MARKERS:
@@ -145,13 +145,34 @@ def validate_request_target(base_url: str, path: str) -> None:
         )
 
     if host == urllib.parse.urlsplit(CERT_BASE_URL).netloc:
-        if request_path.startswith(_ALLOWED_CERT_PREFIXES):
+        if request_path in _ALLOWED_CERT_EXACT_PATHS or _matches_subtree_prefix(
+            request_path, _ALLOWED_CERT_SUBTREE_PREFIXES
+        ):
             return
         raise RuntimeError(
-            f"Blocked TossInvest endpoint: {request_path} is not in the approved cert-api prefixes"
+            f"Blocked TossInvest endpoint: {request_path} is not an approved cert-api endpoint"
         )
 
     raise RuntimeError(f"Blocked TossInvest endpoint: unapproved host {host}")
+
+
+def _validation_path(path: str) -> str:
+    if not path.startswith("/"):
+        raise RuntimeError("Blocked TossInvest endpoint: path must start with /")
+    lowered_raw = path.lower()
+    if "\\" in path or "%2f" in lowered_raw or "%5c" in lowered_raw:
+        raise RuntimeError("Blocked TossInvest endpoint: encoded path separators are not allowed")
+
+    decoded_path = urllib.parse.unquote(path)
+    if "\\" in decoded_path:
+        raise RuntimeError("Blocked TossInvest endpoint: backslash path separators are not allowed")
+    if any(segment in {".", ".."} for segment in decoded_path.split("/")):
+        raise RuntimeError("Blocked TossInvest endpoint: dot segments are not allowed")
+    return decoded_path
+
+
+def _matches_subtree_prefix(path: str, prefixes: tuple[str, ...]) -> bool:
+    return any(path == prefix or path.startswith(f"{prefix}/") for prefix in prefixes)
 
 
 def require_int_range(name: str, value: int, *, minimum: int, maximum: int) -> int:
