@@ -113,7 +113,7 @@ python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-per
 Codex에서 공개 GitHub URL로 설치를 요청할 수 있습니다.
 
 ```text
-Install the skill from https://github.com/dd3ok/tossinvest-api-skills
+https://github.com/dd3ok/tossinvest-api-skills 에서 스킬을 설치해줘.
 ```
 
 설치 후에는 Codex를 재시작해 skill 목록을 다시 로드하세요.
@@ -135,7 +135,7 @@ ln -sfn /path/to/tossinvest-api-skills ~/.agents/skills/tossinvest-web-api
 프롬프트에서 명시적으로 호출할 수 있습니다.
 
 ```text
-Use $tossinvest-web-api to get a compact stock summary and current quote for A005930.
+$tossinvest-web-api를 사용해서 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
 ```
 
 특정 저장소 안에서만 쓰고 싶다면 이 저장소를 아래 위치에 복사하거나 vendor 형태로 포함하세요.
@@ -165,7 +165,7 @@ git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git .claude/s
 Claude는 요청이 `SKILL.md`의 `description`과 맞으면 skill을 자동으로 선택합니다. 직접 요청할 수도 있습니다.
 
 ```text
-Use the tossinvest-web-api skill to fetch daily candles and calculate RSI 14 for A005930.
+tossinvest-web-api 스킬을 사용해서 A005930의 일봉 캔들을 조회하고 RSI 14를 계산해줘.
 ```
 
 ## 프롬프트 예시
@@ -173,9 +173,9 @@ Use the tossinvest-web-api skill to fetch daily candles and calculate RSI 14 for
 처음 써볼 때는 이런 요청이 유용합니다.
 
 ```text
-Use $tossinvest-web-api to fetch KOSPI index price, chart, and index-related news for KGG01P.
-Use $tossinvest-web-api to fetch domestic and US top100 live-chart rankings by trading amount.
-Use $tossinvest-web-api to inspect TossInvest network calls for undocumented read-only stock-page endpoints.
+$tossinvest-web-api를 사용해서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
+$tossinvest-web-api를 사용해서 국내와 미국의 거래대금 기준 live-chart top100 랭킹을 조회해줘.
+$tossinvest-web-api를 사용해서 문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
 ```
 
 새로운 네트워크 호출을 조사하기 전에는 [references/capture-workflow.md](references/capture-workflow.md)와 [references/safety-rules.md](references/safety-rules.md)를 먼저 확인하세요.

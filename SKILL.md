@@ -85,13 +85,13 @@ python3 scripts/screener_count.py --nation kr --rsi oversold --include-results -
 
 Use prompts like these after installing the skill:
 
-- `Use $tossinvest-web-api to get a compact stock summary and current quote for A005930.`
-- `Use $tossinvest-web-api to fetch daily candles and calculate RSI 14, MACD, and Bollinger Bands for A005930.`
-- `Use $tossinvest-web-api to fetch comprehensive financial statement and valuation data for A005930.`
-- `Use $tossinvest-web-api to fetch KOSPI index price, chart, and index-related news for KGG01P.`
-- `Use $tossinvest-web-api to fetch domestic and US top100 live-chart rankings by trading amount, volume, surge, and decline.`
-- `Use $tossinvest-web-api to find Korean stocks where TossInvest screener RSI is oversold.`
-- `Use $tossinvest-web-api to inspect TossInvest network calls for undocumented read-only stock-page endpoints.`
+- `$tossinvest-web-api를 사용해서 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.`
+- `$tossinvest-web-api를 사용해서 A005930의 일봉 캔들을 조회하고 RSI 14, MACD, Bollinger Bands를 계산해줘.`
+- `$tossinvest-web-api를 사용해서 A005930의 종합 재무제표와 밸류에이션 데이터를 조회해줘.`
+- `$tossinvest-web-api를 사용해서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.`
+- `$tossinvest-web-api를 사용해서 국내와 미국의 거래대금, 거래량, 급등, 급락 기준 live-chart top100 랭킹을 조회해줘.`
+- `$tossinvest-web-api를 사용해서 TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식을 찾아줘.`
+- `$tossinvest-web-api를 사용해서 문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.`
 
 Prefer bundled scripts for direct lookups. Re-read [references/safety-rules.md](references/safety-rules.md) before any task involving cookies, account data, HAR files, authenticated APIs, or `wts-cert-api`.
 
