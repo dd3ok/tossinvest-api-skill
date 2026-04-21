@@ -31,6 +31,14 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("TossInvest/토스증권을 언급한 자연어 요청", text)
         self.assertNotIn("description과 맞으면", text)
 
+    def test_readme_has_safe_search_phrases(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("비공식 토스증권 API", text)
+        self.assertIn("TossInvest API", text)
+        self.assertIn("read-only Agent Skill", text)
+        self.assertIn("공개 웹 페이지", text)
+        self.assertIn("공식 API", text)
+
     def test_docs_do_not_name_third_party_trading_tools(self):
         forbidden_terms = ["tossinvest" + "-cli", "toss" + "ctl"]
         checked_paths = [
