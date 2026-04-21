@@ -106,8 +106,13 @@ def add_json_format_argument(parser: argparse.ArgumentParser) -> None:
 def render_csv(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return ""
+    fieldnames: list[str] = []
+    for row in rows:
+        for key in row:
+            if key not in fieldnames:
+                fieldnames.append(key)
     stream = io.StringIO()
-    writer = csv.DictWriter(stream, fieldnames=list(rows[0].keys()))
+    writer = csv.DictWriter(stream, fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(rows)
     return stream.getvalue()

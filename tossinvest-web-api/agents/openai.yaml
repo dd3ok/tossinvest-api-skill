@@ -1,4 +1,9 @@
 interface:
   display_name: "TossInvest Web API"
-  short_description: "Query TossInvest/토스증권 read-only stock APIs"
-  default_prompt: "Use $tossinvest-web-api to query TossInvest/토스증권 read-only stock information APIs and network-call notes."
+  short_description: "Query unofficial read-only TossInvest stock APIs"
+  default_prompt: >-
+    Use $tossinvest-web-api for unofficial public read-only TossInvest/토스증권
+    stock and market information. Prefer the bundled scripts and documented
+    endpoint catalog. Do not use cookies, authorization headers, account data,
+    login, certificate, transfer, or order APIs. Treat wts-cert-api endpoints as
+    sensitive unless they are clearly public page metadata.

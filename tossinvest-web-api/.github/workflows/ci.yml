@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.12"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Compile scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in scripts/*.py; do
+            python -m py_compile "$file"
+          done
+
+      - name: Check script help commands
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in scripts/*.py; do
+            python "$file" --help >/dev/null
+          done
+
+      - name: Validate JSON examples
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in examples/filters/*.json; do
+            python -m json.tool "$file" >/dev/null
+          done

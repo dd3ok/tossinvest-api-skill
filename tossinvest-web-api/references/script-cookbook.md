@@ -40,16 +40,20 @@ python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/financials.py --code A005930 --kind valuation
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
 python3 scripts/trading_trend.py --code A005930 --type investor --count 20
-python3 scripts/trading_trend.py --code A005930 --type broker-ranking
+python3 scripts/trading_trend.py --code A005930 --type broker
 ```
 
 ## Themes And TICS
 
 ```bash
 python3 scripts/theme.py --tag kr --tics-id 289 --include-details --company-ranking marketcap
-python3 scripts/theme.py --tag kr --tics-id 289 --include-news --size 5
-python3 scripts/theme.py --tag kr --tics-id 289 --include-fluctuations
+python3 scripts/theme.py --tag kr --tics-id 289 --news-size 5
+python3 scripts/theme.py --tag kr --tics-id 289
 ```
+
+When `--tics-id` is set, `theme.py` fetches related themes, theme news, and
+fluctuation data. Use `--include-details` and `--company-ranking` for the
+additional detail and company-ranking endpoints.
 
 ## Indices, FX, And Indicators
 
