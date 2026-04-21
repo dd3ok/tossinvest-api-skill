@@ -7,17 +7,17 @@
 
 ## 30초 요약
 
-- 설치 후 `$tossinvest-web-api`로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 랭킹, 스크리너를 요청할 수 있습니다.
+- 설치 후에는 TossInvest/토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 랭킹, 스크리너를 조회할 수 있습니다.
 - bundled Python scripts는 표준 라이브러리만 사용하며, API 호출 전에 host/path safety guard를 통과해야 합니다.
 - 쿠키, 로그인, 계좌, 주문, raw HAR, 접근 제어 우회는 명시적으로 범위 밖입니다.
 - undocumented internal API이므로 중요한 사용 전에는 현재 브라우저 트래픽으로 재확인하는 것을 전제로 합니다.
 
-설치 후에는 이런 식으로 바로 호출할 수 있습니다.
+설치 후에는 이런 식으로 자연스럽게 요청할 수 있습니다.
 
 ```text
-$tossinvest-web-api를 사용해서 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
-$tossinvest-web-api를 사용해서 A005930의 일봉 캔들을 조회하고 RSI 14와 MACD를 계산해줘.
-$tossinvest-web-api를 사용해서 TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식을 찾아줘.
+토스증권 기준으로 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
+토스증권에서 A005930의 일봉 캔들을 조회하고 RSI 14와 MACD를 계산해줘.
+TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식을 찾아줘.
 ```
 
 ## 지원 범위
@@ -143,7 +143,7 @@ Codex에서 공개 GitHub URL로 설치를 요청할 수 있습니다.
 https://github.com/dd3ok/tossinvest-api-skills 에서 스킬을 설치해줘.
 ```
 
-설치 후에는 Codex를 재시작해 skill 목록을 다시 로드하세요.
+설치 후에는 Codex를 재시작해 skill 목록을 다시 로드하세요. 이후 TossInvest/토스증권을 언급한 주식 데이터 요청이 이 skill로 라우팅됩니다.
 
 수동 설치:
 
@@ -159,12 +159,6 @@ git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git "$CODEX_S
 CODEX_SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
 mkdir -p "$CODEX_SKILLS_DIR"
 ln -sfn /path/to/tossinvest-api-skills "$CODEX_SKILLS_DIR/tossinvest-web-api"
-```
-
-프롬프트에서 명시적으로 호출할 수 있습니다.
-
-```text
-$tossinvest-web-api를 사용해서 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
 ```
 
 특정 저장소 안에서만 쓰고 싶다면 이 저장소를 아래 위치에 복사하거나 vendor 형태로 포함하세요.
@@ -191,20 +185,16 @@ mkdir -p .claude/skills
 git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git .claude/skills/tossinvest-web-api
 ```
 
-Claude는 요청이 `SKILL.md`의 `description`과 맞으면 skill을 자동으로 선택합니다. 직접 요청할 수도 있습니다.
-
-```text
-tossinvest-web-api 스킬을 사용해서 A005930의 일봉 캔들을 조회하고 RSI 14를 계산해줘.
-```
+Claude는 TossInvest/토스증권 주식 데이터 요청이 skill 설명과 맞으면 이 skill을 자동으로 선택합니다.
 
 ## 프롬프트 예시
 
 처음 써볼 때는 이런 요청이 유용합니다.
 
 ```text
-$tossinvest-web-api를 사용해서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
-$tossinvest-web-api를 사용해서 국내와 미국의 거래대금 기준 live-chart top100 랭킹을 조회해줘.
-$tossinvest-web-api를 사용해서 문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
+토스증권에서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
+TossInvest의 국내와 미국 거래대금 기준 live-chart top100 랭킹을 조회해줘.
+문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
 ```
 
 새로운 네트워크 호출을 조사하기 전에는 [references/capture-workflow.md](references/capture-workflow.md)와 [references/safety-rules.md](references/safety-rules.md)를 먼저 확인하세요.
