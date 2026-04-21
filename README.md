@@ -3,7 +3,7 @@
 [![TossInvest API Skills CI](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skills?sort=semver)](https://github.com/dd3ok/tossinvest-api-skills/releases/latest)
 
-비공식 토스증권 API / TossInvest API read-only Agent Skill입니다. `tossinvest.com`의 공개 주식/시장 페이지에서 관찰되는 read-only 웹 내부 API를 안전하게 탐색하고 재조회합니다. 공식 API, 증권사 API, 거래 API가 아니라 공개 웹 페이지에 이미 보이는 주식/시장 데이터를 에이전트가 다시 확인하도록 돕는 도구입니다.
+이 저장소는 비공식 토스증권 API / TossInvest API를 다루는 Agent Skill입니다. `tossinvest.com`의 공개 주식/시장 페이지에서 관찰되는 웹 내부 API를 안전하게 탐색하고 재조회합니다. 공식 API, 증권사 API, 거래 API가 아니라 공개 웹 페이지에 이미 보이는 주식/시장 데이터를 에이전트가 다시 확인하도록 돕는 도구입니다.
 
 ## 30초 요약
 
@@ -198,7 +198,7 @@ Claude는 TossInvest/토스증권 주식 데이터 요청이 skill 설명과 맞
 ```text
 토스증권에서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
 TossInvest의 국내와 미국 거래대금 기준 live-chart top100 랭킹을 조회해줘.
-문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
+문서화되지 않은 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
 ```
 
 새로운 네트워크 호출을 조사하기 전에는 [references/capture-workflow.md](references/capture-workflow.md)와 [references/safety-rules.md](references/safety-rules.md)를 먼저 확인하세요.
