@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use when requests mention TossInvest/토스증권 or tossinvest.com network calls for public stock and market data, including prices, charts, financials, rankings, screeners, news, filings, themes, indices, or investor trends.
+description: Use when requests mention TossInvest/토스증권 or tossinvest.com network calls for public read-only stock and market data, including prices, charts, financials, rankings, screeners, news, filings, themes, indices, or investor trends.
 license: MIT
 compatibility: Requires Python 3.10+ and network access; intended for Codex, Claude Code, and other Agent Skills-compatible tools.
 ---
@@ -10,6 +10,12 @@ compatibility: Requires Python 3.10+ and network access; intended for Codex, Cla
 ## Overview
 
 Use this skill to inspect TossInvest web pages and work with unofficial read-only internal API endpoints that help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, or screener questions. Do not combine it with tools that automate login, account access, or trading.
+
+## When To Use
+
+- Use for public TossInvest stock or market data visible on `tossinvest.com`.
+- Use for quotes, order books, candles, financials, filings, news, themes, rankings, indices, investor trends, and screeners.
+- Use when re-verifying an observed read-only browser endpoint before updating scripts or references.
 
 ## When Not To Use
 
