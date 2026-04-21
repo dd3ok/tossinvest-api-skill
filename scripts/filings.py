@@ -9,9 +9,7 @@ from typing import Any
 import tossinvest_api as api
 
 
-def build_filings_path(
-    code: str, page: int, size: int, key: str | None
-) -> str:
+def build_filings_path(code: str, page: int, size: int, key: str | None) -> str:
     return api.build_path(
         f"/api/v1/stock-detail/companies/{api.to_company_code(code)}/filings",
         {"number": page, "size": size, "key": key},
@@ -19,6 +17,8 @@ def build_filings_path(
 
 
 def fetch_filings(code: str, page: int, size: int, key: str | None) -> dict[str, Any]:
+    page = api.require_int_range("page", page, minimum=1, maximum=1000)
+    size = api.require_int_range("size", size, minimum=1, maximum=100)
     result = api.get_result(build_filings_path(code, page, size, key))
     return {
         "code": api.normalize_product_code(code),
@@ -59,4 +59,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

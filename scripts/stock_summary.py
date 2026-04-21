@@ -37,9 +37,7 @@ def fetch_stock_summary(code: str, include_overview: bool) -> dict[str, Any]:
     if not isinstance(price_rows, list):
         raise RuntimeError("Unexpected price details response shape")
     overview = (
-        api.get_result(f"/api/v2/stock-infos/{product_code}/overview")
-        if include_overview
-        else None
+        api.get_result(f"/api/v2/stock-infos/{product_code}/overview") if include_overview else None
     )
     return merge_summary(
         product_code,
@@ -69,4 +67,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

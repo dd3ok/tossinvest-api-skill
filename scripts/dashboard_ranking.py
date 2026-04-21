@@ -8,7 +8,6 @@ from typing import Any
 
 import tossinvest_api as api
 
-
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 LIVE_CHART_IDS = {
     "biggest_total_amount",
@@ -102,6 +101,7 @@ def fetch_live_chart(
 
 
 def fetch_investor_rankings(size: int, side: str) -> dict[str, Any]:
+    size = api.require_int_range("investor-size", size, minimum=1, maximum=100)
     return {
         "kind": "investors",
         "side": side,
@@ -162,4 +162,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

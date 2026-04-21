@@ -8,7 +8,6 @@ from typing import Any
 
 import tossinvest_api as api
 
-
 RECENT_TYPES = {
     "investor": "trading-trend",
     "program": "program-trading",
@@ -58,6 +57,8 @@ def fetch_trading_trend(
     start: str | None,
     end: str | None,
 ) -> dict[str, Any]:
+    if size is not None:
+        size = api.require_int_range("size", size, minimum=1, maximum=120)
     return {
         "code": api.normalize_product_code(code),
         "type": trend_type,
@@ -89,4 +90,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

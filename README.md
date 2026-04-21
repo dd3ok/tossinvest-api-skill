@@ -25,6 +25,8 @@
 
 `wts-cert-api.tossinvest.com`은 현재 공개 페이지에서 public-looking metadata로 확인된 endpoint가 아니라면 민감한 host로 취급하세요. 이 API들은 문서화된 공개 API가 아니며 언제든 변경될 수 있으므로, 의존하기 전에 현재 브라우저 트래픽으로 다시 확인하는 것이 좋습니다.
 
+민감한 endpoint, privacy, credential-handling 관련 제보는 [SECURITY.md](SECURITY.md)를 먼저 확인하세요. GitHub issue에는 쿠키, token, authorization header, raw HAR, 계좌/개인 금융 데이터를 올리지 마세요.
+
 ## 빠른 시작
 
 번들 스크립트는 Python 표준 라이브러리만 사용하며, 네트워크 접근이 필요합니다.
@@ -121,27 +123,29 @@ https://github.com/dd3ok/tossinvest-api-skills 에서 스킬을 설치해줘.
 수동 설치:
 
 ```bash
-mkdir -p ~/.agents/skills
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git ~/.agents/skills/tossinvest-api-skills
+CODEX_SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
+mkdir -p "$CODEX_SKILLS_DIR"
+git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git "$CODEX_SKILLS_DIR/tossinvest-web-api"
 ```
 
 이미 clone한 작업 디렉터리를 쓰고 싶다면 symlink로 노출할 수도 있습니다.
 
 ```bash
-mkdir -p ~/.agents/skills
-ln -sfn /path/to/tossinvest-api-skills ~/.agents/skills/tossinvest-api-skills
+CODEX_SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
+mkdir -p "$CODEX_SKILLS_DIR"
+ln -sfn /path/to/tossinvest-api-skills "$CODEX_SKILLS_DIR/tossinvest-web-api"
 ```
 
 프롬프트에서 명시적으로 호출할 수 있습니다.
 
 ```text
-$tas를 사용해서 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
+$tossinvest-web-api를 사용해서 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
 ```
 
 특정 저장소 안에서만 쓰고 싶다면 이 저장소를 아래 위치에 복사하거나 vendor 형태로 포함하세요.
 
 ```text
-.agents/skills/tossinvest-api-skills/
+.codex/skills/tossinvest-web-api/
 ```
 
 ## Claude Code 설치
@@ -152,20 +156,20 @@ Claude Code는 개인 skill 폴더와 프로젝트 skill 폴더에서 custom ski
 
 ```bash
 mkdir -p ~/.claude/skills
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git ~/.claude/skills/tossinvest-api-skills
+git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git ~/.claude/skills/tossinvest-web-api
 ```
 
 프로젝트 설치:
 
 ```bash
 mkdir -p .claude/skills
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git .claude/skills/tossinvest-api-skills
+git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git .claude/skills/tossinvest-web-api
 ```
 
 Claude는 요청이 `SKILL.md`의 `description`과 맞으면 skill을 자동으로 선택합니다. 직접 요청할 수도 있습니다.
 
 ```text
-tossinvest-api-skills 스킬을 사용해서 A005930의 일봉 캔들을 조회하고 RSI 14를 계산해줘.
+tossinvest-web-api 스킬을 사용해서 A005930의 일봉 캔들을 조회하고 RSI 14를 계산해줘.
 ```
 
 ## 프롬프트 예시

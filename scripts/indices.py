@@ -9,7 +9,6 @@ from typing import Any
 
 import tossinvest_api as api
 
-
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 CHART_PRESETS = {
     "intraday": ("1d", "min:5"),
@@ -150,6 +149,12 @@ def fetch_index_payload(
     net_buying_range: str,
     net_buying_count: int,
 ) -> dict[str, Any]:
+    net_buying_count = api.require_int_range(
+        "net-buying-count",
+        net_buying_count,
+        minimum=1,
+        maximum=120,
+    )
     normalized_code = normalize_index_code(code)
     payload: dict[str, Any] = {
         "code": normalized_code,
@@ -159,7 +164,9 @@ def fetch_index_payload(
     if include_chart:
         resolved_range, resolved_step = resolve_chart_window(chart_preset, chart_range, step)
         payload["chart"] = api.get_result(
-            build_index_chart_path(code, securities_type, resolved_range, resolved_step, invest_mode)
+            build_index_chart_path(
+                code, securities_type, resolved_range, resolved_step, invest_mode
+            )
         )
     if include_fx_chart:
         payload["fxChart"] = api.get_result(
@@ -306,4 +313,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

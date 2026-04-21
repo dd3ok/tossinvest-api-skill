@@ -10,7 +10,6 @@ from typing import Any
 
 import tossinvest_api as api
 
-
 CERT_URL = "https://wts-cert-api.tossinvest.com"
 RSI_FILTER_ID = "RSI_범위"
 NUMBER_RANGE_CONDITION_ID = "NUMBER_RANGE_DEFAULT"
@@ -111,33 +110,25 @@ TECHNICAL_PRESETS = {
         "filter_id": "CUSTOM_이동평균선_돌파",
         "condition_id": "이동평균선_돌파",
         "type": "MOVING_AVERAGE_CROSS_ARRAY",
-        "value": [
-            {"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "upward"}
-        ],
+        "value": [{"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "upward"}],
     },
     "ma-cross-down": {
         "filter_id": "CUSTOM_이동평균선_돌파",
         "condition_id": "이동평균선_돌파",
         "type": "MOVING_AVERAGE_CROSS_ARRAY",
-        "value": [
-            {"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "downward"}
-        ],
+        "value": [{"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "downward"}],
     },
     "volume-ma-cross-up": {
         "filter_id": "CUSTOM_거래량_이동평균선_돌파",
         "condition_id": "이동평균선_돌파",
         "type": "MOVING_AVERAGE_CROSS_ARRAY",
-        "value": [
-            {"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "upward"}
-        ],
+        "value": [{"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "upward"}],
     },
     "volume-ma-cross-down": {
         "filter_id": "CUSTOM_거래량_이동평균선_돌파",
         "condition_id": "이동평균선_돌파",
         "type": "MOVING_AVERAGE_CROSS_ARRAY",
-        "value": [
-            {"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "downward"}
-        ],
+        "value": [{"shortPeriod": 5, "longPeriod": 20, "within": 5, "crossDirection": "downward"}],
     },
     "ma-align-positive": {
         "filter_id": "CUSTOM_이동평균선_배열",
@@ -181,6 +172,27 @@ TECHNICAL_PRESETS = {
     },
 }
 
+ALLOWED_FILTER_IDS = {
+    RSI_FILTER_ID,
+    *(config["filter_id"] for config in PRICE_PRESETS.values()),
+    *(config["filter_id"] for config in TECHNICAL_PRESETS.values()),
+}
+ALLOWED_CONDITION_IDS = {
+    NUMBER_RANGE_CONDITION_ID,
+    "기간_선택_DAY_TO_MONTH",
+    "WEEK_NEW_PRICE_HIT",
+    *(config["condition_id"] for config in TECHNICAL_PRESETS.values()),
+}
+ALLOWED_CONDITION_TYPES = {
+    "MOVING_AVERAGE_ALIGN_ARRAY",
+    "MOVING_AVERAGE_CROSS_ARRAY",
+    "NUMBER_RANGE",
+    "PERIOD",
+    "PRICE_BOLLINGER_BAND_CROSS_ARRAY",
+    "PRICE_MOVING_AVERAGE_CROSS_ARRAY",
+    "WEEK_NEW_PRICE_HIT_WITHIN",
+}
+
 
 def normalize_nation(nation: str) -> str:
     normalized = nation.strip().lower()
@@ -190,7 +202,7 @@ def normalize_nation(nation: str) -> str:
 
 
 def build_count_body(nation: str, filters: list[dict[str, Any]] | None = None) -> dict[str, Any]:
-    return {"filters": filters or [], "nation": normalize_nation(nation)}
+    return {"filters": validate_filters(filters or []), "nation": normalize_nation(nation)}
 
 
 def build_common_presets_path(use_custom: bool = True) -> str:
@@ -270,10 +282,8 @@ def build_screen_body(
     page: int = 1,
     sort: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if size < 1:
-        raise ValueError("size must be greater than 0")
-    if page < 1:
-        raise ValueError("page must be greater than 0")
+    size = api.require_int_range("size", size, minimum=1, maximum=100)
+    page = api.require_int_range("page", page, minimum=1, maximum=100)
     body = {
         "filters": filters or [],
         "nation": normalize_nation(nation),
@@ -333,7 +343,27 @@ def load_filters(path: str | None) -> list[dict[str, Any]]:
         raise ValueError("filters file must contain a JSON list")
     if not all(isinstance(item, dict) for item in payload):
         raise ValueError("filters file must contain a list of JSON objects")
-    return payload
+    return validate_filters(payload)
+
+
+def validate_filters(filters: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    for filter_body in filters:
+        filter_id = filter_body.get("id")
+        if filter_id not in ALLOWED_FILTER_IDS:
+            raise ValueError(f"undocumented screener filter id: {filter_id}")
+        conditions = filter_body.get("conditions")
+        if not isinstance(conditions, list):
+            raise ValueError(f"filter {filter_id} must include a conditions list")
+        for condition in conditions:
+            if not isinstance(condition, dict):
+                raise ValueError(f"filter {filter_id} conditions must be JSON objects")
+            condition_id = condition.get("id")
+            condition_type = condition.get("type")
+            if condition_id not in ALLOWED_CONDITION_IDS:
+                raise ValueError(f"undocumented screener condition id: {condition_id}")
+            if condition_type not in ALLOWED_CONDITION_TYPES:
+                raise ValueError(f"undocumented screener condition type: {condition_type}")
+    return filters
 
 
 def main() -> int:
@@ -425,4 +455,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

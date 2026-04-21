@@ -564,18 +564,18 @@ result rows for:
 
 ## Cert And Status Helpers
 
-These endpoints were observed during public page loads but live under `wts-cert-api`. Treat them as sensitive unless their current behavior is clearly public metadata.
+These endpoints were observed during public page loads but live under `wts-cert-api`. Treat them as sensitive unless their current behavior is clearly public metadata. Script-backed rows are restricted by `scripts/tossinvest_api.py` host/path policy.
 
-| Purpose | Status | Method | URL |
-|---|---|---:|---|
-| Stock red flags | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/stock-infos/{productCode}/red-flags` |
-| Trading status | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/trading/order/{productCode}/trading-status` |
-| Overview indicator | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/index?market=kr` |
-| Overview indicator v3 | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator?market=kr` |
-| Overview ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` |
-| Live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` |
-| Economic calendar | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/calendar/economic-events` |
-| Investor rankings | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` |
+| Purpose | Status | Method | URL | Sensitive-host note |
+|---|---|---:|---|---|
+| Stock red flags | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/stock-infos/{productCode}/red-flags` | Public-looking page metadata; re-check before scripting |
+| Trading status | `needs-recheck` | GET | `https://wts-cert-api.tossinvest.com/api/v3/trading/order/{productCode}/trading-status` | Order-adjacent namespace; keep unscripted unless reverified unauthenticated, no cookies, no account/orderable data |
+| Overview indicator | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/index?market=kr` | Public-looking dashboard metadata only |
+| Overview indicator v3 | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator?market=kr` | Public-looking dashboard metadata; re-check before scripting |
+| Overview ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Public-looking dashboard ranking body only |
+| Live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Public-looking dashboard ranking body only |
+| Economic calendar | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/calendar/economic-events` | Public-looking calendar metadata; re-check before scripting |
+| Investor rankings | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Public-looking ranking widget only |
 
 The `/stocks/{code}/order` bundle also references order prepare/create/correct/cancel, account, orderable amount, and trading mutation APIs. Exclude them from this skill.
 

@@ -3,19 +3,48 @@
 
 from __future__ import annotations
 
+import argparse
 import csv
 import io
 import json
-import argparse
+import os
+import socket
+import sys
+import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
 
-
 BASE_URL = "https://wts-info-api.tossinvest.com"
 DEFAULT_TIMEOUT = 30
+CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
+
+_ALLOWED_INFO_PREFIXES = ("/api/v1/", "/api/v2/", "/api/v3/", "/api/v4/")
+_ALLOWED_CERT_PREFIXES = (
+    "/api/v1/dashboard/wts/overview/indicator/",
+    "/api/v1/dashboard/wts/overview/rankings/by-investors",
+    "/api/v1/screener/screen/count",
+    "/api/v2/dashboard/wts/overview/ranking",
+    "/api/v2/screener/presets/common",
+    "/api/v2/screener/screen",
+    "/api/v3/dashboard/wts/overview/indicator/mini-chart",
+)
+_DENIED_PATH_MARKERS = (
+    "/account",
+    "/accounts",
+    "/authentication",
+    "/balance",
+    "/holding",
+    "/holdings",
+    "/login",
+    "/order/",
+    "/orderable",
+    "/orders",
+    "/trading/order",
+    "/transfer",
+)
 
 
 def normalize_product_code(code: str) -> str:
@@ -51,6 +80,7 @@ def request_json(
     base_url: str = BASE_URL,
     timeout: int = DEFAULT_TIMEOUT,
 ) -> dict[str, Any]:
+    validate_request_target(base_url, path)
     data = None if body is None else json.dumps(body, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         base_url + path,
@@ -66,10 +96,22 @@ def request_json(
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            content = resp.read().decode("utf-8")
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError as exc:
+                raise RuntimeError(
+                    f"TossInvest API returned non-JSON content for {method} {path}; reverify the endpoint"
+                ) from exc
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"TossInvest API returned HTTP {exc.code}: {detail}") from exc
+        raise RuntimeError(
+            f"TossInvest API returned HTTP {exc.code} for {method} {path}: {detail}"
+        ) from exc
+    except (urllib.error.URLError, socket.timeout, TimeoutError) as exc:
+        raise RuntimeError(
+            f"TossInvest API request failed for {method} {path}: {exc}; reverify the endpoint"
+        ) from exc
 
 
 def result_or_raise(payload: dict[str, Any]) -> Any:
@@ -80,6 +122,63 @@ def result_or_raise(payload: dict[str, Any]) -> Any:
 
 def get_result(path: str, **kwargs: Any) -> Any:
     return result_or_raise(request_json(path, **kwargs))
+
+
+def validate_request_target(base_url: str, path: str) -> None:
+    parsed_base = urllib.parse.urlsplit(base_url)
+    host = parsed_base.netloc.lower()
+    parsed_path = urllib.parse.urlsplit(path)
+    if parsed_path.scheme or parsed_path.netloc:
+        raise RuntimeError("Blocked TossInvest endpoint: path must be relative")
+    request_path = parsed_path.path
+    lowered_path = request_path.lower()
+
+    for marker in _DENIED_PATH_MARKERS:
+        if marker in lowered_path:
+            raise RuntimeError(f"Blocked TossInvest endpoint: denied path marker {marker}")
+
+    if host == urllib.parse.urlsplit(BASE_URL).netloc:
+        if request_path.startswith(_ALLOWED_INFO_PREFIXES):
+            return
+        raise RuntimeError(
+            f"Blocked TossInvest endpoint: {request_path} is not in the approved info-api prefixes"
+        )
+
+    if host == urllib.parse.urlsplit(CERT_BASE_URL).netloc:
+        if request_path.startswith(_ALLOWED_CERT_PREFIXES):
+            return
+        raise RuntimeError(
+            f"Blocked TossInvest endpoint: {request_path} is not in the approved cert-api prefixes"
+        )
+
+    raise RuntimeError(f"Blocked TossInvest endpoint: unapproved host {host}")
+
+
+def require_int_range(name: str, value: int, *, minimum: int, maximum: int) -> int:
+    if value < minimum:
+        raise ValueError(f"{name} must be at least {minimum}")
+    if value > maximum:
+        raise ValueError(f"{name} must be at most {maximum}")
+    return value
+
+
+def run_cli(main_func: Any) -> int:
+    try:
+        return int(main_func())
+    except (
+        RuntimeError,
+        ValueError,
+        OSError,
+        json.JSONDecodeError,
+        urllib.error.URLError,
+        socket.timeout,
+        TimeoutError,
+    ) as exc:
+        if os.environ.get("TOSSINVEST_DEBUG"):
+            traceback.print_exc()
+        else:
+            print(f"error: {exc}", file=sys.stderr)
+        return 1
 
 
 def find_by_code(rows: list[dict[str, Any]], code: str) -> dict[str, Any] | None:

@@ -1,15 +1,14 @@
-import sys
 import subprocess
+import sys
 import unittest
 from pathlib import Path
-
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-import filings
 import dashboard_ranking
 import feed
+import filings
 import financials
 import indices
 import news
@@ -34,6 +33,16 @@ class QuoteScriptTests(unittest.TestCase):
             "/api/v2/stock-prices/A005930/ticks?viewType=krx&count=5&investMode=krx",
         )
 
+    def test_fetch_quote_rejects_excessive_tick_count_before_network(self):
+        with self.assertRaisesRegex(ValueError, "ticks must be at most 100"):
+            quote.fetch_quote(
+                "A005930",
+                invest_mode="krx",
+                view_type=None,
+                fallback_krx=None,
+                tick_count=101,
+            )
+
 
 class StockChartScriptTests(unittest.TestCase):
     def test_build_chart_path_uses_c_chart_with_range_and_query(self):
@@ -41,6 +50,29 @@ class StockChartScriptTests(unittest.TestCase):
             stock_chart.build_chart_path("005930", "kr-s", "day:1", 61, "all", "krx", True),
             "/api/v1/c-chart/kr-s/A005930/day:1?count=61&session=all&investMode=krx&useAdjustedRate=true",
         )
+
+    def test_fetch_chart_rejects_non_positive_count_before_network(self):
+        with self.assertRaisesRegex(ValueError, "count must be at least 1"):
+            stock_chart.fetch_chart(
+                "A005930",
+                securities_type="kr-s",
+                range_value="day:1",
+                count=0,
+                session="all",
+                invest_mode="krx",
+                use_adjusted_rate=True,
+                from_datetime=None,
+                currency=None,
+                rsi_period=None,
+                sma_periods=[],
+                ema_periods=[],
+                bollinger_period=None,
+                bollinger_stddev=2.0,
+                include_macd=False,
+                macd_fast=12,
+                macd_slow=26,
+                macd_signal=9,
+            )
 
     def test_calculate_rsi_returns_wilder_values_for_candles(self):
         candles = [{"close": close} for close in [44, 44.15, 43.9, 44.35, 44.7, 44.25]]
@@ -253,9 +285,7 @@ class DashboardRankingScriptTests(unittest.TestCase):
 
     def test_build_live_chart_body_matches_home_url_params(self):
         self.assertEqual(
-            dashboard_ranking.build_live_chart_body(
-                "biggest_total_amount", "KR", "realtime", None
-            ),
+            dashboard_ranking.build_live_chart_body("biggest_total_amount", "KR", "realtime", None),
             {
                 "id": "biggest_total_amount",
                 "tag": "kr",
@@ -363,9 +393,7 @@ class ScreenerCountScriptTests(unittest.TestCase):
                     {
                         "id": "주가_이동평균선_돌파",
                         "type": "PRICE_MOVING_AVERAGE_CROSS_ARRAY",
-                        "value": [
-                            {"period": 20, "within": 5, "crossDirection": "upward"}
-                        ],
+                        "value": [{"period": 20, "within": 5, "crossDirection": "upward"}],
                     }
                 ],
             },
@@ -435,6 +463,18 @@ class ScreenerCountScriptTests(unittest.TestCase):
             },
         )
 
+    def test_validate_filters_rejects_undocumented_filter_id(self):
+        with self.assertRaisesRegex(ValueError, "undocumented screener filter id"):
+            screener_count.validate_filters([{"id": "ACCOUNT_DERIVED_FILTER", "conditions": []}])
+
+    def test_validate_filters_accepts_example_filter_shapes(self):
+        filters = [
+            screener_count.build_rsi_filter("oversold"),
+            screener_count.build_price_filter("new-high-52w-within-20d"),
+            screener_count.build_technical_filter("price-ma-cross-up"),
+        ]
+        self.assertEqual(screener_count.validate_filters(filters), filters)
+
 
 class NewsScriptTests(unittest.TestCase):
     def test_build_company_news_path_uses_company_code(self):
@@ -457,6 +497,13 @@ class FinancialsScriptTests(unittest.TestCase):
             "/api/v2/stock-infos/evaluation/A005930",
         )
 
+    def test_validate_body_rejects_custom_body_without_explicit_opt_in(self):
+        with self.assertRaisesRegex(ValueError, "custom financial POST bodies require"):
+            financials.validate_body({"period": "quarterly"}, allow_custom=False)
+
+    def test_validate_body_accepts_empty_default_body(self):
+        self.assertEqual(financials.validate_body({}, allow_custom=False), {})
+
 
 class TradingTrendScriptTests(unittest.TestCase):
     def test_build_trend_path_for_recent_investor_trend(self):
@@ -467,9 +514,7 @@ class TradingTrendScriptTests(unittest.TestCase):
 
     def test_build_trend_path_for_fixed_window(self):
         self.assertEqual(
-            trading_trend.build_trend_path(
-                "A005930", "fixed", None, "2026-01-01", "2026-01-31"
-            ),
+            trading_trend.build_trend_path("A005930", "fixed", None, "2026-01-01", "2026-01-31"),
             "/api/v1/stock-infos/trade/trend/fixed-trading-trend?productCode=A005930&from=2026-01-01&to=2026-01-31",
         )
 

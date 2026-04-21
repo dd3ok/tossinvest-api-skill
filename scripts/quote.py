@@ -8,6 +8,8 @@ from typing import Any
 
 import tossinvest_api as api
 
+MAX_TICK_COUNT = 100
+
 
 def build_quote_path(
     code: str,
@@ -25,9 +27,7 @@ def build_quote_path(
     )
 
 
-def build_ticks_path(
-    code: str, invest_mode: str | None, view_type: str | None, count: int
-) -> str:
+def build_ticks_path(code: str, invest_mode: str | None, view_type: str | None, count: int) -> str:
     return api.build_path(
         f"/api/v2/stock-prices/{api.normalize_product_code(code)}/ticks",
         {
@@ -46,11 +46,16 @@ def fetch_quote(
     fallback_krx: bool | None,
     tick_count: int | None,
 ) -> dict[str, Any]:
+    if tick_count is not None:
+        tick_count = api.require_int_range(
+            "ticks",
+            tick_count,
+            minimum=1,
+            maximum=MAX_TICK_COUNT,
+        )
     payload: dict[str, Any] = {
         "code": api.normalize_product_code(code),
-        "quote": api.get_result(
-            build_quote_path(code, invest_mode, view_type, fallback_krx)
-        ),
+        "quote": api.get_result(build_quote_path(code, invest_mode, view_type, fallback_krx)),
     }
     if tick_count is not None:
         payload["ticks"] = api.get_result(
@@ -97,4 +102,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

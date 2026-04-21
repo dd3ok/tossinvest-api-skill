@@ -21,12 +21,8 @@ DEFAULT_HISTORY_START = "2019-04-01"
 
 
 def fixed_trend(product_code: str, start: str, end: str) -> list[dict]:
-    query = urllib.parse.urlencode(
-        {"productCode": product_code, "from": start, "to": end}
-    )
-    payload = api.request_json(
-        f"/api/v1/stock-infos/trade/trend/fixed-trading-trend?{query}"
-    )
+    query = urllib.parse.urlencode({"productCode": product_code, "from": start, "to": end})
+    payload = api.request_json(f"/api/v1/stock-infos/trade/trend/fixed-trading-trend?{query}")
     result = payload.get("result")
     if not isinstance(result, list):
         raise RuntimeError("Unexpected fixed-trading-trend response shape")
@@ -53,9 +49,7 @@ def year_windows(start: str, end: str) -> list[tuple[str, str]]:
     return windows
 
 
-def fetch_history(
-    product_code: str, start: str, end: str, chunk_yearly: bool
-) -> list[dict]:
+def fetch_history(product_code: str, start: str, end: str, chunk_yearly: bool) -> list[dict]:
     ranges = year_windows(start, end) if chunk_yearly else [(start, end)]
     rows_by_date = {}
     for window_start, window_end in ranges:
@@ -68,23 +62,17 @@ def fetch_history(
 
 def recent_gross_buy(product_code: str, size: int) -> dict[str, int | None]:
     query = urllib.parse.urlencode({"productCode": product_code, "size": size})
-    payload = api.request_json(
-        f"/api/v1/stock-infos/trade/trend/trading-trend?{query}"
-    )
+    payload = api.request_json(f"/api/v1/stock-infos/trade/trend/trading-trend?{query}")
     result = payload.get("result")
     rows = result.get("body") if isinstance(result, dict) else None
     if not isinstance(rows, list):
         raise RuntimeError("Unexpected trading-trend response shape")
     return {
-        row.get("baseDate"): row.get("pensionFundBuyVolume")
-        for row in rows
-        if row.get("baseDate")
+        row.get("baseDate"): row.get("pensionFundBuyVolume") for row in rows if row.get("baseDate")
     }
 
 
-def normalize_rows(
-    rows: list[dict], gross_by_date: dict[str, int | None] | None
-) -> list[dict]:
+def normalize_rows(rows: list[dict], gross_by_date: dict[str, int | None] | None) -> list[dict]:
     output = []
     for row in rows:
         net = row.get("netPensionFundBuyVolume")
@@ -100,9 +88,7 @@ def normalize_rows(
             "direction": direction,
         }
         if gross_by_date is not None:
-            item["pensionFundBuyVolumeReference"] = gross_by_date.get(
-                row.get("baseDate")
-            )
+            item["pensionFundBuyVolumeReference"] = gross_by_date.get(row.get("baseDate"))
         output.append(item)
     return output
 
@@ -136,9 +122,7 @@ def emit_output(text: str, output_path: str | None) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Fetch TossInvest pension-fund net-buy history."
-    )
+    parser = argparse.ArgumentParser(description="Fetch TossInvest pension-fund net-buy history.")
     parser.add_argument("--code", default="A005930", help="TossInvest product code")
     date_group = parser.add_mutually_exclusive_group(required=True)
     date_group.add_argument("--year", type=int, help="Calendar year to fetch")
@@ -147,9 +131,7 @@ def main() -> int:
         action="store_true",
         help=f"Fetch yearly windows from {DEFAULT_HISTORY_START}",
     )
-    date_group.add_argument(
-        "--from", dest="start", help="Start date YYYY-MM-DD; requires --to"
-    )
+    date_group.add_argument("--from", dest="start", help="Start date YYYY-MM-DD; requires --to")
     parser.add_argument("--to", dest="end", help="End date YYYY-MM-DD")
     parser.add_argument(
         "--history-start",
@@ -225,4 +207,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

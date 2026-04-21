@@ -1,0 +1,25 @@
+[project]
+name = "tossinvest-web-api-skill"
+version = "0.1.0"
+description = "Agent Skill for unofficial read-only TossInvest stock and market web APIs"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = [
+  "scripts/__pycache__",
+  "tests/__pycache__",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

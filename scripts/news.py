@@ -21,6 +21,7 @@ def build_news_detail_path(news_id: str) -> str:
 
 
 def fetch_news(code: str, size: int, news_id: str | None) -> dict[str, Any]:
+    size = api.require_int_range("size", size, minimum=1, maximum=100)
     payload: dict[str, Any] = {
         "code": api.normalize_product_code(code),
         "companyCode": api.to_company_code(code),
@@ -51,10 +52,14 @@ def main() -> int:
     args = parser.parse_args()
 
     payload = fetch_news(args.code, args.size, args.news_id)
-    text = api.render_csv(rows_from_payload(payload)) if args.format == "csv" else api.render_json(payload)
+    text = (
+        api.render_csv(rows_from_payload(payload))
+        if args.format == "csv"
+        else api.render_json(payload)
+    )
     api.emit_output(text, args.output)
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

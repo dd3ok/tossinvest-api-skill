@@ -1,0 +1,46 @@
+name: Endpoint or script report
+description: Report public read-only endpoint drift, stale docs, or script behavior
+title: "[endpoint] "
+labels:
+  - endpoint
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include cookies, authorization headers, tokens, account data, personal financial data, raw HAR files, or storage-state files.
+        Share only sanitized public page URLs, endpoint paths, methods, response-shape notes, and the date checked.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What changed or what is not working?
+    validations:
+      required: true
+  - type: input
+    id: page-url
+    attributes:
+      label: Public TossInvest page URL
+      placeholder: https://www.tossinvest.com/stocks/A005930/order
+  - type: input
+    id: endpoint-path
+    attributes:
+      label: Sanitized endpoint path
+      placeholder: /api/v2/stock-infos/A005930
+  - type: dropdown
+    id: host-type
+    attributes:
+      label: Host
+      options:
+        - wts-info-api.tossinvest.com
+        - wts-cert-api.tossinvest.com
+        - other public TossInvest host
+  - type: input
+    id: checked-at
+    attributes:
+      label: Date checked
+      placeholder: "2026-04-21"
+  - type: textarea
+    id: safe-notes
+    attributes:
+      label: Sanitized notes
+      description: Include method, status code, high-level response shape, and whether the endpoint worked without cookies or authorization.

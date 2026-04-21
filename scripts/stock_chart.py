@@ -9,6 +9,8 @@ from typing import Any
 
 import tossinvest_api as api
 
+MAX_CANDLE_COUNT = 500
+
 
 def build_chart_path(
     code: str,
@@ -148,6 +150,7 @@ def fetch_chart(
     macd_slow: int,
     macd_signal: int,
 ) -> dict[str, Any]:
+    count = api.require_int_range("count", count, minimum=1, maximum=MAX_CANDLE_COUNT)
     path = build_chart_path(
         code,
         securities_type,
@@ -407,7 +410,9 @@ def _calculate_ema_from_optional(values: list[float | None], period: int) -> lis
             window = values[index - period + 1 : index + 1]
             if len(window) < period or any(window_value is None for window_value in window):
                 continue
-            previous = sum(window_value for window_value in window if window_value is not None) / period
+            previous = (
+                sum(window_value for window_value in window if window_value is not None) / period
+            )
             results[index] = round(previous, 2)
             continue
         previous = (value * multiplier) + (previous * (1 - multiplier))
@@ -422,9 +427,7 @@ def _first_complete_window(values: list[float | None], period: int) -> int | Non
     return None
 
 
-def _calculate_chronological(
-    candles: list[dict[str, Any]], calculator: Any
-) -> list[float | None]:
+def _calculate_chronological(candles: list[dict[str, Any]], calculator: Any) -> list[float | None]:
     closes = _ordered_close_values(candles)[1]
     return _restore_original_order(candles, calculator(closes))
 
@@ -485,4 +488,4 @@ def _to_float(value: Any) -> float | None:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

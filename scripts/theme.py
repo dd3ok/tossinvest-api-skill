@@ -8,7 +8,6 @@ from typing import Any
 
 import tossinvest_api as api
 
-
 COMPANY_RANKINGS = {
     "marketcap": 1,
     "revenue": 3,
@@ -54,6 +53,7 @@ def fetch_theme_payload(
     include_details: bool,
     company_rankings: list[str],
 ) -> dict[str, Any]:
+    news_size = api.require_int_range("news-size", news_size, minimum=1, maximum=50)
     payload: dict[str, Any] = {
         "tag": tag.strip().lower(),
         "ranking": api.get_result(build_theme_ranking_path(tag)),
@@ -125,4 +125,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))

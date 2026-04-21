@@ -8,7 +8,6 @@ from typing import Any
 
 import tossinvest_api as api
 
-
 FEED_PATHS = {
     "recommended": "/api/v3/feed/recommend/posts",
     "recommended-ranking": "/api/v4/feed/recommend/ranking-posts",
@@ -88,4 +87,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(api.run_cli(main))
