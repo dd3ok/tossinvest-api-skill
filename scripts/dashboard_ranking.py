@@ -19,6 +19,7 @@ LIVE_CHART_IDS = {
     "realtime_stock",
 }
 MARKETS = {"all", "kr", "us"}
+DURATIONS = {"1d", "realtime"}
 
 
 def build_overview_ranking_body(
@@ -27,6 +28,9 @@ def build_overview_ranking_body(
     duration: str,
     filters: list[str] | None,
 ) -> dict[str, Any]:
+    ranking_id = _require_choice("ranking_id", ranking_id, LIVE_CHART_IDS)
+    tag = _require_choice("tag", tag, MARKETS)
+    duration = _require_choice("duration", duration, DURATIONS)
     return {
         "id": ranking_id,
         "tag": tag,
@@ -41,18 +45,20 @@ def build_live_chart_body(
     duration: str,
     filters: list[str] | None,
 ) -> dict[str, Any]:
-    normalized_chart = live_chart.strip()
-    normalized_market = market.strip().lower()
-    if normalized_chart not in LIVE_CHART_IDS:
-        raise ValueError(f"unknown live-chart id: {live_chart}")
-    if normalized_market not in MARKETS:
-        raise ValueError(f"unknown market: {market}")
     return build_overview_ranking_body(
-        normalized_chart,
-        normalized_market,
+        live_chart,
+        market,
         duration,
         filters,
     )
+
+
+def _require_choice(name: str, value: str, choices: set[str]) -> str:
+    normalized = value.strip().lower()
+    if normalized not in choices:
+        expected = ", ".join(sorted(choices))
+        raise ValueError(f"{name} must be one of: {expected}")
+    return normalized
 
 
 def build_investor_rankings_path(size: int) -> str:
@@ -121,7 +127,9 @@ def main() -> int:
         choices=["overview", "live-chart", "investors"],
         default="overview",
     )
-    parser.add_argument("--ranking-id", default="biggest_market_amount")
+    parser.add_argument(
+        "--ranking-id", default="biggest_market_amount", choices=sorted(LIVE_CHART_IDS)
+    )
     parser.add_argument(
         "--live-chart",
         choices=sorted(LIVE_CHART_IDS),
@@ -132,8 +140,8 @@ def main() -> int:
         choices=sorted(MARKETS),
         help="Home live-chart market parameter; alias for --tag",
     )
-    parser.add_argument("--tag", default="all")
-    parser.add_argument("--duration", default="realtime")
+    parser.add_argument("--tag", default="all", choices=sorted(MARKETS))
+    parser.add_argument("--duration", default="realtime", choices=sorted(DURATIONS))
     parser.add_argument("--filter", dest="filters", action="append")
     parser.add_argument("--investor-size", type=int, default=100)
     parser.add_argument("--side", choices=["buy", "sell"], default="buy")

@@ -58,11 +58,44 @@ class TossInvestApiTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Blocked TossInvest endpoint"):
             api.request_json("/api/v3/trading/order/A005930/create")
 
+    def test_request_json_rejects_encoded_account_or_order_paths_before_network(self):
+        with self.assertRaisesRegex(RuntimeError, "Blocked TossInvest endpoint"):
+            api.validate_request_target(
+                api.BASE_URL,
+                "/api/v1/%61ccounts/balance",
+            )
+        with self.assertRaisesRegex(RuntimeError, "Blocked TossInvest endpoint"):
+            api.validate_request_target(
+                api.BASE_URL,
+                "/api/v1/stock-infos%2F..%2Ftrading%2Forder/A005930/create",
+            )
+
     def test_request_json_rejects_unapproved_cert_paths_before_network(self):
-        with self.assertRaisesRegex(RuntimeError, "not in the approved"):
+        with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
             api.request_json(
                 "/api/v1/certificates/mutation",
                 base_url="https://wts-cert-api.tossinvest.com",
+            )
+
+    def test_cert_allowlist_distinguishes_exact_paths_from_prefixes(self):
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v2/screener/screen",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v1/dashboard/wts/overview/indicator/bond?market=kr",
+        )
+
+        with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v2/screener/screen-extra",
+            )
+        with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/dashboard/wts/overview/indicator-extra/bond",
             )
 
     def test_require_int_range_rejects_non_positive_and_excessive_values(self):

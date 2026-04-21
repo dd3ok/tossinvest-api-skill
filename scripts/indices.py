@@ -15,6 +15,11 @@ CHART_PRESETS = {
     "quarter": ("3m", "day:1"),
     "daily": ("1y", "day:1"),
 }
+ALLOWED_SECURITIES_TYPES = {"auto", "kr-s", "us-s"}
+ALLOWED_INDICATOR_TYPES = {"bond", "commodity", "index"}
+ALLOWED_MARKETS = {"kr", "us"}
+ALLOWED_NET_BUYING_RANGES = {"week"}
+ALLOWED_INVEST_MODES = {"krx"}
 
 
 def normalize_index_code(code: str) -> str:
@@ -27,6 +32,7 @@ def normalize_index_code(code: str) -> str:
 def infer_securities_type(code: str, securities_type: str) -> str:
     normalized = securities_type.strip().lower()
     if normalized != "auto":
+        _require_choice("securities_type", normalized, ALLOWED_SECURITIES_TYPES - {"auto"})
         return normalized
     if "." in normalize_index_code(code):
         return "us-s"
@@ -62,6 +68,7 @@ def build_index_chart_path(
     invest_mode: str,
 ) -> str:
     resolved_securities_type = infer_securities_type(code, securities_type)
+    invest_mode = _require_choice("invest_mode", invest_mode, ALLOWED_INVEST_MODES)
     return api.build_path(
         (
             f"/api/v1/r-chart/{resolved_securities_type}/"
@@ -83,6 +90,8 @@ def build_fx_chart_path(chart_range: str, step: str, currency: str) -> str:
 
 
 def build_indicator_path(indicator_type: str, market: str | None) -> str:
+    indicator_type = _require_choice("indicator_type", indicator_type, ALLOWED_INDICATOR_TYPES)
+    market = _require_optional_choice("market", market, ALLOWED_MARKETS)
     return api.build_path(
         f"/api/v1/dashboard/wts/overview/indicator/{indicator_type}",
         {"market": market},
@@ -103,6 +112,7 @@ def build_net_buying_range_path(
     from_date: str,
     count: int,
 ) -> str:
+    net_range = _require_choice("net_range", net_range, ALLOWED_NET_BUYING_RANGES)
     return api.build_path(
         "/api/v1/stock-infos/index/net-buying/range",
         {
@@ -112,6 +122,20 @@ def build_net_buying_range_path(
             "count": count,
         },
     )
+
+
+def _require_choice(name: str, value: str, choices: set[str]) -> str:
+    normalized = value.strip().lower()
+    if normalized not in choices:
+        expected = ", ".join(sorted(choices))
+        raise ValueError(f"{name} must be one of: {expected}")
+    return normalized
+
+
+def _require_optional_choice(name: str, value: str | None, choices: set[str]) -> str | None:
+    if value is None:
+        return None
+    return _require_choice(name, value, choices)
 
 
 def build_net_buying_daily_path(code: str, from_date: str, count: int) -> str:
@@ -218,7 +242,8 @@ def main() -> int:
     parser.add_argument(
         "--securities-type",
         default="auto",
-        help="Observed r-chart securitiesType, e.g. auto, kr-s, or us-s",
+        choices=sorted(ALLOWED_SECURITIES_TYPES),
+        help="Verified r-chart securitiesType",
     )
     parser.add_argument(
         "--chart-preset",
@@ -228,7 +253,7 @@ def main() -> int:
     )
     parser.add_argument("--range", dest="chart_range")
     parser.add_argument("--step")
-    parser.add_argument("--invest-mode", default="krx")
+    parser.add_argument("--invest-mode", default="krx", choices=sorted(ALLOWED_INVEST_MODES))
     parser.add_argument("--include-chart", action="store_true")
     parser.add_argument(
         "--include-fx-chart",
@@ -267,6 +292,7 @@ def main() -> int:
     parser.add_argument(
         "--net-buying-range",
         default="week",
+        choices=sorted(ALLOWED_NET_BUYING_RANGES),
         help="Range query for the net-buying range widget",
     )
     parser.add_argument(
@@ -278,9 +304,15 @@ def main() -> int:
     parser.add_argument(
         "--indicator-type",
         default="index",
-        help="Observed dashboard indicator type, e.g. index, bond, or commodity",
+        choices=sorted(ALLOWED_INDICATOR_TYPES),
+        help="Verified dashboard indicator type",
     )
-    parser.add_argument("--market", default="kr", help="Indicator market query value")
+    parser.add_argument(
+        "--market",
+        default="kr",
+        choices=sorted(ALLOWED_MARKETS),
+        help="Indicator market query value",
+    )
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()

@@ -1,8 +1,32 @@
-# TossInvest API Skills
+# TossInvest Web API Skill
 
 [![TossInvest API Skills CI](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml)
 
-`tossinvest.com` 주식/시장 페이지에서 브라우저 네트워크 탭으로 관찰되는 공개 read-only TossInvest/토스증권 웹 내부 API를 탐색하고 호출하기 위한 비공식 Agent Skill입니다.
+`tossinvest.com` 주식/시장 페이지에서 브라우저 네트워크 탭으로 관찰되는 공개 read-only TossInvest/토스증권 웹 내부 API를 탐색하고 호출하기 위한 비공식 Agent Skill입니다. 공식 API, 증권사 API, 거래 API가 아니라 공개 웹 페이지에 이미 보이는 주식/시장 데이터를 에이전트가 안전하게 다시 조회하도록 돕는 도구입니다.
+
+## 30초 요약
+
+- 설치 후 `$tossinvest-web-api`로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 랭킹, 스크리너를 요청할 수 있습니다.
+- bundled Python scripts는 표준 라이브러리만 사용하며, API 호출 전에 host/path safety guard를 통과해야 합니다.
+- 쿠키, 로그인, 계좌, 주문, raw HAR, 접근 제어 우회는 명시적으로 범위 밖입니다.
+- undocumented internal API이므로 중요한 사용 전에는 현재 브라우저 트래픽으로 재확인하는 것을 전제로 합니다.
+
+설치 후에는 이런 식으로 바로 호출할 수 있습니다.
+
+```text
+$tossinvest-web-api를 사용해서 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
+$tossinvest-web-api를 사용해서 A005930의 일봉 캔들을 조회하고 RSI 14와 MACD를 계산해줘.
+$tossinvest-web-api를 사용해서 TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식을 찾아줘.
+```
+
+## 지원 범위
+
+- 종목 요약, 현재가, 호가, intraday ticks
+- 일/주/월/min candle chart와 로컬 RSI, SMA, EMA, MACD, Bollinger Bands 계산
+- 재무제표, 실적 추정, valuation, 배당, 안정성 지표
+- 공시, 뉴스, feed discovery, theme/TICS, 관련 테마
+- KOSPI 같은 지수, FX chart, 환율 widget, 채권/원자재 indicator
+- 국내/미국 live-chart top100, 투자자 매매 동향, broker ranking, screener 조건 검색
 
 ## 구성
 
@@ -27,7 +51,7 @@
 
 민감한 endpoint, privacy, credential-handling 관련 제보는 [SECURITY.md](SECURITY.md)를 먼저 확인하세요. GitHub issue에는 쿠키, token, authorization header, raw HAR, 계좌/개인 금융 데이터를 올리지 마세요.
 
-## 빠른 시작
+## 스크립트 빠른 실행
 
 번들 스크립트는 Python 표준 라이브러리만 사용하며, 네트워크 접근이 필요합니다.
 
@@ -47,7 +71,7 @@ python3 scripts/stock_chart.py --help
 
 더 많은 실행 예시는 [references/script-cookbook.md](references/script-cookbook.md)를, endpoint 목록은 [references/api-catalog.md](references/api-catalog.md)를 참고하세요.
 
-## 출력 형태 예시
+## 출력 예시
 
 실시간 값은 계속 바뀝니다. 아래 예시는 고정된 시장 데이터가 아니라 출력 구조를 보여주기 위한 sample shape입니다.
 
@@ -177,16 +201,17 @@ tossinvest-web-api 스킬을 사용해서 A005930의 일봉 캔들을 조회하�
 처음 써볼 때는 이런 요청이 유용합니다.
 
 ```text
-$tas를 사용해서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
-$tas를 사용해서 국내와 미국의 거래대금 기준 live-chart top100 랭킹을 조회해줘.
-$tas를 사용해서 문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
+$tossinvest-web-api를 사용해서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
+$tossinvest-web-api를 사용해서 국내와 미국의 거래대금 기준 live-chart top100 랭킹을 조회해줘.
+$tossinvest-web-api를 사용해서 문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
 ```
 
 새로운 네트워크 호출을 조사하기 전에는 [references/capture-workflow.md](references/capture-workflow.md)와 [references/safety-rules.md](references/safety-rules.md)를 먼저 확인하세요.
 
-## 테스트
+## Maintainer Notes
 
 `tests/`는 maintainer와 CI를 위한 검증 코드입니다. 일반적인 skill 사용에는 필요하지 않습니다.
+공개 릴리스 전에는 [.github/RELEASE_CHECKLIST.md](.github/RELEASE_CHECKLIST.md)를 함께 확인하세요.
 
 ```bash
 python3 -m unittest discover -s tests -v

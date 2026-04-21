@@ -19,7 +19,11 @@ If a report requires network evidence, provide sanitized endpoint paths, request
 
 Open a GitHub issue for public-read-only endpoint drift, stale documentation, unsafe examples, or scripts that accidentally reach outside the documented safety scope.
 
-If you discover a privacy, credential-handling, account-data, or order/trading safety issue, do not post sensitive details publicly. Open a minimal issue saying that a sensitive report is available, or contact the maintainer through the GitHub profile associated with this repository.
+If you discover a privacy, credential-handling, account-data, or order/trading safety issue, do not post sensitive details publicly. Use GitHub Private Vulnerability Reporting for this repository:
+
+https://github.com/dd3ok/tossinvest-api-skills/security/advisories/new
+
+If private vulnerability reporting is unavailable, open only a minimal public issue asking for a private contact path. Do not include endpoint payloads, cookies, tokens, raw HAR files, account data, screenshots of authenticated pages, or personal financial data.
 
 ## Project Safety Rules
 
