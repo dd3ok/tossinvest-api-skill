@@ -72,8 +72,28 @@ class DocumentationPromptTests(unittest.TestCase):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]
         self.assertRegex(frontmatter, r"\ndescription: Use when ")
+        self.assertIn("public read-only stock and market data", frontmatter)
         self.assertIn("\ncompatibility:", frontmatter)
         self.assertNotIn("metadata:\n  compatibility:", frontmatter)
+
+    def test_skill_body_has_positive_when_to_use_guidance(self):
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("## When To Use\n", text)
+        self.assertLess(text.index("## When To Use"), text.index("## When Not To Use"))
+        section = text.split("## When To Use", 1)[1].split("## When Not To Use", 1)[0]
+        self.assertIn("public TossInvest", section)
+        self.assertIn("quotes", section)
+        self.assertIn("read-only browser endpoint", section)
+
+    def test_openai_skill_metadata_is_localized_and_distributable(self):
+        text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
+        self.assertIn('display_name: "토스증권 Web API"', text)
+        self.assertIn("토스증권 공개 주식/시장 데이터", text)
+        self.assertIn("A005930", text)
+        self.assertIn("조회해줘", text)
+
+        license_text = (ROOT / "LICENSE.txt").read_text(encoding="utf-8")
+        self.assertEqual(license_text, (ROOT / "LICENSE").read_text(encoding="utf-8"))
 
     def test_gitignore_covers_python_build_and_local_artifacts(self):
         text = (ROOT / ".gitignore").read_text(encoding="utf-8")
