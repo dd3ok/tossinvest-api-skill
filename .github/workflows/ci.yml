@@ -1,15 +1,24 @@
-name: CI
+name: TossInvest Web API CI
 
 on:
   pull_request:
+    paths:
+      - "tossinvest-web-api/**"
+      - ".github/workflows/ci.yml"
   push:
     branches:
       - main
+    paths:
+      - "tossinvest-web-api/**"
+      - ".github/workflows/ci.yml"
 
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tossinvest-web-api
     strategy:
       fail-fast: false
       matrix:
