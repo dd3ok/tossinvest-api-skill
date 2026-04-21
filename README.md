@@ -3,7 +3,7 @@
 [![TossInvest API Skills CI](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skills?sort=semver)](https://github.com/dd3ok/tossinvest-api-skills/releases/latest)
 
-`tossinvest.com`의 공개 주식/시장 페이지에서 관찰되는 read-only 웹 내부 API를 안전하게 탐색하고 재조회하기 위한 비공식 Agent Skill입니다. 공식 API, 증권사 API, 거래 API가 아니라 공개 웹 페이지에 이미 보이는 주식/시장 데이터를 에이전트가 다시 확인하도록 돕는 도구입니다.
+비공식 토스증권 API / TossInvest API read-only Agent Skill입니다. `tossinvest.com`의 공개 주식/시장 페이지에서 관찰되는 read-only 웹 내부 API를 안전하게 탐색하고 재조회합니다. 공식 API, 증권사 API, 거래 API가 아니라 공개 웹 페이지에 이미 보이는 주식/시장 데이터를 에이전트가 다시 확인하도록 돕는 도구입니다.
 
 ## 30초 요약
 
