@@ -1,4 +1,4 @@
 interface:
   display_name: "TossInvest Web API"
   short_description: "Query unofficial read-only TossInvest stock APIs"
-  default_prompt: "Use $tossinvest-web-api to fetch a read-only TossInvest quote and brief summary for A005930."
+  default_prompt: "Fetch a read-only TossInvest quote and brief summary for A005930."
