@@ -104,10 +104,7 @@ def request_json(
                     f"TossInvest API returned non-JSON content for {method} {path}; reverify the endpoint"
                 ) from exc
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"TossInvest API returned HTTP {exc.code} for {method} {path}: {detail}"
-        ) from exc
+        raise RuntimeError(_http_error_message(exc, method, path)) from exc
     except (urllib.error.URLError, socket.timeout, TimeoutError) as exc:
         raise RuntimeError(
             f"TossInvest API request failed for {method} {path}: {exc}; reverify the endpoint"
@@ -118,6 +115,17 @@ def result_or_raise(payload: dict[str, Any]) -> Any:
     if "result" not in payload:
         raise RuntimeError("Unexpected TossInvest response: missing top-level result")
     return payload["result"]
+
+
+def _http_error_message(exc: urllib.error.HTTPError, method: str, path: str) -> str:
+    detail = "" if exc.fp is None else exc.read().decode("utf-8", errors="replace")
+    message = f"TossInvest API returned HTTP {exc.code} for {method} {path}: {detail}"
+    if exc.code in {403, 429}:
+        message += (
+            " stop automated retries; do not bypass rate limit or anti-bot checks; "
+            "reverify the endpoint from current public browser traffic before trying again"
+        )
+    return message
 
 
 def get_result(path: str, **kwargs: Any) -> Any:

@@ -9,7 +9,7 @@ compatibility: Requires Python 3.10+ and network access; intended for Codex, Cla
 
 ## Overview
 
-Use this skill to inspect TossInvest web pages and work with unofficial read-only internal API endpoints that help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, or screener questions. Do not use `tossctl` or `tossinvest-cli`.
+Use this skill to inspect TossInvest web pages and work with unofficial read-only internal API endpoints that help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, or screener questions. Do not combine it with tools that automate login, account access, or trading.
 
 ## When Not To Use
 
@@ -17,7 +17,8 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 - Do not use it for order placement, order amendment, order cancellation, login, authentication, account balance, holdings, transfer, certificate, or any account-impacting workflow.
 - Do not use it to provide personalized investment advice, buy/sell recommendations, or portfolio decisions.
 - Stop if the requested data requires login cookies, authorization headers, account identifiers, personal financial data, raw HAR storage, or session storage.
-- Do not perform bulk scraping, rate-limit bypass, anti-bot bypass, or attempts to access data that is not visible in public TossInvest web pages.
+- Do not perform bulk scraping, rate-limit bypass, anti-bot bypass, aggressive polling, concurrent fan-out, or attempts to access data that is not visible in public TossInvest web pages.
+- Stop on HTTP 403, HTTP 429, challenge pages, login redirects, or abnormal responses; do not automatically retry or work around rate limit or anti-bot controls.
 
 ## Task Routing
 
@@ -101,8 +102,7 @@ Use [references/eval-prompts.md](references/eval-prompts.md) to smoke-test skill
 
 ## Hard Rules
 
-- Never use, install, or run `tossctl`.
-- Never use, install, or run `tossinvest-cli`.
+- Never combine this skill with tools that automate login, account access, or trading.
 - Never call trading mutation APIs.
 - Never call login, certificate mutation, account, holding, balance, transfer, order placement, order amendment, or order cancellation APIs.
 - Do not describe TradingView chart studies such as RSI/MACD/Bollinger as TossInvest API fields unless a current endpoint is verified; chart studies are displayed by TradingView client logic over `c-chart` candles, and `stock_chart.py` calculates supported indicators locally.
@@ -110,4 +110,5 @@ Use [references/eval-prompts.md](references/eval-prompts.md) to smoke-test skill
 - Do not catalog or script endpoints that do not help answer stock or market information questions, even when they appear in browser traffic.
 - Never store raw cookies, tokens, account numbers, session files, storage state, or raw HAR captures.
 - Stop when a `wts-cert-api` endpoint requires authentication, cookies, account identifiers, or personal data; do not try to work around access controls.
+- Stop on 403/429 or challenge responses instead of retrying, polling, rotating headers, or bypassing rate limit and anti-bot controls.
 - Treat undocumented APIs as unstable and re-verify them with current browser traffic.

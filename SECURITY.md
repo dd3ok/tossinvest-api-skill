@@ -28,6 +28,7 @@ If private vulnerability reporting is unavailable, open only a minimal public is
 ## Project Safety Rules
 
 - Do not add login, authentication, certificate mutation, account, holding, balance, transfer, order placement, order amendment, order cancellation, or orderable-amount endpoints.
-- Do not add rate-limit bypass, anti-bot bypass, bulk scraping, or access-control workaround behavior.
+- Do not add rate limit bypass, anti-bot bypass, bulk scraping, or access-control workaround behavior.
+- Do not add high-frequency polling, concurrent fan-out, large batch scraping, or automatic retries after HTTP 403/429, challenge pages, login redirects, or other abnormal responses.
 - Treat `wts-cert-api.tossinvest.com` as sensitive unless an endpoint is clearly public page metadata and works without cookies or authorization.
 - Re-verify undocumented endpoints against current public browser traffic before changing scripts or catalog status.

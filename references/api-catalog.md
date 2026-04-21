@@ -9,7 +9,7 @@ Primary data host: `https://wts-info-api.tossinvest.com`
 
 This catalog is for read-only stock-information workflows. Include endpoints only when they help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, or screener questions. Do not collect page bootstrapping, telemetry, login/certificate, guest/session, account, order, following/subscription, or personalization endpoints as cataloged APIs.
 
-Re-verify endpoints before depending on them because TossInvest web APIs are undocumented and may change without notice.
+Re-verify endpoints before depending on them because TossInvest web APIs are undocumented and may change without notice. Keep checks small, sequential, and user-initiated. If TossInvest returns access-denied, throttling, challenge, login, or otherwise unexpected responses, stop and re-check the endpoint in current public browser traffic instead of retrying or working around service-protection behavior.
 
 ## Contents
 
