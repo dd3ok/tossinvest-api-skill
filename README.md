@@ -1,4 +1,4 @@
-# TossInvest Web API Skill
+# TossInvest API Skills
 
 [![TossInvest API Skills CI](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skills/actions/workflows/ci.yml)
 
