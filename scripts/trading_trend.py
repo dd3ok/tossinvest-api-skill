@@ -39,14 +39,16 @@ def _rows_from_result(result: Any) -> list[dict[str, Any]]:
         return [row for row in result if isinstance(row, dict)]
     if not isinstance(result, dict):
         return []
-    rows = result.get("body") or result.get("tradingTrends") or result.get("fixedTradingTrends")
-    if isinstance(rows, list):
-        return [row for row in rows if isinstance(row, dict)]
+    for key in ("body", "tradingTrends", "fixedTradingTrends"):
+        rows = result.get(key)
+        if isinstance(rows, list):
+            return [row for row in rows if isinstance(row, dict)]
     data = result.get("data")
     if isinstance(data, dict):
-        content = data.get("content") or data.get("items")
-        if isinstance(content, list):
-            return [row for row in content if isinstance(row, dict)]
+        for key in ("content", "items"):
+            content = data.get(key)
+            if isinstance(content, list):
+                return [row for row in content if isinstance(row, dict)]
     return []
 
 

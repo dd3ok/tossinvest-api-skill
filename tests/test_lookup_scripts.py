@@ -571,6 +571,16 @@ class TradingTrendScriptTests(unittest.TestCase):
         )
         self.assertEqual({item["date"] for item in normalized}, {"2026-04-24"})
 
+    def test_normalize_investor_result_accepts_explicit_empty_primary_lists(self):
+        self.assertEqual(
+            trading_trend.normalize_investor_result({"body": [], "tradingTrends": [{"baseDate": "2026-04-24", "netForeignerBuyVolume": 1}]}),
+            [],
+        )
+        self.assertEqual(
+            trading_trend.normalize_investor_result({"data": {"content": [], "items": [{"baseDate": "2026-04-24", "netForeignerBuyVolume": 1}]}}),
+            [],
+        )
+
     def test_build_trend_path_for_recent_investor_trend(self):
         self.assertEqual(
             trading_trend.build_trend_path("005930", "investor", 20, None, None),
