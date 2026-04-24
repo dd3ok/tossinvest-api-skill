@@ -318,8 +318,34 @@ Observed investor trend row keys include:
 baseDate,
 individualsBuyVolume, individualsSellVolume, netIndividualsBuyVolume,
 foreignerBuyVolume, foreignerSellVolume, netForeignerBuyVolume,
-institutionBuyVolume, institutionSellVolume, netInstitutionBuyVolume
+institutionBuyVolume, institutionSellVolume, netInstitutionBuyVolume,
+netFinancialInvestmentBuyVolume,
+netInsuranceBuyVolume,
+netOtherFinancialInstitutionsBuyVolume,
+netTrustBuyVolume,
+netPrivateEquityFundBuyVolume,
+netPensionFundBuyVolume,
+netBankBuyVolume,
+netOtherCorporationBuyVolume
 ```
+
+Recommended normalized investor taxonomy for KR net-flow rows:
+
+| Normalized type | Korean UI label | Net field |
+|---|---|---|
+| `individual` | 개인 | `netIndividualsBuyVolume` |
+| `foreigner` | 외국인 | `netForeignerBuyVolume` |
+| `institution_total` | 기관계 | `netInstitutionBuyVolume` |
+| `financial_investment` | 금융투자 | `netFinancialInvestmentBuyVolume` |
+| `insurance` | 보험 | `netInsuranceBuyVolume` |
+| `other_financial` | 기타금융 | `netOtherFinancialInstitutionsBuyVolume` |
+| `trust` | 투신 | `netTrustBuyVolume` |
+| `private_equity_fund` | 사모펀드 | `netPrivateEquityFundBuyVolume` |
+| `pension_fund` | 연기금등 | `netPensionFundBuyVolume` |
+| `bank` | 은행 | `netBankBuyVolume` |
+| `other_corporation` | 기타법인 | `netOtherCorporationBuyVolume` |
+
+Institution total is an aggregate row; other corporation is a separate category, not part of institution-detail totals.
 
 Observed pension-fund fields:
 

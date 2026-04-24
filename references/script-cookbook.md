@@ -39,7 +39,8 @@ python3 scripts/stock_chart.py --code A005930 --range week:1 --count 52 --rsi-pe
 python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/financials.py --code A005930 --kind valuation
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
-python3 scripts/trading_trend.py --code A005930 --type investor --count 20
+python3 scripts/trading_trend.py --code A005930 --type investor --size 20
+python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-04-24 --to 2026-04-24 --normalize-investors
 python3 scripts/trading_trend.py --code A005930 --type broker
 ```
 

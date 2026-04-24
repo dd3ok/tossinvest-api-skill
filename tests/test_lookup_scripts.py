@@ -533,6 +533,66 @@ class FinancialsScriptTests(unittest.TestCase):
 
 
 class TradingTrendScriptTests(unittest.TestCase):
+    def test_normalize_investor_rows_maps_live_domestic_investor_taxonomy(self):
+        rows = [
+            {
+                "baseDate": "2026-04-24",
+                "netIndividualsBuyVolume": 6603714,
+                "netForeignerBuyVolume": -5636939,
+                "netInstitutionBuyVolume": -979657,
+                "netFinancialInvestmentBuyVolume": -131380,
+                "netInsuranceBuyVolume": -33737,
+                "netOtherFinancialInstitutionsBuyVolume": -9516,
+                "netTrustBuyVolume": -17438,
+                "netPrivateEquityFundBuyVolume": -757178,
+                "netPensionFundBuyVolume": -3787,
+                "netBankBuyVolume": -26621,
+                "netOtherCorporationBuyVolume": -23714,
+            }
+        ]
+
+        normalized = trading_trend.normalize_investor_rows(rows)
+
+        self.assertEqual(
+            [(item["investorType"], item["labelKo"], item["netBuyVolume"]) for item in normalized],
+            [
+                ("individual", "개인", 6603714),
+                ("foreigner", "외국인", -5636939),
+                ("institution_total", "기관계", -979657),
+                ("financial_investment", "금융투자", -131380),
+                ("insurance", "보험", -33737),
+                ("other_financial", "기타금융", -9516),
+                ("trust", "투신", -17438),
+                ("private_equity_fund", "사모펀드", -757178),
+                ("pension_fund", "연기금등", -3787),
+                ("bank", "은행", -26621),
+                ("other_corporation", "기타법인", -23714),
+            ],
+        )
+        self.assertEqual({item["date"] for item in normalized}, {"2026-04-24"})
+
+    def test_normalize_investor_result_accepts_explicit_empty_primary_lists(self):
+        self.assertEqual(
+            trading_trend.normalize_investor_result(
+                {
+                    "body": [],
+                    "tradingTrends": [{"baseDate": "2026-04-24", "netForeignerBuyVolume": 1}],
+                }
+            ),
+            [],
+        )
+        self.assertEqual(
+            trading_trend.normalize_investor_result(
+                {
+                    "data": {
+                        "content": [],
+                        "items": [{"baseDate": "2026-04-24", "netForeignerBuyVolume": 1}],
+                    }
+                }
+            ),
+            [],
+        )
+
     def test_build_trend_path_for_recent_investor_trend(self):
         self.assertEqual(
             trading_trend.build_trend_path("005930", "investor", 20, None, None),

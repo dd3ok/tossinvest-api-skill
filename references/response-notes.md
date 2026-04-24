@@ -143,9 +143,9 @@ Observed result keys:
 | Endpoint | Observed `result` shape |
 |---|---|
 | `/api/v1/mds/broker/trading-ranking?code={productCode}` | Object: `code`, `top5ActivityList[]`, foreign ask/bid volume and value fields, `updatedAt` |
-| `/api/v1/stock-infos/trade/trend/trading-trend` | Object: `pagingParam`, `body[]`, `lastPage`; body entries include investor buy/sell/net volume fields |
+| `/api/v1/stock-infos/trade/trend/trading-trend` | Object: `pagingParam`, `body[]`, `lastPage`; body entries include investor buy/sell/net volume fields. Live KR rows include aggregate net fields for individual/foreigner/institution total/other corporation plus institution-detail fields: `netFinancialInvestmentBuyVolume`, `netInsuranceBuyVolume`, `netOtherFinancialInstitutionsBuyVolume`, `netTrustBuyVolume`, `netPrivateEquityFundBuyVolume`, `netPensionFundBuyVolume`, `netBankBuyVolume`. Some detail categories expose gross buy fields but not matching sell fields; use explicit `net*BuyVolume` fields for net-flow semantics. |
 | `/api/v1/stock-infos/trade/trend/program-trading` | Object: `pagingParam`, `body[]`, `lastPage`; body entries include arbitrage, non-arbitrage, and total buy/sell/net quantities |
-| `/api/v1/stock-infos/trade/trend/fixed-trading-trend` | List: date-bounded investor buy/sell/net volume rows |
+| `/api/v1/stock-infos/trade/trend/fixed-trading-trend` | List: date-bounded investor buy/sell/net volume rows. Live KR rows include `netIndividualsBuyVolume` (개인), `netForeignerBuyVolume` (외국인), `netInstitutionBuyVolume` (기관계), `netOtherCorporationBuyVolume` (기타법인), and institution-detail net fields such as `netFinancialInvestmentBuyVolume`, `netInsuranceBuyVolume`, `netOtherFinancialInstitutionsBuyVolume`, `netTrustBuyVolume`, `netPrivateEquityFundBuyVolume`, `netPensionFundBuyVolume`, `netBankBuyVolume`. |
 | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend` | List: date-bounded accumulated net investor-volume rows |
 | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend/detail` | Object: accumulated net investor-volume fields by detail category |
 | `/api/v1/mds/info/credit` | Object: `pagingParam`, `body[]`, `lastPage`; verify each `/mds/info/{type}` variant separately |
