@@ -19,6 +19,61 @@ FIXED_TYPES = {
     "accumulated-detail": "accumulated-fixed-trading-trend/detail",
 }
 
+INVESTOR_NET_FIELDS = (
+    ("individual", "개인", "netIndividualsBuyVolume"),
+    ("foreigner", "외국인", "netForeignerBuyVolume"),
+    ("institution_total", "기관계", "netInstitutionBuyVolume"),
+    ("financial_investment", "금융투자", "netFinancialInvestmentBuyVolume"),
+    ("insurance", "보험", "netInsuranceBuyVolume"),
+    ("other_financial", "기타금융", "netOtherFinancialInstitutionsBuyVolume"),
+    ("trust", "투신", "netTrustBuyVolume"),
+    ("private_equity_fund", "사모펀드", "netPrivateEquityFundBuyVolume"),
+    ("pension_fund", "연기금등", "netPensionFundBuyVolume"),
+    ("bank", "은행", "netBankBuyVolume"),
+    ("other_corporation", "기타법인", "netOtherCorporationBuyVolume"),
+)
+
+
+def _rows_from_result(result: Any) -> list[dict[str, Any]]:
+    if isinstance(result, list):
+        return [row for row in result if isinstance(row, dict)]
+    if not isinstance(result, dict):
+        return []
+    for key in ("body", "tradingTrends", "fixedTradingTrends"):
+        rows = result.get(key)
+        if isinstance(rows, list):
+            return [row for row in rows if isinstance(row, dict)]
+    data = result.get("data")
+    if isinstance(data, dict):
+        for key in ("content", "items"):
+            content = data.get(key)
+            if isinstance(content, list):
+                return [row for row in content if isinstance(row, dict)]
+    return []
+
+
+def normalize_investor_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized: list[dict[str, Any]] = []
+    for row in rows:
+        trade_date = row.get("baseDate") or row.get("date") or row.get("tradeDate")
+        for investor_type, label_ko, field_name in INVESTOR_NET_FIELDS:
+            if field_name not in row:
+                continue
+            normalized.append(
+                {
+                    "date": trade_date,
+                    "investorType": investor_type,
+                    "labelKo": label_ko,
+                    "field": field_name,
+                    "netBuyVolume": row.get(field_name),
+                }
+            )
+    return normalized
+
+
+def normalize_investor_result(result: Any) -> list[dict[str, Any]]:
+    return normalize_investor_rows(_rows_from_result(result))
+
 
 def build_trend_path(
     code: str,
@@ -56,14 +111,19 @@ def fetch_trading_trend(
     size: int | None,
     start: str | None,
     end: str | None,
+    normalize_investors: bool = False,
 ) -> dict[str, Any]:
     if size is not None:
         size = api.require_int_range("size", size, minimum=1, maximum=120)
-    return {
+    result = api.get_result(build_trend_path(code, trend_type, size, start, end))
+    payload = {
         "code": api.normalize_product_code(code),
         "type": trend_type,
-        "result": api.get_result(build_trend_path(code, trend_type, size, start, end)),
+        "result": result,
     }
+    if normalize_investors and trend_type in {"investor", "fixed"}:
+        payload["normalizedInvestorRows"] = normalize_investor_result(result)
+    return payload
 
 
 def main() -> int:
@@ -80,11 +140,23 @@ def main() -> int:
     parser.add_argument("--size", type=int, default=60, help="Rows for recent/paged endpoints")
     parser.add_argument("--from", dest="start", help="Start date YYYY-MM-DD")
     parser.add_argument("--to", dest="end", help="End date YYYY-MM-DD")
+    parser.add_argument(
+        "--normalize-investors",
+        action="store_true",
+        help="Add normalized KR investor net-buy rows for investor/fixed endpoints",
+    )
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
-    payload = fetch_trading_trend(args.code, args.type, args.size, args.start, args.end)
+    payload = fetch_trading_trend(
+        args.code,
+        args.type,
+        args.size,
+        args.start,
+        args.end,
+        normalize_investors=args.normalize_investors,
+    )
     api.emit_output(api.render_json(payload), args.output)
     return 0
 
