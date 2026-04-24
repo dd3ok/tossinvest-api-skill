@@ -10,6 +10,8 @@ from typing import Any
 import tossinvest_api as api
 
 DEFAULT_PAGES = ("order", "analytics", "news", "transaction-status")
+MAX_SUMMARY_KEYS = 24
+MAX_SUMMARY_ROW_KEYS = 18
 ROW_KEYS = (
     "body",
     "candles",
@@ -36,6 +38,18 @@ class EndpointCheck:
     body: dict[str, Any] | None = None
 
 
+@dataclass(frozen=True)
+class CheckContext:
+    product_code: str
+    company_code: str
+    start: str
+    end: str
+    news_size: int
+    filing_size: int
+    tick_count: int
+    candle_count: int
+
+
 def build_check_plan(
     code: str,
     pages: list[str],
@@ -48,7 +62,16 @@ def build_check_plan(
     candle_count: int,
 ) -> list[EndpointCheck]:
     product_code = api.normalize_product_code(code)
-    company_code = api.to_company_code(product_code)
+    context = CheckContext(
+        product_code=product_code,
+        company_code=api.to_company_code(product_code),
+        start=start,
+        end=end,
+        news_size=news_size,
+        filing_size=filing_size,
+        tick_count=tick_count,
+        candle_count=candle_count,
+    )
     page_builders = {
         "order": _order_checks,
         "analytics": _analytics_checks,
@@ -59,81 +82,70 @@ def build_check_plan(
     for page in pages:
         if page not in page_builders:
             raise ValueError(f"unknown page: {page}")
-        plan.extend(
-            page_builders[page](
-                product_code,
-                company_code,
-                start,
-                end,
-                news_size,
-                filing_size,
-                tick_count,
-                candle_count,
-            )
-        )
+        plan.extend(page_builders[page](context))
     return plan
 
 
-def _order_checks(
-    product_code: str,
-    company_code: str,
-    start: str,
-    end: str,
-    news_size: int,
-    filing_size: int,
-    tick_count: int,
-    candle_count: int,
-) -> list[EndpointCheck]:
-    del company_code, start, end, news_size, filing_size
+def _order_checks(context: CheckContext) -> list[EndpointCheck]:
     return [
         EndpointCheck(
             "order",
             "common stock detail UI",
             "GET",
-            f"/api/v1/stock-detail/ui/{product_code}/common",
+            f"/api/v1/stock-detail/ui/{context.product_code}/common",
         ),
         EndpointCheck(
-            "order", "stock header info", "GET", f"/api/v1/stock-infos/header/{product_code}"
+            "order",
+            "stock header info",
+            "GET",
+            f"/api/v1/stock-infos/header/{context.product_code}",
         ),
         EndpointCheck(
-            "order", "WTS badges", "GET", f"/api/v1/stock-infos/{product_code}/wts-badges"
+            "order",
+            "WTS badges",
+            "GET",
+            f"/api/v1/stock-infos/{context.product_code}/wts-badges",
         ),
-        EndpointCheck("order", "stock metadata", "GET", f"/api/v2/stock-infos/{product_code}"),
+        EndpointCheck(
+            "order", "stock metadata", "GET", f"/api/v2/stock-infos/{context.product_code}"
+        ),
         EndpointCheck(
             "order",
             "price details",
             "GET",
-            api.build_path("/api/v3/stock-prices/details", {"productCodes": product_code}),
+            api.build_path("/api/v3/stock-prices/details", {"productCodes": context.product_code}),
         ),
         EndpointCheck(
             "order",
             "quote book",
             "GET",
-            api.build_path(f"/api/v3/stock-prices/{product_code}/quotes", {"investMode": "krx"}),
+            api.build_path(
+                f"/api/v3/stock-prices/{context.product_code}/quotes", {"investMode": "krx"}
+            ),
         ),
         EndpointCheck(
             "order",
             "intraday ticks",
             "GET",
             api.build_path(
-                f"/api/v2/stock-prices/{product_code}/ticks",
-                {"viewType": "krx", "count": tick_count, "investMode": "krx"},
+                f"/api/v2/stock-prices/{context.product_code}/ticks",
+                {"viewType": "krx", "count": context.tick_count, "investMode": "krx"},
             ),
         ),
         EndpointCheck(
             "order",
             "upper/lower bounds",
             "GET",
-            f"/api/v2/stock-prices/{product_code}/upper-lower",
+            f"/api/v2/stock-prices/{context.product_code}/upper-lower",
         ),
         EndpointCheck(
             "order",
             "daily c-chart candles",
             "GET",
             api.build_path(
-                f"/api/v1/c-chart/kr-s/{product_code}/day:1",
+                f"/api/v1/c-chart/kr-s/{context.product_code}/day:1",
                 {
-                    "count": candle_count,
+                    "count": context.candle_count,
                     "session": "all",
                     "investMode": "krx",
                     "useAdjustedRate": True,
@@ -143,110 +155,112 @@ def _order_checks(
     ]
 
 
-def _analytics_checks(
-    product_code: str,
-    company_code: str,
-    start: str,
-    end: str,
-    news_size: int,
-    filing_size: int,
-    tick_count: int,
-    candle_count: int,
-) -> list[EndpointCheck]:
-    del start, end, news_size, filing_size, tick_count, candle_count
+def _analytics_checks(context: CheckContext) -> list[EndpointCheck]:
     post_paths = [
         (
             "comprehensive financial statements",
-            f"/api/v2/companies/{product_code}/financial-statements/comprehensive",
+            f"/api/v2/companies/{context.product_code}/financial-statements/comprehensive",
         ),
         (
             "financial statement records",
-            f"/api/v2/companies/{product_code}/financial-statement-records",
+            f"/api/v2/companies/{context.product_code}/financial-statement-records",
         ),
-        ("revenue estimate", f"/api/v2/companies/{product_code}/financial/estimate/revenue"),
-        ("EPS estimate", f"/api/v2/companies/{product_code}/financial/estimate/eps"),
+        (
+            "revenue estimate",
+            f"/api/v2/companies/{context.product_code}/financial/estimate/revenue",
+        ),
+        ("EPS estimate", f"/api/v2/companies/{context.product_code}/financial/estimate/eps"),
         (
             "operating income estimate",
-            f"/api/v2/companies/{product_code}/financial/estimate/operating-income",
+            f"/api/v2/companies/{context.product_code}/financial/estimate/operating-income",
         ),
-        ("valuation", f"/api/v2/stock-infos/evaluation/{product_code}"),
-        ("valuation comparison", f"/api/v2/stock-infos/evaluation-comparison/{product_code}"),
-        ("stability", f"/api/v2/stock-infos/stability/{product_code}"),
-        ("revenue and net profit", f"/api/v2/stock-infos/revenue-and-net-profit/{product_code}"),
-        ("operating income", f"/api/v2/stock-infos/operating-income/{product_code}"),
+        ("valuation", f"/api/v2/stock-infos/evaluation/{context.product_code}"),
+        (
+            "valuation comparison",
+            f"/api/v2/stock-infos/evaluation-comparison/{context.product_code}",
+        ),
+        ("stability", f"/api/v2/stock-infos/stability/{context.product_code}"),
+        (
+            "revenue and net profit",
+            f"/api/v2/stock-infos/revenue-and-net-profit/{context.product_code}",
+        ),
+        ("operating income", f"/api/v2/stock-infos/operating-income/{context.product_code}"),
     ]
     checks = [
         EndpointCheck(
             "analytics",
             "sales composition",
             "GET",
-            f"/api/v1/companies/{company_code}/sales-compositions",
+            f"/api/v1/companies/{context.company_code}/sales-compositions",
         ),
         EndpointCheck(
-            "analytics", "related themes", "GET", f"/api/v2/companies/{company_code}/tics"
+            "analytics", "related themes", "GET", f"/api/v2/companies/{context.company_code}/tics"
         ),
         EndpointCheck(
-            "analytics", "stock overview", "GET", f"/api/v2/stock-infos/{product_code}/overview"
+            "analytics",
+            "stock overview",
+            "GET",
+            f"/api/v2/stock-infos/{context.product_code}/overview",
         ),
         EndpointCheck(
             "analytics",
             "business/holding composition",
             "GET",
-            f"/api/v2/stock-infos/{product_code}/compositions",
+            f"/api/v2/stock-infos/{context.product_code}/compositions",
         ),
         EndpointCheck(
             "analytics",
             "consensus",
             "GET",
-            f"/api/v2/stock-infos/consensus/{product_code}",
+            f"/api/v2/stock-infos/consensus/{context.product_code}",
         ),
         EndpointCheck(
             "analytics",
             "analyst opinion",
             "GET",
-            f"/api/v1/stock-detail/ui/wts/{product_code}/analyst-opinion",
+            f"/api/v1/stock-detail/ui/wts/{context.product_code}/analyst-opinion",
         ),
         EndpointCheck(
             "analytics",
             "analyst reports",
             "GET",
-            f"/api/v1/stock-detail/ui/wts/{product_code}/analyst-reports",
+            f"/api/v1/stock-detail/ui/wts/{context.product_code}/analyst-reports",
         ),
         EndpointCheck(
             "analytics",
             "investment indicators",
             "GET",
-            f"/api/v1/stock-detail/ui/wts/{product_code}/investment-indicators",
+            f"/api/v1/stock-detail/ui/wts/{context.product_code}/investment-indicators",
         ),
         EndpointCheck(
             "analytics",
             "analytics section order",
             "GET",
-            f"/api/v1/stock-detail/ui/wts/{product_code}/section-orders",
+            f"/api/v1/stock-detail/ui/wts/{context.product_code}/section-orders",
         ),
         EndpointCheck(
             "analytics",
             "dividend summary",
             "GET",
-            f"/api/v1/stock-infos/dividend/{product_code}/summary",
+            f"/api/v1/stock-infos/dividend/{context.product_code}/summary",
         ),
         EndpointCheck(
             "analytics",
             "dividend years",
             "GET",
-            f"/api/v1/stock-infos/dividend/{product_code}/years",
+            f"/api/v1/stock-infos/dividend/{context.product_code}/years",
         ),
         EndpointCheck(
             "analytics",
             "dividend yield histories",
             "GET",
-            f"/api/v1/stock-infos/{product_code}/dividends/yield-ratio/histories",
+            f"/api/v1/stock-infos/{context.product_code}/dividends/yield-ratio/histories",
         ),
         EndpointCheck(
             "analytics",
             "financial estimate date",
             "GET",
-            f"/api/v2/companies/{product_code}/financial/estimate/date",
+            f"/api/v2/companies/{context.product_code}/financial/estimate/date",
         ),
     ]
     checks.extend(
@@ -255,53 +269,35 @@ def _analytics_checks(
     return checks
 
 
-def _news_checks(
-    product_code: str,
-    company_code: str,
-    start: str,
-    end: str,
-    news_size: int,
-    filing_size: int,
-    tick_count: int,
-    candle_count: int,
-) -> list[EndpointCheck]:
-    del product_code, start, end, tick_count, candle_count
+def _news_checks(context: CheckContext) -> list[EndpointCheck]:
     return [
         EndpointCheck(
             "news",
             "company news",
             "GET",
-            api.build_path(f"/api/v2/news/companies/{company_code}", {"size": news_size}),
+            api.build_path(
+                f"/api/v2/news/companies/{context.company_code}", {"size": context.news_size}
+            ),
         ),
         EndpointCheck(
             "news",
             "company filings",
             "GET",
             api.build_path(
-                f"/api/v1/stock-detail/companies/{company_code}/filings",
-                {"number": 1, "size": filing_size},
+                f"/api/v1/stock-detail/companies/{context.company_code}/filings",
+                {"number": 1, "size": context.filing_size},
             ),
         ),
     ]
 
 
-def _transaction_status_checks(
-    product_code: str,
-    company_code: str,
-    start: str,
-    end: str,
-    news_size: int,
-    filing_size: int,
-    tick_count: int,
-    candle_count: int,
-) -> list[EndpointCheck]:
-    del company_code, news_size, filing_size, tick_count, candle_count
+def _transaction_status_checks(context: CheckContext) -> list[EndpointCheck]:
     return [
         EndpointCheck(
             "transaction-status",
             "broker trading ranking",
             "GET",
-            api.build_path("/api/v1/mds/broker/trading-ranking", {"code": product_code}),
+            api.build_path("/api/v1/mds/broker/trading-ranking", {"code": context.product_code}),
         ),
         EndpointCheck(
             "transaction-status",
@@ -309,7 +305,7 @@ def _transaction_status_checks(
             "GET",
             api.build_path(
                 "/api/v1/stock-infos/trade/trend/trading-trend",
-                {"productCode": product_code, "size": 5},
+                {"productCode": context.product_code, "size": 5},
             ),
         ),
         EndpointCheck(
@@ -318,7 +314,7 @@ def _transaction_status_checks(
             "GET",
             api.build_path(
                 "/api/v1/stock-infos/trade/trend/program-trading",
-                {"productCode": product_code, "size": 5},
+                {"productCode": context.product_code, "size": 5},
             ),
         ),
         EndpointCheck(
@@ -327,7 +323,7 @@ def _transaction_status_checks(
             "GET",
             api.build_path(
                 "/api/v1/stock-infos/trade/trend/fixed-trading-trend",
-                {"productCode": product_code, "from": start, "to": end},
+                {"productCode": context.product_code, "from": context.start, "to": context.end},
             ),
         ),
         EndpointCheck(
@@ -336,7 +332,7 @@ def _transaction_status_checks(
             "GET",
             api.build_path(
                 "/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend",
-                {"productCode": product_code, "from": start, "to": end},
+                {"productCode": context.product_code, "from": context.start, "to": context.end},
             ),
         ),
         EndpointCheck(
@@ -345,7 +341,7 @@ def _transaction_status_checks(
             "GET",
             api.build_path(
                 "/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend/detail",
-                {"productCode": product_code, "from": start, "to": end},
+                {"productCode": context.product_code, "from": context.start, "to": context.end},
             ),
         ),
         EndpointCheck(
@@ -353,7 +349,8 @@ def _transaction_status_checks(
             "credit info",
             "GET",
             api.build_path(
-                "/api/v1/mds/info/credit", {"stockCode": product_code, "number": 1, "size": 5}
+                "/api/v1/mds/info/credit",
+                {"stockCode": context.product_code, "number": 1, "size": 5},
             ),
         ),
     ]
@@ -361,17 +358,20 @@ def _transaction_status_checks(
 
 def summarize_result(result: Any) -> dict[str, Any]:
     if isinstance(result, dict):
-        summary: dict[str, Any] = {"type": "object", "keys": list(result.keys())[:24]}
+        summary: dict[str, Any] = {
+            "type": "object",
+            "keys": list(result.keys())[:MAX_SUMMARY_KEYS],
+        }
         for key in ROW_KEYS:
             rows = result.get(key)
             if isinstance(rows, list) and rows and isinstance(rows[0], dict):
-                summary["rowKeys"] = {key: list(rows[0].keys())[:18]}
+                summary["rowKeys"] = {key: list(rows[0].keys())[:MAX_SUMMARY_ROW_KEYS]}
                 break
         return summary
     if isinstance(result, list):
         summary = {"type": "list", "len": len(result)}
         if result and isinstance(result[0], dict):
-            summary["itemKeys"] = list(result[0].keys())[:24]
+            summary["itemKeys"] = list(result[0].keys())[:MAX_SUMMARY_KEYS]
         return summary
     return {"type": type(result).__name__}
 
@@ -431,9 +431,10 @@ def main() -> int:
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
+    pages = _parse_pages(args.pages)
     plan = build_check_plan(
         args.code,
-        _parse_pages(args.pages),
+        pages,
         start=args.start,
         end=args.end,
         news_size=api.require_int_range("news-size", args.news_size, minimum=1, maximum=50),
@@ -443,7 +444,7 @@ def main() -> int:
     )
     payload = {
         "code": api.normalize_product_code(args.code),
-        "pages": _parse_pages(args.pages),
+        "pages": pages,
         "checks": run_checks(plan),
     }
     api.emit_output(api.render_json(payload), args.output)
