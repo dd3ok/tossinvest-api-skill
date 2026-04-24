@@ -54,7 +54,6 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 7. Read [references/capture-workflow.md](references/capture-workflow.md) when adding new endpoints.
 8. Read [references/safety-rules.md](references/safety-rules.md) before handling HAR files, cookies, account data, authenticated APIs, or order-related endpoints.
 9. For any `wts-cert-api.tossinvest.com` request, continue only if the endpoint is public-looking page metadata and no cookie, authorization header, account identifier, or personal data is required.
-10. For pension-fund investor trend checks, prefer `netPensionFundBuyVolume`; use `pensionFundBuyVolume` only as a reference gross-buy field unless re-verified against the current UI.
 
 ## Bundled Scripts
 
@@ -70,7 +69,7 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 - `scripts/dashboard_ranking.py`: Fetches dashboard overview rankings, home live-chart top100 rankings, and domestic investor buy/sell ranking widgets.
 - `scripts/feed.py`: Fetches recommended feed payloads and dashboard news categories.
 - `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`, optional common preset/search modal metadata, RSI, price-condition, and technical-analysis filter presets plus paged/sorted results; uses `wts-cert-api`, so keep sensitive-host caution.
-- `scripts/pension_fund_trend.py`: Fetches pension-fund net-buy history from `fixed-trading-trend`; supports `--from/--to`, `--year`, `--all-history`, JSON/CSV output, `--output`, summary metadata, and optional reference gross-buy values from recent `trading-trend` rows.
+- `scripts/pension_fund_trend.py`: Fetches pension-fund net-buy history from `fixed-trading-trend`; supports `--from/--to`, `--year`, `--all-history`, JSON/CSV output, `--output`, and summary metadata.
 
 ## Script Examples
 

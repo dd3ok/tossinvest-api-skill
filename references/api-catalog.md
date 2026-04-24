@@ -306,8 +306,6 @@ Notes:
 - The `contentType=net-buy` page URL variant did not introduce a separate API in observed captures.
 - Treat `from` and `to` as dynamic dates derived by the page, not hard-coded constants.
 - Direct response checks showed top-level key `result` for all four endpoints above.
-- For pension-fund trend, match the TossInvest investor-status UI against `netPensionFundBuyVolume`: positive values are net buys and negative values are net sells.
-- Treat `pensionFundBuyVolume` as a reference gross-buy field. It has been observed in recent `trading-trend` rows and sums into `institutionBuyVolume` with other institution detail buy fields, but it is not the UI net-buy value.
 - `fixed-trading-trend` is the preferred endpoint for date-bounded pension-fund history. It returned rows back to `2019-04-01` for `A005930` in verification; earlier ranges returned no rows.
 - Long date-bounded requests may be truncated. A single `A005930` request from `2019-04-01` through `2026-04-16` returned 1,731 rows; query by year or smaller windows for stable history collection.
 - Use `scripts/pension_fund_trend.py --year YYYY` for one calendar year or `--all-history --format csv --output pension.csv` for yearly-window collection from the verified history start. Use `--summary-only` when only row count, net total, and net-buy/net-sell day counts are needed.
@@ -350,8 +348,7 @@ Institution total is an aggregate row; other corporation is a separate category,
 Observed pension-fund fields:
 
 ```text
-netPensionFundBuyVolume   # primary UI-matching net-buy/net-sell value
-pensionFundBuyVolume      # reference gross-buy field, not available in every endpoint
+netPensionFundBuyVolume
 ```
 
 Observed program trading row keys include:

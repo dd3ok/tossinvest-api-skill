@@ -60,19 +60,7 @@ def fetch_history(product_code: str, start: str, end: str, chunk_yearly: bool) -
     return [rows_by_date[key] for key in sorted(rows_by_date, reverse=True)]
 
 
-def recent_gross_buy(product_code: str, size: int) -> dict[str, int | None]:
-    query = urllib.parse.urlencode({"productCode": product_code, "size": size})
-    payload = api.request_json(f"/api/v1/stock-infos/trade/trend/trading-trend?{query}")
-    result = payload.get("result")
-    rows = result.get("body") if isinstance(result, dict) else None
-    if not isinstance(rows, list):
-        raise RuntimeError("Unexpected trading-trend response shape")
-    return {
-        row.get("baseDate"): row.get("pensionFundBuyVolume") for row in rows if row.get("baseDate")
-    }
-
-
-def normalize_rows(rows: list[dict], gross_by_date: dict[str, int | None] | None) -> list[dict]:
+def normalize_rows(rows: list[dict]) -> list[dict]:
     output = []
     for row in rows:
         net = row.get("netPensionFundBuyVolume")
@@ -87,8 +75,6 @@ def normalize_rows(rows: list[dict], gross_by_date: dict[str, int | None] | None
             "netPensionFundBuyVolume": net,
             "direction": direction,
         }
-        if gross_by_date is not None:
-            item["pensionFundBuyVolumeReference"] = gross_by_date.get(row.get("baseDate"))
         output.append(item)
     return output
 
@@ -139,11 +125,6 @@ def main() -> int:
         help="Start date used with --all-history",
     )
     parser.add_argument(
-        "--include-gross-reference",
-        action="store_true",
-        help="Include recent pensionFundBuyVolume reference values when available",
-    )
-    parser.add_argument(
         "--format",
         choices=["json", "csv"],
         default="json",
@@ -178,12 +159,7 @@ def main() -> int:
         chunk_yearly = False
 
     rows = fetch_history(args.code, start, end, chunk_yearly)
-    gross = (
-        recent_gross_buy(args.code, min(max(len(rows), 1), 120))
-        if args.include_gross_reference
-        else None
-    )
-    normalized = normalize_rows(rows, gross)
+    normalized = normalize_rows(rows)
     summary = {
         "code": args.code,
         "from": start,
