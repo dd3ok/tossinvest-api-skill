@@ -105,6 +105,13 @@ class DocumentationPromptTests(unittest.TestCase):
         license_text = (ROOT / "LICENSE.txt").read_text(encoding="utf-8")
         self.assertEqual(license_text, (ROOT / "LICENSE").read_text(encoding="utf-8"))
 
+    def test_cookbook_documents_page_level_api_smoke_check(self):
+        text = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        self.assertIn("Page API Smoke Checks", text)
+        self.assertIn("scripts/page_api_check.py --code A005930", text)
+        self.assertIn("order,analytics,news,transaction-status", text)
+        self.assertIn("does not call order placement", text)
+
     def test_gitignore_covers_python_build_and_local_artifacts(self):
         text = (ROOT / ".gitignore").read_text(encoding="utf-8")
         for pattern in [".venv/", "build/", "dist/", "*.egg-info/", ".coverage", "htmlcov/"]:

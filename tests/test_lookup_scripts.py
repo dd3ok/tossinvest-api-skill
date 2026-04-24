@@ -12,6 +12,7 @@ import filings
 import financials
 import indices
 import news
+import page_api_check
 import quote
 import screener_count
 import stock_chart
@@ -260,6 +261,7 @@ class JsonOnlyScriptCliTests(unittest.TestCase):
             "feed.py",
             "financials.py",
             "indices.py",
+            "page_api_check.py",
             "quote.py",
             "screener_count.py",
             "stock_chart.py",
@@ -604,6 +606,85 @@ class TradingTrendScriptTests(unittest.TestCase):
             trading_trend.build_trend_path("A005930", "fixed", None, "2026-01-01", "2026-01-31"),
             "/api/v1/stock-infos/trade/trend/fixed-trading-trend?productCode=A005930&from=2026-01-01&to=2026-01-31",
         )
+
+
+class PageApiCheckScriptTests(unittest.TestCase):
+    def test_build_check_plan_maps_stock_pages_to_read_only_endpoints(self):
+        plan = page_api_check.build_check_plan(
+            "A005930",
+            ["order", "analytics", "news", "transaction-status"],
+            start="2026-04-01",
+            end="2026-04-24",
+            news_size=5,
+            filing_size=5,
+            tick_count=5,
+            candle_count=5,
+        )
+
+        self.assertEqual(plan[0].page, "order")
+        self.assertEqual(plan[0].path, "/api/v1/stock-detail/ui/A005930/common")
+        self.assertIn(
+            "/api/v2/news/companies/005930?size=5",
+            [item.path for item in plan],
+        )
+        self.assertIn(
+            "/api/v1/stock-infos/trade/trend/fixed-trading-trend?productCode=A005930&from=2026-04-01&to=2026-04-24",
+            [item.path for item in plan],
+        )
+
+    def test_build_check_plan_excludes_order_account_and_mutation_paths(self):
+        plan = page_api_check.build_check_plan(
+            "A005930",
+            ["order"],
+            start="2026-04-01",
+            end="2026-04-24",
+            news_size=5,
+            filing_size=5,
+            tick_count=5,
+            candle_count=5,
+        )
+
+        forbidden_fragments = ["/trading/order", "/orderable", "/account", "/balance"]
+        for item in plan:
+            with self.subTest(path=item.path):
+                self.assertFalse(any(fragment in item.path for fragment in forbidden_fragments))
+
+    def test_summarize_result_reports_shapes_without_storing_full_payload(self):
+        summary = page_api_check.summarize_result(
+            {
+                "pagingParam": {"number": 1},
+                "body": [
+                    {
+                        "id": "news1",
+                        "title": "sample",
+                        "summary": "long content should not be copied",
+                    }
+                ],
+                "lastPage": False,
+            }
+        )
+
+        self.assertEqual(
+            summary,
+            {
+                "type": "object",
+                "keys": ["pagingParam", "body", "lastPage"],
+                "rowKeys": {"body": ["id", "title", "summary"]},
+            },
+        )
+
+    def test_build_check_plan_rejects_unknown_pages(self):
+        with self.assertRaisesRegex(ValueError, "unknown page"):
+            page_api_check.build_check_plan(
+                "A005930",
+                ["account"],
+                start="2026-04-01",
+                end="2026-04-24",
+                news_size=5,
+                filing_size=5,
+                tick_count=5,
+                candle_count=5,
+            )
 
 
 if __name__ == "__main__":

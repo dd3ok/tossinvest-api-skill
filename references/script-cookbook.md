@@ -12,6 +12,7 @@ Use this cookbook when `SKILL.md` has selected the right script family but the t
 - [Rankings And Feed](#rankings-and-feed)
 - [Screener](#screener)
 - [Pension Fund Trend](#pension-fund-trend)
+- [Page API Smoke Checks](#page-api-smoke-checks)
 
 ## Stock Detail
 
@@ -100,4 +101,17 @@ python3 scripts/screener_count.py --nation kr --filters-file examples/filters/ne
 ```bash
 python3 scripts/pension_fund_trend.py --code A005930 --year 2026 --summary-only
 python3 scripts/pension_fund_trend.py --code A005930 --from 2026-01-01 --to 2026-01-31 --format csv
+```
+
+## Page API Smoke Checks
+
+Use `page_api_check.py` when a user asks whether the stock page APIs still call
+cleanly for a single product. It checks only read-only stock information endpoint
+groups and does not call order placement, order amendment, account, balance, or
+orderable-amount APIs.
+
+```bash
+python3 scripts/page_api_check.py --code A005930
+python3 scripts/page_api_check.py --code A005930 --pages order,analytics,news,transaction-status
+python3 scripts/page_api_check.py --code A005930 --pages transaction-status --from 2026-04-01 --to 2026-04-24
 ```

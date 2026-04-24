@@ -41,6 +41,7 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 | Home rankings, top100 by amount/volume/surge/decline | `scripts/dashboard_ranking.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Recommended feed and news discovery | `scripts/feed.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Screener counts, filter metadata, RSI filters, price/technical presets | `scripts/screener_count.py` | [examples/filters](examples/filters) |
+| Page-level stock API smoke checks | `scripts/page_api_check.py` | [references/script-cookbook.md](references/script-cookbook.md) |
 | New endpoint capture or undocumented page analysis | Browser network capture, bundled JavaScript inspection | [references/capture-workflow.md](references/capture-workflow.md), [references/safety-rules.md](references/safety-rules.md) |
 
 ## Workflow
@@ -69,6 +70,7 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 - `scripts/dashboard_ranking.py`: Fetches dashboard overview rankings, home live-chart top100 rankings, and domestic investor buy/sell ranking widgets.
 - `scripts/feed.py`: Fetches recommended feed payloads and dashboard news categories.
 - `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`, optional common preset/search modal metadata, RSI, price-condition, and technical-analysis filter presets plus paged/sorted results; uses `wts-cert-api`, so keep sensitive-host caution.
+- `scripts/page_api_check.py`: Smoke-checks read-only endpoint groups for stock pages such as order, analytics, news, and transaction-status; reports response shapes without storing full payloads.
 - `scripts/pension_fund_trend.py`: Fetches pension-fund net-buy history from `fixed-trading-trend`; supports `--from/--to`, `--year`, `--all-history`, JSON/CSV output, `--output`, and summary metadata.
 
 ## Script Examples
@@ -85,6 +87,7 @@ python3 scripts/indices.py --code KGG01P --include-chart --include-fx-chart --in
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
 python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
+python3 scripts/page_api_check.py --code A005930 --pages order,analytics,news,transaction-status
 ```
 
 ## Usage Prompts
