@@ -11,7 +11,6 @@ Most checked endpoints returned JSON with a top-level `result` key. Do not assum
 - [Discovery And Screener Shapes](#discovery-and-screener-shapes)
 - [Financial POST Shapes](#financial-post-shapes)
 - [Transaction Status Shapes](#transaction-status-shapes)
-- [Pension-Fund Trend Notes](#pension-fund-trend-notes)
 
 ## Stock And Price Shapes
 
@@ -149,11 +148,3 @@ Observed result keys:
 | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend` | List: date-bounded accumulated net investor-volume rows |
 | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend/detail` | Object: accumulated net investor-volume fields by detail category |
 | `/api/v1/mds/info/credit` | Object: `pagingParam`, `body[]`, `lastPage`; verify each `/mds/info/{type}` variant separately |
-
-## Pension-Fund Trend Notes
-
-Use `netPensionFundBuyVolume` as the UI-matching pension-fund net-buy value. Positive values indicate pension-fund net buying; negative values indicate pension-fund net selling.
-
-Treat `pensionFundBuyVolume` as a reference gross-buy field. It was observed in recent `trading-trend` rows and matched the institution detail buy-volume aggregation, but it is not the investor-status net-buy value and is not present in every date-bounded response.
-
-For `A005930`, `fixed-trading-trend` returned date-bounded `netPensionFundBuyVolume` rows back to `2019-04-01` during verification. Older date windows returned `200` with an empty list. Long windows can be truncated, so prefer yearly or smaller windows when collecting history.
