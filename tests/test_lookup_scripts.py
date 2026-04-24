@@ -573,11 +573,23 @@ class TradingTrendScriptTests(unittest.TestCase):
 
     def test_normalize_investor_result_accepts_explicit_empty_primary_lists(self):
         self.assertEqual(
-            trading_trend.normalize_investor_result({"body": [], "tradingTrends": [{"baseDate": "2026-04-24", "netForeignerBuyVolume": 1}]}),
+            trading_trend.normalize_investor_result(
+                {
+                    "body": [],
+                    "tradingTrends": [{"baseDate": "2026-04-24", "netForeignerBuyVolume": 1}],
+                }
+            ),
             [],
         )
         self.assertEqual(
-            trading_trend.normalize_investor_result({"data": {"content": [], "items": [{"baseDate": "2026-04-24", "netForeignerBuyVolume": 1}]}}),
+            trading_trend.normalize_investor_result(
+                {
+                    "data": {
+                        "content": [],
+                        "items": [{"baseDate": "2026-04-24", "netForeignerBuyVolume": 1}],
+                    }
+                }
+            ),
             [],
         )
 
