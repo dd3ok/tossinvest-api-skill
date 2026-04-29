@@ -1,3 +1,4 @@
+import json
 import re
 import unittest
 from pathlib import Path
@@ -111,6 +112,17 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("scripts/page_api_check.py --code A005930", text)
         self.assertIn("order,analytics,news,transaction-status", text)
         self.assertIn("does not call order placement", text)
+
+    def test_gemini_extension_metadata_is_distributable(self):
+        config = json.loads((ROOT / "gemini-extension.json").read_text(encoding="utf-8"))
+        self.assertEqual(config["name"], "tossinvest-web-api")
+        self.assertEqual(config["contextFileName"], "GEMINI.md")
+        self.assertRegex(config["version"], r"^\d+\.\d+\.\d+$")
+
+        text = (ROOT / "GEMINI.md").read_text(encoding="utf-8")
+        self.assertIn("TossInvest", text)
+        self.assertIn("scripts/stock_chart.py", text)
+        self.assertIn("SPX.CBI", text)
 
     def test_gitignore_covers_python_build_and_local_artifacts(self):
         text = (ROOT / ".gitignore").read_text(encoding="utf-8")

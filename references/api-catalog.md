@@ -3,6 +3,7 @@
 Base observation date: 2026-04-16
 Additional bundle/API check: 2026-04-20 against `buildId=SUN83tZwsh5murULLiDPr`
 Additional page check: 2026-04-20 for `/stocks/A005930/order`, home ranking variants, `/indices/KGG01P`, `/feed/recommended`, and `/feed/news`
+Additional direct recheck: 2026-04-29 for US `c-chart` product candles and US overview indicator codes.
 Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
@@ -103,6 +104,7 @@ Observed on home and stock detail pages.
 | Purpose | Status | Method | Path | Params and notes |
 |---|---|---:|---|---|
 | KR stock candle chart | `script-backed` | GET | `/api/v1/c-chart/kr-s/{productCode}/{range}` | Observed ranges include `min:1`, `day:1`, `week:1`, `month:1`; query: `count`, `session=all`, `investMode=krx`, `useAdjustedRate=true`; result includes `code`, `nextDateTime`, `exchangeRate`, `exchange`, `candles[]` |
+| US stock candle chart | `script-backed` | GET | `/api/v1/c-chart/us-s/{productCode}/{range}` | Direct recheck accepted `min:1` and `day:1` for US product codes such as `AMX0250122009`; use the same query fields as KR. |
 
 Example:
 
@@ -111,7 +113,13 @@ GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/day:1?count=
 GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/min:1?count=5&session=all&investMode=krx&useAdjustedRate=true
 GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/week:1?count=5&session=all&investMode=krx&useAdjustedRate=true
 GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/month:1?count=5&session=all&investMode=krx&useAdjustedRate=true
+GET https://wts-info-api.tossinvest.com/api/v1/c-chart/us-s/AMX0250122009/day:1?count=5&session=all&investMode=krx&useAdjustedRate=true
+GET https://wts-info-api.tossinvest.com/api/v1/c-chart/us-s/AMX0250122009/min:1?count=5&session=all&investMode=krx&useAdjustedRate=true
 ```
+
+Do not substitute uppercase or legacy range aliases such as `1D` or `1H`, and do
+not use `hour:1` unless a fresh browser capture verifies it. Direct rechecks on
+2026-04-29 returned HTTP 400 for `1D`, `1H`, and `hour:1`.
 
 Observed values:
 
@@ -161,6 +169,10 @@ Examples:
 ```text
 GET https://wts-info-api.tossinvest.com/api/v2/index-infos/KGG01P
 GET https://wts-info-api.tossinvest.com/api/v1/index-prices/KGG01P
+GET https://wts-info-api.tossinvest.com/api/v2/index-infos/SPX.CBI
+GET https://wts-info-api.tossinvest.com/api/v1/index-prices/SPX.CBI
+GET https://wts-info-api.tossinvest.com/api/v2/index-infos/COMP.NAI
+GET https://wts-info-api.tossinvest.com/api/v1/index-prices/COMP.NAI
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:5?session=main&investMode=krx&last=false
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/us-s/RFU.GCv1/1d/min:5?session=main&investMode=krx&last=false
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KR1BENCH0010/1d/min:5?session=main&investMode=krx&last=false
@@ -202,6 +214,11 @@ and other codes infer `kr-s`.
 also fetch the verified mini-chart, related ETF, and index net-buying widgets
 with `--include-mini-chart`, `--include-related-etfs`, and
 `--include-net-buying`.
+
+US equity index codes should be taken from the dashboard indicator payload, not
+from common ticker aliases. Direct rechecks on 2026-04-29 accepted `SPX.CBI` for
+S&P 500 and `COMP.NAI` for Nasdaq, while plain `SPX` and `NDX` returned 404/400
+from the index info/price endpoints.
 
 ## Analytics APIs
 
