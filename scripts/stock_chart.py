@@ -10,7 +10,7 @@ from typing import Any
 import tossinvest_api as api
 
 MAX_CANDLE_COUNT = 500
-ALLOWED_SECURITIES_TYPES = {"kr-s"}
+ALLOWED_SECURITIES_TYPES = {"kr-s", "us-s"}
 ALLOWED_RANGES = {"min:1", "day:1", "week:1", "month:1"}
 ALLOWED_SESSIONS = {"all"}
 ALLOWED_INVEST_MODES = {"krx"}

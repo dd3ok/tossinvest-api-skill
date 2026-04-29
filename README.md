@@ -35,6 +35,8 @@ TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식
 - `scripts/`: 시세, 차트, 재무, 랭킹, 스크리너, 뉴스, 공시, 테마, 지수, 투자자 동향을 조회하는 작은 Python 스크립트
 - `references/`: API 카탈로그, 네트워크 캡처 절차, 응답 노트, 안전 규칙, 스모크 테스트 프롬프트
 - `examples/`: 재사용 가능한 스크리너 필터 JSON 예시
+- `agents/openai.yaml`: Codex/OpenAI 계열 도구에서 노출할 표시 메타데이터
+- `gemini-extension.json`, `GEMINI.md`: Gemini CLI extension 설치를 위한 메타데이터와 컨텍스트 파일
 - `tests/`: 스크립트 helper와 endpoint path builder를 검증하는 maintainer/CI용 테스트
 
 ## 안전 범위
@@ -64,6 +66,7 @@ TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식
 python3 scripts/stock_summary.py --code A005930 --no-overview
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
+python3 scripts/stock_chart.py --code AMX0250122009 --securities-type us-s --range day:1 --count 20
 python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 ```
@@ -190,6 +193,20 @@ git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skills.git .claude/s
 ```
 
 Claude는 TossInvest/토스증권 주식 데이터 요청이 skill 설명과 맞으면 이 skill을 자동으로 선택합니다.
+
+## Gemini CLI 설치
+
+Gemini CLI extension으로 설치할 수 있도록 `gemini-extension.json`과 `GEMINI.md`를 포함합니다. Gemini CLI는 설치한 extension을 복사하므로, GitHub나 로컬 경로에서 설치한 뒤 변경사항을 반영하려면 `gemini extensions update`가 필요합니다.
+
+```bash
+gemini extensions install https://github.com/dd3ok/tossinvest-api-skills.git
+```
+
+개발 중인 로컬 checkout을 바로 반영하려면 link 모드를 사용합니다.
+
+```bash
+gemini extensions link /path/to/tossinvest-api-skills
+```
 
 ## 프롬프트 예시
 
