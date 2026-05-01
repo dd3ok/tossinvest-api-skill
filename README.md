@@ -66,12 +66,12 @@ TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식
 python3 scripts/stock_summary.py --code A005930 --no-overview
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
-python3 scripts/stock_chart.py --code AMX0250122009 --securities-type us-s --range day:1 --count 20
+python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
 python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 ```
 
-스크립트별 옵션은 `--help`로 확인합니다.
+스크립트별 옵션은 `--help`로 확인합니다. 미국 주식 차트 조회에는 display ticker/표시 티커(`SPY`, `NVDA` 등)가 아니라 TossInvest 페이지/API에서 확인한 product/source code를 사용하세요. 표시 티커를 `c-chart` product code로 바로 넣으면 HTTP 400이 날 수 있습니다.
 
 ```bash
 python3 scripts/stock_chart.py --help

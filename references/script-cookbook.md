@@ -32,11 +32,15 @@ python3 scripts/news.py --code A005930 --size 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --sma-period 20 --ema-period 20 --macd --bollinger-period 20
 python3 scripts/stock_chart.py --code A005930 --range min:1 --count 30
 python3 scripts/stock_chart.py --code A005930 --range week:1 --count 52 --rsi-period 14
-python3 scripts/stock_chart.py --code AMX0250122009 --securities-type us-s --range day:1 --count 20
+python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
 ```
 
 Use `day:1` or `min:1` for US product candles unless a current browser capture
-shows another accepted range. Do not use `1D`, `1H`, or `hour:1` as aliases.
+shows another accepted range. For US stocks, use the TossInvest product/source
+code from the page/API, not the display ticker. Recent smoke checks accepted
+opaque codes such as `US20100311002`, while direct display tickers such as
+`SPY`, `QQQ`, `NVDA`, and `BRK.B` returned HTTP 400 when used as `c-chart`
+product codes.
 
 ## Financials And Investor Trend
 

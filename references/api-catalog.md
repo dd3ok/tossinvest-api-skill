@@ -104,7 +104,7 @@ Observed on home and stock detail pages.
 | Purpose | Status | Method | Path | Params and notes |
 |---|---|---:|---|---|
 | KR stock candle chart | `script-backed` | GET | `/api/v1/c-chart/kr-s/{productCode}/{range}` | Observed ranges include `min:1`, `day:1`, `week:1`, `month:1`; query: `count`, `session=all`, `investMode=krx`, `useAdjustedRate=true`; result includes `code`, `nextDateTime`, `exchangeRate`, `exchange`, `candles[]` |
-| US stock candle chart | `script-backed` | GET | `/api/v1/c-chart/us-s/{productCode}/{range}` | Direct recheck accepted `min:1` and `day:1` for US product codes such as `AMX0250122009`; use the same query fields as KR. |
+| US stock candle chart | `script-backed` | GET | `/api/v1/c-chart/us-s/{productCode}/{range}` | Direct recheck accepted `min:1` and `day:1` for opaque US product/source codes such as `US20100311002` and `US20100629001`; use the same query fields as KR. Display tickers are not interchangeable with product codes: recent smoke checks returned HTTP 400 for `SPY`, `QQQ`, `NVDA`, and `BRK.B` when passed directly as `productCode`. |
 
 Example:
 
@@ -113,8 +113,8 @@ GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/day:1?count=
 GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/min:1?count=5&session=all&investMode=krx&useAdjustedRate=true
 GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/week:1?count=5&session=all&investMode=krx&useAdjustedRate=true
 GET https://wts-info-api.tossinvest.com/api/v1/c-chart/kr-s/A005930/month:1?count=5&session=all&investMode=krx&useAdjustedRate=true
-GET https://wts-info-api.tossinvest.com/api/v1/c-chart/us-s/AMX0250122009/day:1?count=5&session=all&investMode=krx&useAdjustedRate=true
-GET https://wts-info-api.tossinvest.com/api/v1/c-chart/us-s/AMX0250122009/min:1?count=5&session=all&investMode=krx&useAdjustedRate=true
+GET https://wts-info-api.tossinvest.com/api/v1/c-chart/us-s/US20100311002/day:1?count=5&session=all&investMode=krx&useAdjustedRate=true
+GET https://wts-info-api.tossinvest.com/api/v1/c-chart/us-s/US20100311002/min:1?count=5&session=all&investMode=krx&useAdjustedRate=true
 ```
 
 Do not substitute uppercase or legacy range aliases such as `1D` or `1H`, and do

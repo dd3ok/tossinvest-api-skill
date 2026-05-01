@@ -60,7 +60,7 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 
 - `scripts/stock_summary.py`: Fetches stock metadata, price detail, and optional overview for a product code.
 - `scripts/quote.py`: Fetches quote-book data from v3 quotes and optional intraday ticks.
-- `scripts/stock_chart.py`: Fetches verified KR/US `c-chart` candle ranges and can add locally calculated RSI, SMA, EMA, MACD, and Bollinger Bands from close prices. Use `day:1` or `min:1` for US product candles; do not substitute `1D`, `1H`, or `hour:1` without a fresh network capture.
+- `scripts/stock_chart.py`: Fetches verified KR/US `c-chart` candle ranges and can add locally calculated RSI, SMA, EMA, MACD, and Bollinger Bands from close prices. Use `day:1` or `min:1` for US product candles; do not substitute `1D`, `1H`, or `hour:1` without a fresh network capture. For US stocks, pass the TossInvest product/source code observed from the page/API (for example `US20100311002`), not the display ticker; direct tickers such as `SPY`, `QQQ`, `NVDA`, or `BRK.B` may return HTTP 400.
 - `scripts/filings.py`: Fetches company filing lists; supports JSON or CSV output.
 - `scripts/news.py`: Fetches company news lists and optional news detail payloads.
 - `scripts/financials.py`: Fetches financial statement, estimate, valuation, stability, revenue/net-profit, and operating-income endpoints.
@@ -81,7 +81,7 @@ Use these as the common first-pass checks. Run `python3 scripts/<name>.py --help
 python3 scripts/stock_summary.py --code A005930 --no-overview
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
-python3 scripts/stock_chart.py --code AMX0250122009 --securities-type us-s --range day:1 --count 20
+python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
 python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
 python3 scripts/indices.py --code SPX.CBI --include-chart --include-fx-chart --include-exchange-rates --format json
