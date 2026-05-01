@@ -54,8 +54,8 @@ class StockChartScriptTests(unittest.TestCase):
 
     def test_build_chart_path_allows_us_securities_type_with_observed_ranges(self):
         self.assertEqual(
-            stock_chart.build_chart_path("AMX0250122009", "us-s", "day:1", 5, "all", "krx", True),
-            "/api/v1/c-chart/us-s/AMX0250122009/day:1?count=5&session=all&investMode=krx&useAdjustedRate=true",
+            stock_chart.build_chart_path("US20100311002", "us-s", "day:1", 5, "all", "krx", True),
+            "/api/v1/c-chart/us-s/US20100311002/day:1?count=5&session=all&investMode=krx&useAdjustedRate=true",
         )
 
     def test_build_chart_path_rejects_unverified_selectors(self):

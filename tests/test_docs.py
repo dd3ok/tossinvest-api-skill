@@ -113,6 +113,23 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("order,analytics,news,transaction-status", text)
         self.assertIn("does not call order placement", text)
 
+    def test_cookbook_documents_us_product_source_code_caution(self):
+        checked_paths = [
+            ROOT / "SKILL.md",
+            ROOT / "README.md",
+            ROOT / "GEMINI.md",
+            ROOT / "references" / "script-cookbook.md",
+            ROOT / "references" / "api-catalog.md",
+        ]
+        for path in checked_paths:
+            with self.subTest(path=path.relative_to(ROOT)):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("US20100311002", text)
+                self.assertIn("display ticker", text.lower())
+        api_catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        self.assertIn("SPY", api_catalog)
+        self.assertIn("HTTP 400", api_catalog)
+
     def test_gemini_extension_metadata_is_distributable(self):
         config = json.loads((ROOT / "gemini-extension.json").read_text(encoding="utf-8"))
         self.assertEqual(config["name"], "tossinvest-web-api")

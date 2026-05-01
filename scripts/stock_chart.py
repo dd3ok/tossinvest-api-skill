@@ -262,7 +262,14 @@ def main() -> int:
             "SMA, EMA, MACD, and Bollinger Bands."
         )
     )
-    parser.add_argument("--code", default="A005930", help="TossInvest product code")
+    parser.add_argument(
+        "--code",
+        default="A005930",
+        help=(
+            "TossInvest product/source code. For US c-chart, use an opaque page/API code "
+            "such as US20100311002, not a display ticker such as SPY or NVDA."
+        ),
+    )
     parser.add_argument(
         "--securities-type",
         default="kr-s",

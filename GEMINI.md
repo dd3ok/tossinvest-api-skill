@@ -32,6 +32,9 @@ Current endpoint notes:
 - Stock product candles use `/api/v1/c-chart/{kr-s|us-s}/{productCode}/{range}`.
 - Verified candle ranges include `min:1`, `day:1`, `week:1`, and `month:1`.
 - Use `day:1` or `min:1` for US stock candles unless re-verified; do not use
-  `1D`, `1H`, or `hour:1` as aliases.
+  `1D`, `1H`, or `hour:1` as aliases. For US stocks, pass the TossInvest
+  product/source code observed from the page/API, such as `US20100311002`, not
+  the display ticker; direct tickers such as `SPY`, `QQQ`, `NVDA`, and `BRK.B`
+  may return HTTP 400.
 - Use dashboard-provided indicator codes for US indices, such as `SPX.CBI` for
   S&P 500 and `COMP.NAI` for Nasdaq, instead of plain `SPX` or `NDX`.
