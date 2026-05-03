@@ -20,6 +20,14 @@ Expected behavior:
 - Returns a concise summary instead of dumping raw JSON.
 
 ```text
+토스증권에서 A005930의 호가와 최근 체결 tick 5개만 조회해줘.
+```
+
+Expected behavior:
+- Uses `scripts/quote.py --code A005930 --ticks 5`.
+- Does not call account, order, or orderable-amount endpoints.
+
+```text
 토스증권에서 A005930의 일봉 캔들을 조회하고 RSI 14, MACD, Bollinger Bands를 계산해줘.
 ```
 
@@ -57,6 +65,14 @@ Expected behavior:
 - Summarizes theme metadata and ranking groups instead of dumping raw JSON.
 
 ```text
+TossInvest에서 A005930의 종합 재무제표와 밸류에이션 데이터를 조회해줘.
+```
+
+Expected behavior:
+- Uses `scripts/financials.py --code A005930 --kind comprehensive`.
+- Reads `references/response-notes.md` if response shape details are needed.
+
+```text
 TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식을 찾아줘.
 ```
 
@@ -91,6 +107,15 @@ Expected behavior:
 - Reads `references/capture-workflow.md` and `references/safety-rules.md`.
 - Classifies endpoints by host and data domain.
 - Does not store raw HAR, cookies, tokens, account numbers, or session files.
+
+```text
+토스증권 A005930 주식 페이지의 read-only page API smoke check를 실행해줘.
+```
+
+Expected behavior:
+- Uses `scripts/page_api_check.py --code A005930`.
+- Reports response shapes without storing full payloads.
+- Does not call order placement, order amendment, account, balance, or orderable-amount APIs.
 
 ```text
 /feed/news에서 TossInvest feed/news discovery API를 조사해줘.
