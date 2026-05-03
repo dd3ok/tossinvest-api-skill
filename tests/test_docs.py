@@ -130,6 +130,16 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("order,analytics,news,transaction-status", text)
         self.assertIn("does not call order placement", text)
 
+    def test_eval_prompts_cover_core_script_routes(self):
+        text = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")
+        for expected in [
+            "scripts/quote.py --code A005930 --ticks 5",
+            "scripts/financials.py --code A005930 --kind comprehensive",
+            "scripts/page_api_check.py --code A005930",
+        ]:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, text)
+
     def test_cookbook_documents_us_product_source_code_caution(self):
         checked_paths = [
             ROOT / "SKILL.md",

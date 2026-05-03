@@ -56,50 +56,29 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 8. Read [references/safety-rules.md](references/safety-rules.md) before handling HAR files, cookies, account data, authenticated APIs, or order-related endpoints.
 9. For any `wts-cert-api.tossinvest.com` request, continue only if the endpoint is public-looking page metadata and no cookie, authorization header, account identifier, or personal data is required.
 
-## Bundled Scripts
+## Script Use
 
-- `scripts/stock_summary.py`: Fetches stock metadata, price detail, and optional overview for a product code.
-- `scripts/quote.py`: Fetches quote-book data from v3 quotes and optional intraday ticks.
-- `scripts/stock_chart.py`: Fetches verified KR/US `c-chart` candle ranges and can add locally calculated RSI, SMA, EMA, MACD, and Bollinger Bands from close prices. Use `day:1` or `min:1` for US product candles; do not substitute `1D`, `1H`, or `hour:1` without a fresh network capture. For US stocks, pass the TossInvest product/source code observed from the page/API (for example `US20100311002`), not the display ticker; direct tickers such as `SPY`, `QQQ`, `NVDA`, or `BRK.B` may return HTTP 400.
-- `scripts/filings.py`: Fetches company filing lists; supports JSON or CSV output.
-- `scripts/news.py`: Fetches company news lists and optional news detail payloads.
-- `scripts/financials.py`: Fetches financial statement, estimate, valuation, stability, revenue/net-profit, and operating-income endpoints.
-- `scripts/trading_trend.py`: Fetches investor, program, fixed-window, accumulated, broker-ranking, and credit trend endpoints.
-- `scripts/theme.py`: Fetches theme/TICS rankings and optional related themes, news, and fluctuation data.
-- `scripts/indices.py`: Fetches market index info, price, optional index/FX charts, exchange-rate widgets, and index/bond/commodity indicator lists.
-- `scripts/dashboard_ranking.py`: Fetches dashboard overview rankings, home live-chart top100 rankings, and domestic investor buy/sell ranking widgets.
-- `scripts/feed.py`: Fetches recommended feed payloads and dashboard news categories.
-- `scripts/screener_count.py`: Fetches public-looking screener result counts for `kr` or `us`, optional common preset/search modal metadata, RSI, price-condition, and technical-analysis filter presets plus paged/sorted results; uses `wts-cert-api`, so keep sensitive-host caution.
-- `scripts/page_api_check.py`: Smoke-checks read-only endpoint groups for stock pages such as order, analytics, news, and transaction-status; reports response shapes without storing full payloads.
-- `scripts/pension_fund_trend.py`: Fetches pension-fund net-buy history from `fixed-trading-trend`; supports `--from/--to`, `--year`, `--all-history`, JSON/CSV output, `--output`, and summary metadata.
+Use the task routing table to choose a script, then run `python3 scripts/<name>.py --help` for current options. Use [references/script-cookbook.md](references/script-cookbook.md) for expanded recipes and [references/response-notes.md](references/response-notes.md) for observed response shapes.
 
-## Script Examples
-
-Use these as the common first-pass checks. Run `python3 scripts/<name>.py --help` for script-specific options, and use [references/script-cookbook.md](references/script-cookbook.md) for expanded recipes.
+Common first-pass checks:
 
 ```bash
 python3 scripts/stock_summary.py --code A005930 --no-overview
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
 python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
-python3 scripts/financials.py --code A005930 --kind comprehensive
-python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
-python3 scripts/indices.py --code SPX.CBI --include-chart --include-fx-chart --include-exchange-rates --format json
-python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
-python3 scripts/feed.py --kind news --news-type HOT
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 python3 scripts/page_api_check.py --code A005930 --pages order,analytics,news,transaction-status
 ```
 
-## Usage Prompts
+For US stock candles, use an observed TossInvest product/source code such as `US20100311002`, not the display ticker (`SPY`, `QQQ`, `NVDA`, `BRK.B`). Use `day:1` or `min:1` unless a current browser capture verifies another accepted range.
 
-Use natural prompts like these after installing the skill. The skill name is descriptive for discovery and installation; users normally should not need to include it in every request.
+## Prompt Examples
+
+Users normally should not need to include the skill name. Natural prompts like these are enough:
 
 - `토스증권 기준으로 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.`
 - `토스증권에서 A005930의 일봉 캔들을 조회하고 RSI 14, MACD, Bollinger Bands를 계산해줘.`
-- `TossInvest에서 A005930의 종합 재무제표와 밸류에이션 데이터를 조회해줘.`
-- `토스증권에서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.`
-- `TossInvest의 국내와 미국 거래대금, 거래량, 급등, 급락 기준 live-chart top100 랭킹을 조회해줘.`
 - `TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식을 찾아줘.`
 - `문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.`
 
