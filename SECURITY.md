@@ -21,7 +21,7 @@ Open a GitHub issue for public-read-only endpoint drift, stale documentation, un
 
 If you discover a privacy, credential-handling, account-data, or order/trading safety issue, do not post sensitive details publicly. Use GitHub Private Vulnerability Reporting for this repository:
 
-https://github.com/dd3ok/tossinvest-api-skills/security/advisories/new
+https://github.com/dd3ok/tossinvest-api-skill/security/advisories/new
 
 If private vulnerability reporting is unavailable, open only a minimal public issue asking for a private contact path. Do not include endpoint payloads, cookies, tokens, raw HAR files, account data, screenshots of authenticated pages, or personal financial data.
 

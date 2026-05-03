@@ -55,6 +55,23 @@ class DocumentationPromptTests(unittest.TestCase):
                 with self.subTest(path=path.relative_to(ROOT), term=term):
                     self.assertNotIn(term, text)
 
+    def test_project_slug_uses_singular_skill_name(self):
+        forbidden_terms = [
+            "tossinvest-api-" + "skills",
+            "tossinvest-api-" + "skills-skill",
+            "TossInvest API " + "Skills",
+        ]
+        checked_paths = [
+            ROOT / "README.md",
+            ROOT / "SECURITY.md",
+            ROOT / "scripts" / "tossinvest_api.py",
+        ]
+        for path in checked_paths:
+            text = path.read_text(encoding="utf-8")
+            for term in forbidden_terms:
+                with self.subTest(path=path.relative_to(ROOT), term=term):
+                    self.assertNotIn(term, text)
+
     def test_readme_uses_project_native_safety_wording(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("공개 주식/시장 페이지", text)
