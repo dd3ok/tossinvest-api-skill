@@ -124,6 +124,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("Do not infer replacement paths", skill_text)
 
         catalog_text = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        self.assertIn("## Known Observed Pages", catalog_text)
         observed_pages = catalog_text.split("## Known Observed Pages", 1)[1]
         self.assertIn("endpoint drift or lookup failures", observed_pages)
         self.assertIn("capture-workflow.md", observed_pages)
