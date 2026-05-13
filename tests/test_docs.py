@@ -113,6 +113,22 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("quotes", section)
         self.assertIn("read-only browser endpoint", section)
 
+    def test_endpoint_drift_guidance_is_explicit_and_routed(self):
+        skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("## Lookup Failures\n", skill_text)
+        self.assertIn("HTTP 400/404", skill_text)
+        self.assertIn("endpoint-drift signal", skill_text)
+        self.assertIn("stop using the stale path", skill_text)
+        self.assertIn("references/capture-workflow.md", skill_text)
+        self.assertIn("Known Observed Pages", skill_text)
+        self.assertIn("Do not infer replacement paths", skill_text)
+
+        catalog_text = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        observed_pages = catalog_text.split("## Known Observed Pages", 1)[1]
+        self.assertIn("endpoint drift or lookup failures", observed_pages)
+        self.assertIn("capture-workflow.md", observed_pages)
+        self.assertIn("Do not guess a replacement endpoint", observed_pages)
+
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "토스증권 Web API"', text)

@@ -632,6 +632,8 @@ Do not collect these as cataloged APIs, even if they appear in browser network t
 
 ## Known Observed Pages
 
+Use this table as the first stop for endpoint drift or lookup failures. Open the public page that should expose the missing data, follow [capture-workflow.md](capture-workflow.md), and update this catalog before changing scripts. Do not guess a replacement endpoint from a stale path.
+
 | Page | Key endpoint groups |
 |---|---|
 | `https://www.tossinvest.com/?focusedProductCode=A000660` | Chart, stock summary, ranking, dashboard signals |
