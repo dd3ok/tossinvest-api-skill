@@ -73,6 +73,12 @@ python3 scripts/page_api_check.py --code A005930 --pages order,analytics,news,tr
 
 For US stock candles, use an observed TossInvest product/source code such as `US20100311002`, not the display ticker (`SPY`, `QQQ`, `NVDA`, `BRK.B`). Use `day:1` or `min:1` unless a current browser capture verifies another accepted range.
 
+## Lookup Failures
+
+If a script returns HTTP 400/404, non-JSON content, a missing `result`, a changed response shape, or another endpoint-drift signal, stop using the stale path. Open the public TossInvest page that should expose the same data, then re-capture current browser network requests with [references/capture-workflow.md](references/capture-workflow.md). Use [Known Observed Pages](references/api-catalog.md#known-observed-pages) as the starting page map.
+
+Do not infer replacement paths from old endpoint names. Update [references/api-catalog.md](references/api-catalog.md) with the checked date, source page, method, path, params/body, and response shape before updating scripts.
+
 ## Prompt Examples
 
 Users normally should not need to include the skill name. Natural prompts like these are enough:
