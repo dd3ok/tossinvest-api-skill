@@ -34,6 +34,20 @@ or unrelated dashboard refreshes, not a stock technical-indicator data API. Use
 they calculate from candle `close` prices and annotate the output with
 `source=local-calculation-from-c-chart-candles`.
 
+Do not infer c-chart acceptance from price-details acceptance. On 2026-05-10,
+price details accepted `Q520072` and `AMX0221116003`, but c-chart returned HTTP
+400 for `us-s/Q520072` and `kr-s/AMX0221116003`. Consumers should validate codes
+per endpoint family and record/report skipped incompatible targets separately
+from network or payload-shape failures.
+
+Ticker strings are not TossInvest product codes. For US stocks, scripts that accept
+display tickers should first resolve `ticker -> TossInvest product/source code`
+through a maintained alias table or a verified search/page capture. If the alias is
+missing and the raw ticker is sent to price or c-chart endpoints, TossInvest may
+return HTTP 400; report this as a product-code resolution failure, not as proof
+that TossInvest has no real-time quote/chart path. Keep alias-table details in the
+calling application, not in this public skill.
+
 ## Index And Indicator Shapes
 
 | Endpoint | Observed `result` shape |

@@ -121,6 +121,12 @@ Do not substitute uppercase or legacy range aliases such as `1D` or `1H`, and do
 not use `hour:1` unless a fresh browser capture verifies it. Direct rechecks on
 2026-04-29 returned HTTP 400 for `1D`, `1H`, and `hour:1`.
 
+Endpoint compatibility is narrower for `c-chart` than for price details. A
+small direct smoke check on 2026-05-10 found `/api/v3/stock-prices/details`
+accepted `Q520072` and `AMX0221116003`, while `c-chart` returned HTTP 400 for
+`us-s/Q520072` and `kr-s/AMX0221116003`. Treat `productCode` validation as
+endpoint-specific: price-details-compatible does not imply candle-compatible.
+
 Observed values:
 
 | Param | Example | Meaning |
@@ -317,6 +323,13 @@ GET https://wts-info-api.tossinvest.com/api/v1/stock-infos/trade/trend/program-t
 GET https://wts-info-api.tossinvest.com/api/v1/stock-infos/trade/trend/fixed-trading-trend?productCode=A005930&from=2026-04-09&to=2026-04-16
 GET https://wts-info-api.tossinvest.com/api/v1/mds/info/credit?stockCode=A005930&number=1&size=5
 ```
+
+These transaction-status endpoints are KR-stock oriented in observed workflows.
+Use KR TossInvest product codes such as `A005930`. Do not feed US opaque codes,
+exchange-prefixed codes (`AMX...`, `NAS...`, `NYS...`), or `Q...` codes into the
+KR domestic-flow/trading-trend collectors unless current browser traffic verifies
+that exact use case; a 2026-05-10 smoke check returned HTTP 400 for
+`productCode=AMX0221116003` on `trading-trend`.
 
 Notes:
 
