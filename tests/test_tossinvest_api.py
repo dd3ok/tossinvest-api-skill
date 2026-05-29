@@ -101,6 +101,10 @@ class TossInvestApiTests(unittest.TestCase):
         )
         api.validate_request_target(
             api.CERT_BASE_URL,
+            "/api/v2/screener/screen/search/modal",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
             "/api/v1/dashboard/wts/overview/indicator/bond?market=kr",
         )
 

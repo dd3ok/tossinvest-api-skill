@@ -27,6 +27,11 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("\nname: tossinvest-web-api\n", frontmatter)
         self.assertNotIn("\nname: twa\n", frontmatter)
 
+    def test_readme_install_root_matches_skill_name(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("name: tossinvest-web-api", text)
+        self.assertIn("최종 skill root를 `tossinvest-web-api`", text)
+
     def test_readme_describes_natural_language_routing(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("TossInvest/토스증권을 언급한 자연어 요청", text)
@@ -96,13 +101,15 @@ class DocumentationPromptTests(unittest.TestCase):
                 self.assertRegex(text, r"429|403")
                 self.assertRegex(text, r"polling|반복 호출")
 
-    def test_skill_frontmatter_uses_standard_compatibility_field(self):
+    def test_skill_frontmatter_uses_validator_compatible_fields(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]
         self.assertRegex(frontmatter, r"\ndescription: Use when ")
         self.assertIn("public read-only stock and market data", frontmatter)
-        self.assertIn("\ncompatibility:", frontmatter)
-        self.assertNotIn("metadata:\n  compatibility:", frontmatter)
+        self.assertIn("AI signals", frontmatter)
+        self.assertIn("VWAP.KRW-*", frontmatter)
+        self.assertIn("short-selling", frontmatter)
+        self.assertNotIn("\ncompatibility:", frontmatter)
 
     def test_skill_body_has_positive_when_to_use_guidance(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")

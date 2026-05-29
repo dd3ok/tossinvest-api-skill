@@ -259,6 +259,78 @@ class IndicesScriptTests(unittest.TestCase):
             "/api/v1/r-chart/fx/EXCHANGE_RATE/1d/min:5?last=false&useAdjustedRate=true&currency=USD",
         )
 
+    def test_infer_securities_type_uses_crypto_for_vwap_codes(self):
+        self.assertEqual(indices.infer_securities_type("VWAP.KRW-BTC", "auto"), "crypto")
+
+    def test_build_crypto_index_chart_path_uses_crypto_route(self):
+        self.assertEqual(
+            indices.build_index_chart_path("VWAP.KRW-BTC", "auto", "1d", "min:5", "krx"),
+            "/api/v1/r-chart/crypto/VWAP.KRW-BTC/1d/min:5?session=main&investMode=krx&last=false",
+        )
+
+    def test_build_crypto_prices_path_uses_product_codes_query(self):
+        self.assertEqual(
+            indices.build_crypto_prices_path(["VWAP.KRW-BTC"]),
+            "/api/v1/crypto-prices?productCodes=VWAP.KRW-BTC",
+        )
+
+    def test_build_product_exchange_rate_path_uses_currency_pair(self):
+        self.assertEqual(
+            indices.build_product_exchange_rate_path("usd", "krw"),
+            "/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW",
+        )
+
+    def test_fetch_index_payload_wires_optional_crypto_and_exchange_rate_widgets(self):
+        calls = []
+
+        def fake_get_result(path, **kwargs):
+            calls.append((path, kwargs))
+            return {"path": path}
+
+        original_get_result = indices.api.get_result
+        try:
+            indices.api.get_result = fake_get_result
+            payload = indices.fetch_index_payload(
+                code="VWAP.KRW-BTC",
+                securities_type="auto",
+                chart_preset="intraday",
+                chart_range=None,
+                step=None,
+                invest_mode="krx",
+                include_chart=False,
+                include_fx_chart=False,
+                include_indicators=False,
+                include_exchange_rates=False,
+                include_crypto_prices=True,
+                include_product_exchange_rate=True,
+                include_mini_chart=False,
+                include_related_etfs=False,
+                include_net_buying=False,
+                fx_chart_range="1d",
+                fx_step="min:5",
+                fx_currency="USD",
+                exchange_buy_currency="usd",
+                exchange_sell_currency="krw",
+                indicator_type="index",
+                market="kr",
+                net_buying_from="2026-05-29",
+                net_buying_range="week",
+                net_buying_count=5,
+            )
+        finally:
+            indices.api.get_result = original_get_result
+
+        self.assertIn("cryptoPrices", payload)
+        self.assertIn("productExchangeRate", payload)
+        self.assertIn(
+            ("/api/v1/crypto-prices?productCodes=VWAP.KRW-BTC", {}),
+            calls,
+        )
+        self.assertIn(
+            ("/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW", {}),
+            calls,
+        )
+
 
 class JsonOnlyScriptCliTests(unittest.TestCase):
     def test_json_only_scripts_accept_format_json_alias(self):
@@ -328,6 +400,22 @@ class DashboardRankingScriptTests(unittest.TestCase):
                 "filters": [],
             },
         )
+
+    def test_build_overview_signals_path_joins_product_codes(self):
+        self.assertEqual(
+            dashboard_ranking.build_overview_signals_path(["005930", "A000660"]),
+            "/api/v1/dashboard/wts/overview/signals?codes=A005930%2CA000660",
+        )
+
+    def test_help_mentions_signals_mode(self):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "dashboard_ranking.py"), "--help"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertIn("signals", result.stdout)
+        self.assertIn("--signal-code", result.stdout)
 
 
 class FeedScriptTests(unittest.TestCase):
@@ -400,6 +488,12 @@ class ScreenerCountScriptTests(unittest.TestCase):
         self.assertEqual(
             screener_count.build_sort("market-cap", "desc"),
             {"column": "C_시가총액", "label": "시가총액", "order": "DESC"},
+        )
+
+    def test_build_screener_sort_supports_current_price_change_column(self):
+        self.assertEqual(
+            screener_count.build_sort("price-change-1w", "desc"),
+            {"column": "C_주가등락률_1W", "label": "주가등락률", "order": "DESC"},
         )
 
     def test_build_screener_results_body_includes_sort_when_requested(self):
@@ -613,6 +707,24 @@ class TradingTrendScriptTests(unittest.TestCase):
             "/api/v1/stock-infos/trade/trend/fixed-trading-trend?productCode=A005930&from=2026-01-01&to=2026-01-31",
         )
 
+    def test_build_trend_path_for_lending_trading(self):
+        self.assertEqual(
+            trading_trend.build_trend_path("005930", "lending-trading", 3, None, None),
+            "/api/v1/mds/info/lending-trading?stockCode=A005930&number=1&size=3",
+        )
+
+    def test_build_trend_path_for_short_selling_trend(self):
+        self.assertEqual(
+            trading_trend.build_trend_path("A005930", "short-selling-trend", 3, None, None),
+            "/api/v1/mds/info/short-selling-trend?stockCode=A005930&number=1&size=3",
+        )
+
+    def test_build_trend_path_for_cfd(self):
+        self.assertEqual(
+            trading_trend.build_trend_path("A005930", "cfd", 3, None, None),
+            "/api/v1/mds/info/cfd?stockCode=A005930&number=1&size=3",
+        )
+
 
 class PageApiCheckScriptTests(unittest.TestCase):
     def test_build_check_plan_maps_stock_pages_to_read_only_endpoints(self):
@@ -636,6 +748,42 @@ class PageApiCheckScriptTests(unittest.TestCase):
         self.assertIn(
             "/api/v1/stock-infos/trade/trend/fixed-trading-trend?productCode=A005930&from=2026-04-01&to=2026-04-24",
             [item.path for item in plan],
+        )
+        self.assertIn(
+            "/api/v1/mds/info/lending-trading?stockCode=A005930&number=1&size=5",
+            [item.path for item in plan],
+        )
+        self.assertIn(
+            "/api/v1/mds/info/short-selling-trend?stockCode=A005930&number=1&size=5",
+            [item.path for item in plan],
+        )
+        self.assertIn(
+            "/api/v1/mds/info/cfd?stockCode=A005930&number=1&size=5",
+            [item.path for item in plan],
+        )
+
+    def test_transaction_status_plan_uses_shared_mds_info_types(self):
+        plan = page_api_check.build_check_plan(
+            "A005930",
+            ["transaction-status"],
+            start="2026-04-01",
+            end="2026-04-24",
+            news_size=5,
+            filing_size=5,
+            tick_count=5,
+            candle_count=5,
+        )
+        mds_paths = {
+            item.path
+            for item in plan
+            if item.path.startswith("/api/v1/mds/info/")
+        }
+        self.assertEqual(
+            mds_paths,
+            {
+                trading_trend.build_mds_info_path("A005930", mds_type, 5)
+                for mds_type in trading_trend.MDS_INFO_TYPES
+            },
         )
 
     def test_build_check_plan_excludes_order_account_and_mutation_paths(self):

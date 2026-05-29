@@ -28,6 +28,7 @@ _ALLOWED_CERT_EXACT_PATHS = (
     "/api/v2/dashboard/wts/overview/ranking",
     "/api/v2/screener/presets/common",
     "/api/v2/screener/screen",
+    "/api/v2/screener/screen/search/modal",
     "/api/v3/dashboard/wts/overview/indicator/mini-chart",
 )
 _ALLOWED_CERT_SUBTREE_PREFIXES = ("/api/v1/dashboard/wts/overview/indicator",)
