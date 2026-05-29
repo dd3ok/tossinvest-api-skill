@@ -64,5 +64,7 @@ python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
 - CI is green on the target branch.
 - No generated caches, virtualenvs, build outputs, credentials, HAR files, or
   local result files are staged.
+- If `gemini-extension.json` version changes, create a matching Git tag and
+  GitHub release or document why the version is intentionally unreleased.
 - Release notes mention that TossInvest web APIs are unofficial, undocumented,
   and subject to change.
