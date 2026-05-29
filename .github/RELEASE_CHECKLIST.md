@@ -6,9 +6,10 @@ skill from GitHub.
 ## Skill Surface
 
 - `SKILL.md` frontmatter has the canonical `name: tossinvest-web-api`.
-- `SKILL.md` description starts with `Use when` and describes trigger conditions,
+- `SKILL.md` description starts with `Use` and describes trigger conditions,
   not implementation steps.
-- `agents/openai.yaml` matches the public skill name and core lookup workflow.
+- `agents/openai.yaml` has localized display metadata consistent with `SKILL.md`
+  and the core lookup workflow.
 - Public prompt examples use `$tossinvest-web-api`, not aliases.
 
 ## Safety
@@ -16,9 +17,10 @@ skill from GitHub.
 - No script accepts cookies, authorization headers, account identifiers, raw HAR
   files, or browser storage state.
 - `scripts/tossinvest_api.py` blocks unapproved hosts, account/order/login
-  markers, encoded path separators, backslashes, and dot segments.
-- `wts-cert-api` endpoints are limited to public-looking metadata and documented
-  with sensitive-host caution.
+  markers, sensitive query/body keys, encoded path separators, backslashes, and
+  dot segments.
+- `wts-cert-api` endpoints use an exact allowlist for public-looking metadata
+  and are documented with sensitive-host caution.
 - Order, account, login, certificate mutation, and orderable-amount endpoints are
   excluded from scripts and cataloged only as out-of-scope notes when needed.
 

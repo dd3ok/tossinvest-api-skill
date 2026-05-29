@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use when requests mention TossInvest/토스증권 or tossinvest.com network calls for public read-only stock and market data, including prices, charts, financials, rankings, screeners, news, filings, themes, indices, investor trends, AI signals, crypto-like VWAP.KRW-* indices, credit, lending trading, short-selling, or CFD data.
+description: Use for public, read-only TossInvest/토스증권 stock or market data visible on tossinvest.com, including re-verifying those public web endpoints.
 license: MIT
 ---
 
@@ -47,8 +47,8 @@ Requires Python 3.10+ and network access.
 
 Route details:
 
-- Use `scripts/dashboard_ranking.py --kind signals --signal-code A005930` after collecting product codes from live-chart rankings.
-- Use `scripts/trading_trend.py --type lending-trading`, `--type short-selling-trend`, or `--type cfd` for current transaction-status sub-tabs.
+- Use `scripts/dashboard_ranking.py --kind signals --signal-code A005930` only to fetch TossInvest UI-provided home AI-summary label fields. Do not interpret these labels as buy/sell signals or personalized investment advice.
+- Treat credit, lending-trading, short-selling-trend, and CFD routes as public transaction-status page datasets only. Use `scripts/trading_trend.py --type credit`, `--type lending-trading`, `--type short-selling-trend`, or `--type cfd` for those datasets; do not use them for account credit limits, margin eligibility, borrowing, orderability, leverage decisions, or trading advice.
 - Use `scripts/indices.py --code VWAP.KRW-BTC --include-chart --include-crypto-prices` for crypto-like index pages; `--securities-type auto` maps `VWAP.KRW-*` codes to `crypto`.
 - Use `scripts/feed.py --kind news --news-type INDEX --index-code KGG01P` for index news; `ALL_HIGHLIGHT`, `HOT`, and `SOARING_STOCK` need no index code. Personalized popular news remains excluded.
 - Use `scripts/screener_count.py --sort price-change-1w` when a current preset exposes `C_주가등락률_1W`.
