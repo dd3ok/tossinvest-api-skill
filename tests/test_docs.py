@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class DocumentationPromptTests(unittest.TestCase):
     def test_prompts_do_not_depend_on_dollar_skill_selectors(self):
         checked_paths = [
+            ROOT / ".github" / "RELEASE_CHECKLIST.md",
             ROOT / "README.md",
             ROOT / "SKILL.md",
             ROOT / "agents" / "openai.yaml",
@@ -195,8 +196,14 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("description starts with `Use`", checklist)
         self.assertIn("sensitive query/body keys", checklist)
         self.assertIn("exact allowlist", checklist)
+        self.assertIn("natural TossInvest/토스증권 language", checklist)
+        self.assertIn("do not", checklist)
+        self.assertIn("depend on `$...` skill selectors or aliases", checklist)
         self.assertNotIn("matches the public skill name", checklist)
         self.assertNotIn("description starts with `Use when`", checklist)
+        self.assertNotIn(
+            "Public prompt examples use `$tossinvest-web-api`, not aliases.", checklist
+        )
 
     def test_cookbook_documents_page_level_api_smoke_check(self):
         text = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
