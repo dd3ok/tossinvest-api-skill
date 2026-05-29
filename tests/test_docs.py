@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 import unittest
@@ -60,6 +61,37 @@ class DocumentationPromptTests(unittest.TestCase):
             for term in forbidden_terms:
                 with self.subTest(path=path.relative_to(ROOT), term=term):
                     self.assertNotIn(term, text)
+
+    def test_docs_do_not_reference_personal_project_details(self):
+        forbidden_hashes = {
+            "08f65dba38b29733214a82715b4698d02b322983d08b564840acdc1dfb600068",
+            "24f0de806060dfed92e061d322773330d9bc67cfef69f17b6641bfda449cb09a",
+            "5bf88f4aea2c997524cdc6746f867cb6508fb1e3c6467f8c5e044f9e0cd20b6f",
+            "9201ffb5facc764a4ae1aae8f6cb99b73d8b0645085d1a389e42cbddbf51f8a2",
+            "d099b4d5fb4911ab2f6f689978b1e1d2b1d0b1e2710ea9b18abaf5b08e36904d",
+            "da4b260c37d6cb1c114176c82132dcc91ca19fe0fc75cecf6770c3fabdb399f6",
+            "e237cb2a2eb43c0c30c6631fe52dbe6bdc496312368abf2879da3645b2d85b1c",
+        }
+        checked_paths = [
+            ROOT / "README.md",
+            ROOT / "SKILL.md",
+            ROOT / "GEMINI.md",
+            ROOT / "references" / "api-catalog.md",
+            ROOT / "references" / "response-notes.md",
+            ROOT / "references" / "script-cookbook.md",
+            ROOT / "references" / "safety-rules.md",
+            ROOT / ".github" / "RELEASE_CHECKLIST.md",
+        ]
+        for path in checked_paths:
+            text = path.read_text(encoding="utf-8").lower()
+            tokens = re.findall(r"[a-z0-9_.-]+", text)
+            candidates = set(tokens)
+            candidates.update(f"{left}_{right}" for left, right in zip(tokens, tokens[1:]))
+            candidates.update(f"{left}.{right}" for left, right in zip(tokens, tokens[1:]))
+            for candidate in candidates:
+                digest = hashlib.sha256(candidate.encode()).hexdigest()
+                with self.subTest(path=path.relative_to(ROOT), digest=digest):
+                    self.assertNotIn(digest, forbidden_hashes)
 
     def test_project_slug_uses_singular_skill_name(self):
         forbidden_terms = [
@@ -205,6 +237,23 @@ class DocumentationPromptTests(unittest.TestCase):
             "Public prompt examples use `$tossinvest-web-api`, not aliases.", checklist
         )
 
+    def test_readme_documents_current_codex_skill_paths(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("$HOME/.agents/skills", text)
+        self.assertIn(".agents/skills/tossinvest-web-api/", text)
+        self.assertNotIn(".co" + "dex/skills", text)
+
+    def test_readme_distinguishes_gemini_context_from_agent_skills(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("extension-level context", text)
+        self.assertIn("skills/<name>/SKILL.md", text)
+        self.assertFalse((ROOT / "skills").exists())
+
+    def test_skill_uses_single_us_stock_candle_caution(self):
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertEqual(text.count("For US stock candles"), 1)
+        self.assertIn("Use `day:1` or `min:1`", text)
+
     def test_cookbook_documents_page_level_api_smoke_check(self):
         text = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
         self.assertIn("Page API Smoke Checks", text)
@@ -249,6 +298,12 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("TossInvest", text)
         self.assertIn("scripts/stock_chart.py", text)
         self.assertIn("SPX.CBI", text)
+
+    def test_release_checklist_tracks_versioned_release_metadata(self):
+        checklist = (ROOT / ".github" / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
+        self.assertIn("gemini-extension.json", checklist)
+        self.assertIn("matching Git tag", checklist)
+        self.assertIn("GitHub release", checklist)
 
     def test_gitignore_covers_python_build_and_local_artifacts(self):
         text = (ROOT / ".gitignore").read_text(encoding="utf-8")
