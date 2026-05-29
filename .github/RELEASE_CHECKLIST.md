@@ -10,7 +10,8 @@ skill from GitHub.
   not implementation steps.
 - `agents/openai.yaml` has localized display metadata consistent with `SKILL.md`
   and the core lookup workflow.
-- Public prompt examples use `$tossinvest-web-api`, not aliases.
+- Public prompt examples use natural TossInvest/토스증권 language and do not
+  depend on `$...` skill selectors or aliases.
 
 ## Safety
 
