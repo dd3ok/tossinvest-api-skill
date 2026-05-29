@@ -120,10 +120,16 @@ class DocumentationPromptTests(unittest.TestCase):
                     window = tokens[index : index + size]
                     for separator in (" ", "_", "-", "."):
                         candidates.add(separator.join(window))
+            matched_digests = []
             for candidate in candidates:
                 digest = hashlib.sha256(candidate.encode()).hexdigest()
-                with self.subTest(path=path.relative_to(ROOT), digest=digest):
-                    self.assertNotIn(digest, forbidden_hashes)
+                if digest in forbidden_hashes:
+                    matched_digests.append(digest)
+            self.assertFalse(
+                matched_digests,
+                "Forbidden hashed project-detail digests found in "
+                f"{path.relative_to(ROOT)}: {sorted(set(matched_digests))}",
+            )
 
     def test_project_slug_uses_singular_skill_name(self):
         forbidden_terms = [
