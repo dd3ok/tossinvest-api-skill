@@ -773,11 +773,7 @@ class PageApiCheckScriptTests(unittest.TestCase):
             tick_count=5,
             candle_count=5,
         )
-        mds_paths = {
-            item.path
-            for item in plan
-            if item.path.startswith("/api/v1/mds/info/")
-        }
+        mds_paths = {item.path for item in plan if item.path.startswith("/api/v1/mds/info/")}
         self.assertEqual(
             mds_paths,
             {
