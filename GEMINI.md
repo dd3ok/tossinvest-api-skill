@@ -38,9 +38,10 @@ Current endpoint notes:
   may return HTTP 400.
 - Use dashboard-provided indicator codes for US indices, such as `SPX.CBI` for
   S&P 500 and `COMP.NAI` for Nasdaq, instead of plain `SPX` or `NDX`.
-- Use `dashboard_ranking.py --kind signals --signal-code A005930` for home
-  live-chart AI signal columns.
-- Use `trading_trend.py --type lending-trading|short-selling-trend|cfd` for
-  transaction-status sub-tabs.
+- Use `dashboard_ranking.py --kind signals --signal-code A005930` only for
+  TossInvest UI-provided home AI-summary label fields; these are not buy/sell signals
+  or personalized investment advice.
+- Use `trading_trend.py --type credit|lending-trading|short-selling-trend|cfd`
+  for public transaction-status page datasets only; these are not account limits, orderability, leverage decisions, or trading advice.
 - Use `feed.py --kind news --news-type INDEX --index-code KGG01P` for index
   news; `ALL_HIGHLIGHT`, `HOT`, and `SOARING_STOCK` need no index code.

@@ -20,8 +20,8 @@
 
 Observed in the 2026-05-29 recheck:
 
-- Home live-chart AI summary signals via `dashboard_ranking.py --kind signals`.
-- Transaction-status sub-tabs for credit, lending trading, short-selling trend, and CFD via `trading_trend.py`.
+- Home live-chart AI summary label fields via `dashboard_ranking.py --kind signals`; these are public UI labels, not buy/sell signals.
+- Transaction-status public page datasets for credit, lending trading, short-selling trend, and CFD via `trading_trend.py`; these are not account limits, orderability, leverage decisions, or trading advice.
 - Index-like crypto pages such as `VWAP.KRW-BTC`, including `r-chart/crypto` and `/api/v1/crypto-prices`.
 - Current feed/news labels: major news (`ALL_HIGHLIGHT`), latest news (`HOT`), soaring-stock news (`SOARING_STOCK`), and index news (`INDEX`).
 - Current screener presets, including the `C_주가등락률_1W` price-change sort column.
@@ -80,7 +80,7 @@ mkdir -p .claude/skills
 git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git .claude/skills/tossinvest-web-api
 ```
 
-Claude는 TossInvest/토스증권 주식 데이터 요청이 skill 설명과 맞으면 이 skill을 자동으로 선택합니다.
+Claude는 TossInvest/토스증권 공개 주식·시장 데이터 요청이 지원 범위와 맞으면 이 skill을 사용할 수 있습니다.
 
 ### Gemini CLI
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "토스증권 Web API"
-  short_description: "토스증권 공개 주식/시장 데이터를 읽기 전용으로 조회"
+  short_description: "토스증권 공개 주식·시장·지수·랭킹·스크리너 데이터를 읽기 전용으로 조회"
   default_prompt: "토스증권 기준으로 A005930의 간단한 종목 요약과 현재 시세를 조회해줘."

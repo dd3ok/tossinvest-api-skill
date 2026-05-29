@@ -24,6 +24,9 @@ CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 _ALLOWED_INFO_PREFIXES = ("/api/v1/", "/api/v2/", "/api/v3/", "/api/v4/")
 _ALLOWED_CERT_EXACT_PATHS = (
     "/api/v1/dashboard/wts/overview/rankings/by-investors",
+    "/api/v1/dashboard/wts/overview/indicator/bond",
+    "/api/v1/dashboard/wts/overview/indicator/commodity",
+    "/api/v1/dashboard/wts/overview/indicator/index",
     "/api/v1/screener/screen/count",
     "/api/v2/dashboard/wts/overview/ranking",
     "/api/v2/screener/presets/common",
@@ -31,7 +34,6 @@ _ALLOWED_CERT_EXACT_PATHS = (
     "/api/v2/screener/screen/search/modal",
     "/api/v3/dashboard/wts/overview/indicator/mini-chart",
 )
-_ALLOWED_CERT_SUBTREE_PREFIXES = ("/api/v1/dashboard/wts/overview/indicator",)
 _DENIED_PATH_MARKERS = (
     "/account",
     "/accounts",
@@ -46,6 +48,21 @@ _DENIED_PATH_MARKERS = (
     "/trading/order",
     "/transfer",
 )
+_DENIED_KEY_MARKERS = (
+    "account",
+    "authorization",
+    "auth",
+    "balance",
+    "cookie",
+    "customer",
+    "holding",
+    "holdings",
+    "orderable",
+    "personal",
+    "token",
+    "transfer",
+)
+_DENIED_EXACT_KEYS = {"ci"}
 
 
 def normalize_product_code(code: str) -> str:
@@ -65,6 +82,7 @@ def to_company_code(code: str) -> str:
 def build_path(path: str, params: dict[str, Any] | None = None) -> str:
     if not params:
         return path
+    validate_no_sensitive_keys(params)
     query = urllib.parse.urlencode(
         {key: _query_value(value) for key, value in params.items() if value is not None}
     )
@@ -82,6 +100,8 @@ def request_json(
     timeout: int = DEFAULT_TIMEOUT,
 ) -> dict[str, Any]:
     validate_request_target(base_url, path)
+    if body is not None:
+        validate_no_sensitive_keys(body)
     data = None if body is None else json.dumps(body, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         base_url + path,
@@ -140,6 +160,10 @@ def validate_request_target(base_url: str, path: str) -> None:
     if parsed_path.scheme or parsed_path.netloc:
         raise RuntimeError("Blocked TossInvest endpoint: path must be relative")
     request_path = _validation_path(parsed_path.path)
+    if parsed_path.query:
+        validate_no_sensitive_keys(
+            dict(urllib.parse.parse_qsl(parsed_path.query, keep_blank_values=True))
+        )
     lowered_path = request_path.lower()
 
     for marker in _DENIED_PATH_MARKERS:
@@ -154,9 +178,7 @@ def validate_request_target(base_url: str, path: str) -> None:
         )
 
     if host == urllib.parse.urlsplit(CERT_BASE_URL).netloc:
-        if request_path in _ALLOWED_CERT_EXACT_PATHS or _matches_subtree_prefix(
-            request_path, _ALLOWED_CERT_SUBTREE_PREFIXES
-        ):
+        if request_path in _ALLOWED_CERT_EXACT_PATHS:
             return
         raise RuntimeError(
             f"Blocked TossInvest endpoint: {request_path} is not an approved cert-api endpoint"
@@ -180,8 +202,26 @@ def _validation_path(path: str) -> str:
     return decoded_path
 
 
-def _matches_subtree_prefix(path: str, prefixes: tuple[str, ...]) -> bool:
-    return any(path == prefix or path.startswith(f"{prefix}/") for prefix in prefixes)
+def validate_no_sensitive_keys(value: Any) -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            _raise_if_sensitive_key(str(key))
+            validate_no_sensitive_keys(child)
+    elif isinstance(value, (list, tuple)):
+        for child in value:
+            validate_no_sensitive_keys(child)
+
+
+def _raise_if_sensitive_key(key: str) -> None:
+    normalized = _normalize_payload_key(key)
+    if normalized in _DENIED_EXACT_KEYS or any(
+        marker in normalized for marker in _DENIED_KEY_MARKERS
+    ):
+        raise RuntimeError(f"Blocked TossInvest request: sensitive key {key}")
+
+
+def _normalize_payload_key(key: str) -> str:
+    return "".join(char for char in key.lower() if char.isalnum())
 
 
 def require_int_range(name: str, value: int, *, minimum: int, maximum: int) -> int:

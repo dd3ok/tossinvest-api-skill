@@ -104,12 +104,49 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_skill_frontmatter_uses_validator_compatible_fields(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]
-        self.assertRegex(frontmatter, r"\ndescription: Use when ")
-        self.assertIn("public read-only stock and market data", frontmatter)
-        self.assertIn("AI signals", frontmatter)
-        self.assertIn("VWAP.KRW-*", frontmatter)
-        self.assertIn("short-selling", frontmatter)
+        self.assertRegex(frontmatter, r"\ndescription: Use ")
+        description = next(
+            line.removeprefix("description: ")
+            for line in frontmatter.splitlines()
+            if line.startswith("description: ")
+        )
+        self.assertLessEqual(len(description), 200)
+        self.assertIn("public, read-only TossInvest", description)
+        for broad_trigger in [
+            "AI signals",
+            "accounts",
+            "credit",
+            "investment advice",
+            "lending trading",
+            "login",
+            "short-selling",
+            "trading",
+            "CFD",
+            "VWAP.KRW-*",
+        ]:
+            with self.subTest(broad_trigger=broad_trigger):
+                self.assertNotIn(broad_trigger, frontmatter)
         self.assertNotIn("\ncompatibility:", frontmatter)
+
+    def test_skill_routes_disambiguate_financial_and_signal_labels(self):
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("UI-provided home AI-summary label fields", text)
+        self.assertIn("Do not interpret these labels as buy/sell signals", text)
+        self.assertIn("public transaction-status page datasets only", text)
+        self.assertIn("`scripts/trading_trend.py --type credit`", text)
+        self.assertIn("account credit limits", text)
+        self.assertIn("margin eligibility", text)
+        self.assertIn("leverage decisions", text)
+
+    def test_gemini_context_mirrors_financial_and_signal_guards(self):
+        text = (ROOT / "GEMINI.md").read_text(encoding="utf-8")
+        self.assertIn("UI-provided home AI-summary label fields", text)
+        self.assertIn("not buy/sell signals", text)
+        self.assertIn("public transaction-status page datasets only", text)
+        self.assertIn("credit|lending-trading|short-selling-trend|cfd", text)
+        self.assertIn(
+            "not account limits, orderability, leverage decisions, or trading advice", text
+        )
 
     def test_skill_body_has_positive_when_to_use_guidance(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -140,12 +177,26 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "토스증권 Web API"', text)
-        self.assertIn("토스증권 공개 주식/시장 데이터", text)
+        self.assertIn("토스증권 공개 주식·시장·지수·랭킹·스크리너 데이터", text)
         self.assertIn("A005930", text)
         self.assertIn("조회해줘", text)
 
         license_text = (ROOT / "LICENSE.txt").read_text(encoding="utf-8")
         self.assertEqual(license_text, (ROOT / "LICENSE").read_text(encoding="utf-8"))
+
+    def test_ci_and_release_docs_use_singular_skill_wording(self):
+        ci_text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        self.assertIn("name: TossInvest API Skill CI", ci_text)
+        self.assertNotIn("name: TossInvest API Skills CI", ci_text)
+
+        checklist = (ROOT / ".github" / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
+        self.assertIn("agents/openai.yaml", checklist)
+        self.assertIn("consistent with `SKILL.md`", checklist)
+        self.assertIn("description starts with `Use`", checklist)
+        self.assertIn("sensitive query/body keys", checklist)
+        self.assertIn("exact allowlist", checklist)
+        self.assertNotIn("matches the public skill name", checklist)
+        self.assertNotIn("description starts with `Use when`", checklist)
 
     def test_cookbook_documents_page_level_api_smoke_check(self):
         text = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
