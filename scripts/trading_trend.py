@@ -19,6 +19,13 @@ FIXED_TYPES = {
     "accumulated-detail": "accumulated-fixed-trading-trend/detail",
 }
 
+MDS_INFO_TYPES = {
+    "credit": "credit",
+    "lending-trading": "lending-trading",
+    "short-selling-trend": "short-selling-trend",
+    "cfd": "cfd",
+}
+
 INVESTOR_NET_FIELDS = (
     ("individual", "개인", "netIndividualsBuyVolume"),
     ("foreigner", "외국인", "netForeignerBuyVolume"),
@@ -97,12 +104,19 @@ def build_trend_path(
         )
     if trend_type == "broker":
         return api.build_path("/api/v1/mds/broker/trading-ranking", {"code": product_code})
-    if trend_type == "credit":
-        return api.build_path(
-            "/api/v1/mds/info/credit",
-            {"stockCode": product_code, "number": 1, "size": size},
-        )
+    if trend_type in MDS_INFO_TYPES:
+        return build_mds_info_path(product_code, trend_type, size)
     raise ValueError(f"unknown trend type: {trend_type}")
+
+
+def build_mds_info_path(code: str, mds_type: str, size: int | None) -> str:
+    product_code = api.normalize_product_code(code)
+    if mds_type not in MDS_INFO_TYPES:
+        raise ValueError(f"unknown mds info type: {mds_type}")
+    return api.build_path(
+        f"/api/v1/mds/info/{MDS_INFO_TYPES[mds_type]}",
+        {"stockCode": product_code, "number": 1, "size": size},
+    )
 
 
 def fetch_trading_trend(
@@ -128,12 +142,15 @@ def fetch_trading_trend(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Fetch TossInvest investor, program, fixed, broker, or credit trend data."
+        description=(
+            "Fetch TossInvest investor, program, fixed, broker, credit, lending, "
+            "short-selling, or CFD trend data."
+        )
     )
     parser.add_argument("--code", default="A005930", help="TossInvest product code")
     parser.add_argument(
         "--type",
-        choices=sorted([*RECENT_TYPES, *FIXED_TYPES, "broker", "credit"]),
+        choices=sorted([*RECENT_TYPES, *FIXED_TYPES, *MDS_INFO_TYPES, "broker"]),
         default="investor",
         help="Trend endpoint to call",
     )

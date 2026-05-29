@@ -15,7 +15,7 @@ CHART_PRESETS = {
     "quarter": ("3m", "day:1"),
     "daily": ("1y", "day:1"),
 }
-ALLOWED_SECURITIES_TYPES = {"auto", "kr-s", "us-s"}
+ALLOWED_SECURITIES_TYPES = {"auto", "crypto", "kr-s", "us-s"}
 ALLOWED_INDICATOR_TYPES = {"bond", "commodity", "index"}
 ALLOWED_MARKETS = {"kr", "us"}
 ALLOWED_NET_BUYING_RANGES = {"week"}
@@ -34,7 +34,10 @@ def infer_securities_type(code: str, securities_type: str) -> str:
     if normalized != "auto":
         _require_choice("securities_type", normalized, ALLOWED_SECURITIES_TYPES - {"auto"})
         return normalized
-    if "." in normalize_index_code(code):
+    normalized_code = normalize_index_code(code)
+    if normalized_code.upper().startswith("VWAP.KRW-"):
+        return "crypto"
+    if "." in normalized_code:
         return "us-s"
     return "kr-s"
 
@@ -85,6 +88,23 @@ def build_fx_chart_path(chart_range: str, step: str, currency: str) -> str:
             "last": False,
             "useAdjustedRate": True,
             "currency": currency.strip().upper(),
+        },
+    )
+
+
+def build_crypto_prices_path(product_codes: list[str]) -> str:
+    if not product_codes:
+        raise ValueError("product_codes must contain at least one code")
+    normalized_codes = ",".join(normalize_index_code(code) for code in product_codes)
+    return api.build_path("/api/v1/crypto-prices", {"productCodes": normalized_codes})
+
+
+def build_product_exchange_rate_path(buy_currency: str, sell_currency: str) -> str:
+    return api.build_path(
+        "/api/v1/product/exchange-rate",
+        {
+            "buyCurrency": buy_currency.strip().upper(),
+            "sellCurrency": sell_currency.strip().upper(),
         },
     )
 
@@ -161,12 +181,16 @@ def fetch_index_payload(
     include_fx_chart: bool,
     include_indicators: bool,
     include_exchange_rates: bool,
+    include_crypto_prices: bool,
+    include_product_exchange_rate: bool,
     include_mini_chart: bool,
     include_related_etfs: bool,
     include_net_buying: bool,
     fx_chart_range: str,
     fx_step: str,
     fx_currency: str,
+    exchange_buy_currency: str,
+    exchange_sell_currency: str,
     indicator_type: str,
     market: str | None,
     net_buying_from: str,
@@ -228,6 +252,12 @@ def fetch_index_payload(
         }
     if include_exchange_rates:
         payload["exchangeRates"] = api.get_result(build_exchange_rates_path())
+    if include_crypto_prices:
+        payload["cryptoPrices"] = api.get_result(build_crypto_prices_path([normalized_code]))
+    if include_product_exchange_rate:
+        payload["productExchangeRate"] = api.get_result(
+            build_product_exchange_rate_path(exchange_buy_currency, exchange_sell_currency)
+        )
     return payload
 
 
@@ -267,12 +297,32 @@ def main() -> int:
     parser.add_argument(
         "--include-exchange-rates",
         action="store_true",
-        help="Also fetch the public-looking dashboard exchange-rates widget",
+        help="Also fetch the public dashboard exchange-rates widget",
+    )
+    parser.add_argument(
+        "--include-crypto-prices",
+        action="store_true",
+        help="Also fetch crypto price metadata for the selected index-like crypto code",
+    )
+    parser.add_argument(
+        "--include-product-exchange-rate",
+        action="store_true",
+        help="Also fetch the public product exchange-rate pair",
+    )
+    parser.add_argument(
+        "--exchange-buy-currency",
+        default="USD",
+        help="Buy currency for --include-product-exchange-rate",
+    )
+    parser.add_argument(
+        "--exchange-sell-currency",
+        default="KRW",
+        help="Sell currency for --include-product-exchange-rate",
     )
     parser.add_argument(
         "--include-mini-chart",
         action="store_true",
-        help="Also fetch public-looking overview indicator mini-chart metadata",
+        help="Also fetch public overview indicator mini-chart metadata",
     )
     parser.add_argument(
         "--include-related-etfs",
@@ -328,12 +378,16 @@ def main() -> int:
         include_fx_chart=args.include_fx_chart,
         include_indicators=args.include_indicators,
         include_exchange_rates=args.include_exchange_rates,
+        include_crypto_prices=args.include_crypto_prices,
+        include_product_exchange_rate=args.include_product_exchange_rate,
         include_mini_chart=args.include_mini_chart,
         include_related_etfs=args.include_related_etfs,
         include_net_buying=args.include_net_buying,
         fx_chart_range=args.fx_range,
         fx_step=args.fx_step,
         fx_currency=args.fx_currency,
+        exchange_buy_currency=args.exchange_buy_currency,
+        exchange_sell_currency=args.exchange_sell_currency,
         indicator_type=args.indicator_type,
         market=args.market,
         net_buying_from=args.net_buying_from,

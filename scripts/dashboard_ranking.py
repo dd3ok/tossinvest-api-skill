@@ -68,6 +68,16 @@ def build_investor_rankings_path(size: int) -> str:
     )
 
 
+def build_overview_signals_path(product_codes: list[str]) -> str:
+    if not product_codes:
+        raise ValueError("signal codes must contain at least one code")
+    normalized_codes = ",".join(api.normalize_product_code(code) for code in product_codes)
+    return api.build_path(
+        "/api/v1/dashboard/wts/overview/signals",
+        {"codes": normalized_codes},
+    )
+
+
 def fetch_overview_ranking(
     ranking_id: str,
     tag: str,
@@ -118,13 +128,21 @@ def fetch_investor_rankings(size: int, side: str) -> dict[str, Any]:
     }
 
 
+def fetch_overview_signals(product_codes: list[str]) -> dict[str, Any]:
+    return {
+        "kind": "signals",
+        "codes": [api.normalize_product_code(code) for code in product_codes],
+        "result": api.get_result(build_overview_signals_path(product_codes)),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Fetch TossInvest overview, live-chart, or investor rankings."
+        description="Fetch TossInvest overview, live-chart, investor rankings, or stock signals."
     )
     parser.add_argument(
         "--kind",
-        choices=["overview", "live-chart", "investors"],
+        choices=["overview", "live-chart", "investors", "signals"],
         default="overview",
     )
     parser.add_argument(
@@ -145,12 +163,21 @@ def main() -> int:
     parser.add_argument("--filter", dest="filters", action="append")
     parser.add_argument("--investor-size", type=int, default=100)
     parser.add_argument("--side", choices=["buy", "sell"], default="buy")
+    parser.add_argument(
+        "--signal-code",
+        action="append",
+        help="Product code for --kind signals; can be repeated",
+    )
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
     if args.kind == "investors":
         payload = fetch_investor_rankings(args.investor_size, args.side)
+    elif args.kind == "signals":
+        if not args.signal_code:
+            raise ValueError("--kind signals requires at least one --signal-code")
+        payload = fetch_overview_signals(args.signal_code)
     elif args.kind == "live-chart":
         payload = fetch_live_chart(
             args.live_chart or args.ranking_id,
