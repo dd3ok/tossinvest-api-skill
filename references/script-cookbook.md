@@ -51,6 +51,9 @@ python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 -
 python3 scripts/trading_trend.py --code A005930 --type investor --size 20
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-04-24 --to 2026-04-24 --normalize-investors
 python3 scripts/trading_trend.py --code A005930 --type broker
+python3 scripts/trading_trend.py --code A005930 --type lending-trading --size 5
+python3 scripts/trading_trend.py --code A005930 --type short-selling-trend --size 5
+python3 scripts/trading_trend.py --code A005930 --type cfd --size 5
 ```
 
 ## Themes And TICS
@@ -74,9 +77,13 @@ python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type b
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type commodity
 python3 scripts/indices.py --code RFU.GCv1 --include-chart --chart-preset daily
 python3 scripts/indices.py --code KR1BENCH0010 --include-chart --chart-preset quarter
+python3 scripts/indices.py --code VWAP.KRW-BTC --include-chart --include-crypto-prices
+python3 scripts/indices.py --code KGG01P --include-product-exchange-rate
 ```
 
-Preserve case-sensitive dotted indicator codes such as `RFU.GCv1`. The default `--securities-type auto` behavior infers dotted codes as `us-s` and non-dotted codes as `kr-s`.
+Preserve case-sensitive dotted indicator codes such as `RFU.GCv1`. The default
+`--securities-type auto` behavior infers `VWAP.KRW-*` crypto codes as `crypto`,
+other dotted codes as `us-s`, and non-dotted codes as `kr-s`.
 
 ## Rankings And Feed
 
@@ -84,18 +91,23 @@ Preserve case-sensitive dotted indicator codes such as `RFU.GCv1`. The default `
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart heavy_soar --market us --duration 1d
 python3 scripts/dashboard_ranking.py --kind investors --side sell
+python3 scripts/dashboard_ranking.py --kind signals --signal-code A005930 --signal-code A000660
 python3 scripts/feed.py --kind news --news-type HOT
+python3 scripts/feed.py --kind news --news-type ALL_HIGHLIGHT
+python3 scripts/feed.py --kind news --news-type SOARING_STOCK
+python3 scripts/feed.py --kind news --news-type INDEX --index-code KGG01P
 python3 scripts/feed.py --kind recommended
 ```
 
 ## Screener
 
-`screener_count.py` uses public-looking `wts-cert-api` screener endpoints. Keep the sensitive-host rules: no cookies, auth headers, account identifiers, or personal data.
+`screener_count.py` uses `wts-cert-api` screener endpoints. Keep the sensitive-host rules: only cataloged public page data/metadata, with no cookies, auth headers, account identifiers, or personal data.
 
 ```bash
 python3 scripts/screener_count.py --nation kr
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 python3 scripts/screener_count.py --nation kr --include-common-presets --include-search-modal
+python3 scripts/screener_count.py --nation kr --price-filter price-change-5d-up-5 --include-results --sort price-change-1w --size 5
 python3 scripts/screener_count.py --nation kr --price-filter new-high-52w-within-20d --include-results --sort market-cap --size 5
 python3 scripts/screener_count.py --nation kr --price-filter price-change-5d-up-5 --technical-filter price-ma-cross-up --include-results --sort volume --size 5
 python3 scripts/screener_count.py --nation kr --price-filter new-low-52w-within-20d --technical-filter bollinger-lower-down --include-results --sort volume --size 5

@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class DocumentationPromptTests(unittest.TestCase):
     def test_prompts_do_not_depend_on_dollar_skill_selectors(self):
         checked_paths = [
+            ROOT / ".github" / "RELEASE_CHECKLIST.md",
             ROOT / "README.md",
             ROOT / "SKILL.md",
             ROOT / "agents" / "openai.yaml",
@@ -26,6 +27,11 @@ class DocumentationPromptTests(unittest.TestCase):
         frontmatter = text.split("---", 2)[1]
         self.assertIn("\nname: tossinvest-web-api\n", frontmatter)
         self.assertNotIn("\nname: twa\n", frontmatter)
+
+    def test_readme_install_root_matches_skill_name(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("name: tossinvest-web-api", text)
+        self.assertIn("최종 skill root를 `tossinvest-web-api`", text)
 
     def test_readme_describes_natural_language_routing(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -96,13 +102,52 @@ class DocumentationPromptTests(unittest.TestCase):
                 self.assertRegex(text, r"429|403")
                 self.assertRegex(text, r"polling|반복 호출")
 
-    def test_skill_frontmatter_uses_standard_compatibility_field(self):
+    def test_skill_frontmatter_uses_validator_compatible_fields(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]
-        self.assertRegex(frontmatter, r"\ndescription: Use when ")
-        self.assertIn("public read-only stock and market data", frontmatter)
-        self.assertIn("\ncompatibility:", frontmatter)
-        self.assertNotIn("metadata:\n  compatibility:", frontmatter)
+        self.assertRegex(frontmatter, r"\ndescription: Use ")
+        description = next(
+            line.removeprefix("description: ")
+            for line in frontmatter.splitlines()
+            if line.startswith("description: ")
+        )
+        self.assertLessEqual(len(description), 200)
+        self.assertIn("public, read-only TossInvest", description)
+        for broad_trigger in [
+            "AI signals",
+            "accounts",
+            "credit",
+            "investment advice",
+            "lending trading",
+            "login",
+            "short-selling",
+            "trading",
+            "CFD",
+            "VWAP.KRW-*",
+        ]:
+            with self.subTest(broad_trigger=broad_trigger):
+                self.assertNotIn(broad_trigger, frontmatter)
+        self.assertNotIn("\ncompatibility:", frontmatter)
+
+    def test_skill_routes_disambiguate_financial_and_signal_labels(self):
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("UI-provided home AI-summary label fields", text)
+        self.assertIn("Do not interpret these labels as buy/sell signals", text)
+        self.assertIn("public transaction-status page datasets only", text)
+        self.assertIn("`scripts/trading_trend.py --type credit`", text)
+        self.assertIn("account credit limits", text)
+        self.assertIn("margin eligibility", text)
+        self.assertIn("leverage decisions", text)
+
+    def test_gemini_context_mirrors_financial_and_signal_guards(self):
+        text = (ROOT / "GEMINI.md").read_text(encoding="utf-8")
+        self.assertIn("UI-provided home AI-summary label fields", text)
+        self.assertIn("not buy/sell signals", text)
+        self.assertIn("public transaction-status page datasets only", text)
+        self.assertIn("credit|lending-trading|short-selling-trend|cfd", text)
+        self.assertIn(
+            "not account limits, orderability, leverage decisions, or trading advice", text
+        )
 
     def test_skill_body_has_positive_when_to_use_guidance(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -133,12 +178,32 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "토스증권 Web API"', text)
-        self.assertIn("토스증권 공개 주식/시장 데이터", text)
+        self.assertIn("토스증권 공개 주식·시장·지수·랭킹·스크리너 데이터", text)
         self.assertIn("A005930", text)
         self.assertIn("조회해줘", text)
 
         license_text = (ROOT / "LICENSE.txt").read_text(encoding="utf-8")
         self.assertEqual(license_text, (ROOT / "LICENSE").read_text(encoding="utf-8"))
+
+    def test_ci_and_release_docs_use_singular_skill_wording(self):
+        ci_text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        self.assertIn("name: TossInvest API Skill CI", ci_text)
+        self.assertNotIn("name: TossInvest API Skills CI", ci_text)
+
+        checklist = (ROOT / ".github" / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
+        self.assertIn("agents/openai.yaml", checklist)
+        self.assertIn("consistent with `SKILL.md`", checklist)
+        self.assertIn("description starts with `Use`", checklist)
+        self.assertIn("sensitive query/body keys", checklist)
+        self.assertIn("exact allowlist", checklist)
+        self.assertIn("natural TossInvest/토스증권 language", checklist)
+        self.assertIn("do not", checklist)
+        self.assertIn("depend on `$...` skill selectors or aliases", checklist)
+        self.assertNotIn("matches the public skill name", checklist)
+        self.assertNotIn("description starts with `Use when`", checklist)
+        self.assertNotIn(
+            "Public prompt examples use `$tossinvest-web-api`, not aliases.", checklist
+        )
 
     def test_cookbook_documents_page_level_api_smoke_check(self):
         text = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")

@@ -1,8 +1,7 @@
 ---
 name: tossinvest-web-api
-description: Use when requests mention TossInvest/토스증권 or tossinvest.com network calls for public read-only stock and market data, including prices, charts, financials, rankings, screeners, news, filings, themes, indices, or investor trends.
+description: Use for public, read-only TossInvest/토스증권 stock or market data visible on tossinvest.com, including re-verifying those public web endpoints.
 license: MIT
-compatibility: Requires Python 3.10+ and network access; intended for Codex, Claude Code, and other Agent Skills-compatible tools.
 ---
 
 # TossInvest Web API
@@ -10,6 +9,8 @@ compatibility: Requires Python 3.10+ and network access; intended for Codex, Cla
 ## Overview
 
 Use this skill to inspect TossInvest web pages and work with unofficial read-only internal API endpoints that help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, or screener questions. Do not combine it with tools that automate login, account access, or trading.
+
+Requires Python 3.10+ and network access.
 
 ## When To Use
 
@@ -35,26 +36,31 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 | KR/US candles, RSI, SMA, EMA, MACD, Bollinger Bands | `scripts/stock_chart.py` | [references/response-notes.md](references/response-notes.md) |
 | Filings or company news | `scripts/filings.py`, `scripts/news.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Financial statements, estimates, valuation, dividend | `scripts/financials.py` | [references/response-notes.md](references/response-notes.md) |
-| Investor trading trend, broker ranking, pension fund | `scripts/trading_trend.py`, `scripts/pension_fund_trend.py` | [references/response-notes.md](references/response-notes.md) |
+| Investor trading trend, broker ranking, credit, lending trading, short-selling trend, CFD, pension fund | `scripts/trading_trend.py`, `scripts/pension_fund_trend.py` | [references/response-notes.md](references/response-notes.md) |
 | Theme, TICS, related-theme ranking | `scripts/theme.py` | [references/api-catalog.md](references/api-catalog.md) |
-| Market indices, FX charts, exchange-rate widgets, bond indicators, commodity indicators | `scripts/indices.py` | [references/api-catalog.md](references/api-catalog.md) |
-| Home rankings, top100 by amount/volume/surge/decline | `scripts/dashboard_ranking.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Market indices, FX charts, exchange-rate widgets, bond indicators, commodity indicators, crypto-like index pages | `scripts/indices.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Home rankings, top100 by amount/volume/surge/decline, AI summary signals | `scripts/dashboard_ranking.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Recommended feed and news discovery | `scripts/feed.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Screener counts, filter metadata, RSI filters, price/technical presets | `scripts/screener_count.py` | [examples/filters](examples/filters) |
 | Page-level stock API smoke checks | `scripts/page_api_check.py` | [references/script-cookbook.md](references/script-cookbook.md) |
 | New endpoint capture or undocumented page analysis | Browser network capture, bundled JavaScript inspection | [references/capture-workflow.md](references/capture-workflow.md), [references/safety-rules.md](references/safety-rules.md) |
 
+Route details:
+
+- Use `scripts/dashboard_ranking.py --kind signals --signal-code A005930` only to fetch TossInvest UI-provided home AI-summary label fields. Do not interpret these labels as buy/sell signals or personalized investment advice.
+- Treat credit, lending-trading, short-selling-trend, and CFD routes as public transaction-status page datasets only. Use `scripts/trading_trend.py --type credit`, `--type lending-trading`, `--type short-selling-trend`, or `--type cfd` for those datasets; do not use them for account credit limits, margin eligibility, borrowing, orderability, leverage decisions, or trading advice.
+- Use `scripts/indices.py --code VWAP.KRW-BTC --include-chart --include-crypto-prices` for crypto-like index pages; `--securities-type auto` maps `VWAP.KRW-*` codes to `crypto`.
+- Use `scripts/feed.py --kind news --news-type INDEX --index-code KGG01P` for index news; `ALL_HIGHLIGHT`, `HOT`, and `SOARING_STOCK` need no index code. Personalized popular news remains excluded.
+- Use `scripts/screener_count.py --sort price-change-1w` when a current preset exposes `C_주가등락률_1W`.
+
 ## Workflow
 
-1. Identify the target TossInvest page and stock code.
-2. Capture browser network requests or inspect bundled JavaScript.
-3. Keep only endpoints that directly help with stock or market information; ignore bootstrapping, telemetry, guest/session, following/subscription, personalization, login, account, and order calls.
-4. Classify retained endpoints by host and data domain.
-5. Prefer `wts-info-api.tossinvest.com` read-only endpoints.
-6. Read [references/api-catalog.md](references/api-catalog.md) for known endpoint patterns.
-7. Read [references/capture-workflow.md](references/capture-workflow.md) when adding new endpoints.
-8. Read [references/safety-rules.md](references/safety-rules.md) before handling HAR files, cookies, account data, authenticated APIs, or order-related endpoints.
-9. For any `wts-cert-api.tossinvest.com` request, continue only if the endpoint is public-looking page metadata and no cookie, authorization header, account identifier, or personal data is required.
+1. For normal lookups, choose a bundled script from the routing table.
+2. For missing or drifted endpoints, follow [references/capture-workflow.md](references/capture-workflow.md).
+3. Exclude telemetry, personalization, login, account, and order calls. Include bootstrapping only when needed to identify a public read-only endpoint.
+4. Prefer `wts-info-api.tossinvest.com` read-only endpoints.
+5. Use `wts-cert-api.tossinvest.com` only for public visible page data or metadata, limited to cataloged or script-backed endpoint families and never requiring cookies, authorization headers, account identifiers, or personal data.
+6. Read [references/safety-rules.md](references/safety-rules.md) before handling HAR files, cookies, account data, authenticated APIs, order-related endpoints, or `wts-cert-api`.
 
 ## Script Use
 
@@ -76,7 +82,7 @@ For US stock candles, use an observed TossInvest product/source code such as `US
 
 ## Lookup Failures
 
-If a script returns HTTP 400/404, non-JSON content, a missing `result`, a changed response shape, or another endpoint-drift signal, stop using the stale path. Open the public TossInvest page that should expose the same data, then re-capture current browser network requests with [references/capture-workflow.md](references/capture-workflow.md). Use [Known Observed Pages](references/api-catalog.md#known-observed-pages) as the starting page map.
+On HTTP 400/404, non-JSON content, missing `result`, changed response shape, or another endpoint-drift signal: stop using the stale path. Open the matching public TossInvest page, re-capture browser requests with [references/capture-workflow.md](references/capture-workflow.md), and start from [Known Observed Pages](references/api-catalog.md#known-observed-pages).
 
 Do not infer replacement paths from old endpoint names. Update [references/api-catalog.md](references/api-catalog.md) with the checked date, source page, method, path, params/body, and response shape before updating scripts.
 

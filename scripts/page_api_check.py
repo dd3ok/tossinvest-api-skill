@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import tossinvest_api as api
+import trading_trend
 
 DEFAULT_PAGES = ("order", "analytics", "news", "transaction-status")
 MAX_SUMMARY_KEYS = 24
@@ -292,7 +293,7 @@ def _news_checks(context: CheckContext) -> list[EndpointCheck]:
 
 
 def _transaction_status_checks(context: CheckContext) -> list[EndpointCheck]:
-    return [
+    checks = [
         EndpointCheck(
             "transaction-status",
             "broker trading ranking",
@@ -344,16 +345,17 @@ def _transaction_status_checks(context: CheckContext) -> list[EndpointCheck]:
                 {"productCode": context.product_code, "from": context.start, "to": context.end},
             ),
         ),
+    ]
+    checks.extend(
         EndpointCheck(
             "transaction-status",
-            "credit info",
+            "credit info" if mds_type == "credit" else mds_type.replace("-", " "),
             "GET",
-            api.build_path(
-                "/api/v1/mds/info/credit",
-                {"stockCode": context.product_code, "number": 1, "size": 5},
-            ),
-        ),
-    ]
+            trading_trend.build_mds_info_path(context.product_code, mds_type, 5),
+        )
+        for mds_type in trading_trend.MDS_INFO_TYPES
+    )
+    return checks
 
 
 def summarize_result(result: Any) -> dict[str, Any]:

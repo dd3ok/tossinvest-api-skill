@@ -31,6 +31,21 @@ class TossInvestApiTests(unittest.TestCase):
             "/api/v3/stock-prices/details?productCodes=A005930%2CA000660&meta=true",
         )
 
+    def test_build_path_rejects_sensitive_query_keys(self):
+        with self.assertRaisesRegex(RuntimeError, "sensitive key accountNo"):
+            api.build_path("/api/v3/stock-prices/details", {"accountNo": "123"})
+        with self.assertRaisesRegex(RuntimeError, "sensitive key authorization"):
+            api.build_path("/api/v3/stock-prices/details", {"authorization": "Bearer token"})
+
+    def test_request_target_rejects_blank_sensitive_query_keys(self):
+        for path in [
+            "/api/v3/stock-prices/details?accountNo=",
+            "/api/v3/stock-prices/details?accountNo",
+        ]:
+            with self.subTest(path=path):
+                with self.assertRaisesRegex(RuntimeError, "sensitive key accountNo"):
+                    api.validate_request_target(api.BASE_URL, path)
+
     def test_result_or_raise_returns_result_key(self):
         self.assertEqual(api.result_or_raise({"result": {"ok": True}}), {"ok": True})
 
@@ -101,7 +116,19 @@ class TossInvestApiTests(unittest.TestCase):
         )
         api.validate_request_target(
             api.CERT_BASE_URL,
+            "/api/v2/screener/screen/search/modal",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
             "/api/v1/dashboard/wts/overview/indicator/bond?market=kr",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v1/dashboard/wts/overview/indicator/index?market=kr",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v1/dashboard/wts/overview/indicator/commodity?market=kr",
         )
 
         with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
@@ -113,6 +140,39 @@ class TossInvestApiTests(unittest.TestCase):
             api.validate_request_target(
                 api.CERT_BASE_URL,
                 "/api/v1/dashboard/wts/overview/indicator-extra/bond",
+            )
+        with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/dashboard/wts/overview/indicator/unverified",
+            )
+        with self.assertRaisesRegex(RuntimeError, "Blocked TossInvest endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/dashboard/wts/overview/indicator/bond/account",
+            )
+
+    def test_request_json_rejects_sensitive_body_keys_before_network(self):
+        with self.assertRaisesRegex(RuntimeError, "sensitive key accountNo"):
+            api.request_json(
+                "/api/v1/screener/screen/count",
+                method="POST",
+                body={"accountNo": "123", "filters": []},
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "sensitive key authorization"):
+            api.request_json(
+                "/api/v1/screener/screen/count",
+                method="POST",
+                body={"filters": [{"authorization": "Bearer token"}]},
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "sensitive key accountNo"):
+            api.request_json(
+                "/api/v1/screener/screen/count",
+                method="POST",
+                body=({"accountNo": "123"},),
+                base_url=api.CERT_BASE_URL,
             )
 
     def test_require_int_range_rejects_non_positive_and_excessive_values(self):

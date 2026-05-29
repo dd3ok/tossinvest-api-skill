@@ -18,6 +18,14 @@
 
 설치 후에는 TossInvest/토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 랭킹, 스크리너를 조회할 수 있습니다.
 
+Observed in the 2026-05-29 recheck:
+
+- Home live-chart AI summary label fields via `dashboard_ranking.py --kind signals`; these are public UI labels, not buy/sell signals.
+- Transaction-status public page datasets for credit, lending trading, short-selling trend, and CFD via `trading_trend.py`; these are not account limits, orderability, leverage decisions, or trading advice.
+- Index-like crypto pages such as `VWAP.KRW-BTC`, including `r-chart/crypto` and `/api/v1/crypto-prices`.
+- Current feed/news labels: major news (`ALL_HIGHLIGHT`), latest news (`HOT`), soaring-stock news (`SOARING_STOCK`), and index news (`INDEX`).
+- Current screener presets, including the `C_주가등락률_1W` price-change sort column.
+
 ## 설치
 
 ### Codex
@@ -52,6 +60,8 @@ ln -sfn /path/to/tossinvest-api-skill "$CODEX_SKILLS_DIR/tossinvest-web-api"
 .codex/skills/tossinvest-web-api/
 ```
 
+설치 디렉터리명은 `SKILL.md`의 `name: tossinvest-web-api`와 맞추는 것이 가장 호환성이 좋습니다. Zip/archive로 배포하거나 vendor로 포함할 때도 최종 skill root를 `tossinvest-web-api`로 두세요.
+
 ### Claude Code
 
 Claude Code는 개인 skill 폴더와 프로젝트 skill 폴더에서 custom skill을 탐색합니다.
@@ -70,7 +80,7 @@ mkdir -p .claude/skills
 git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git .claude/skills/tossinvest-web-api
 ```
 
-Claude는 TossInvest/토스증권 주식 데이터 요청이 skill 설명과 맞으면 이 skill을 자동으로 선택합니다.
+Claude는 TossInvest/토스증권 공개 주식·시장 데이터 요청이 지원 범위와 맞으면 이 skill을 사용할 수 있습니다.
 
 ### Gemini CLI
 
@@ -115,7 +125,7 @@ python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 ```
 
-스크립트별 옵션은 `--help`로 확인합니다. 미국 주식 차트 조회에는 display ticker/표시 티커(`SPY`, `NVDA` 등)가 아니라 TossInvest 페이지/API에서 확인한 product/source code를 사용하세요. 표시 티커를 `c-chart` product code로 바로 넣으면 HTTP 400이 날 수 있습니다.
+스크립트별 옵션은 `--help`로 확인합니다. 미국 주식 차트는 TossInvest product/source code가 필요합니다. Display ticker/표시 티커(`SPY`, `NVDA` 등)를 `c-chart` product code로 바로 넣으면 HTTP 400이 날 수 있습니다.
 
 ```bash
 python3 scripts/stock_chart.py --help
@@ -258,7 +268,7 @@ for f in examples/filters/*.json; do python3 -m json.tool "$f" >/dev/null || exi
 - 크롤러, 배경 모니터, 대량 반복 조회처럼 동작하는 자동 수집
 - 막힌 요청이나 비정상 응답을 우회하기 위한 자동 재시도
 
-`wts-cert-api.tossinvest.com`은 현재 공개 페이지에서 public-looking metadata로 확인된 endpoint가 아니라면 민감한 host로 취급하세요. 이 API들은 문서화된 공개 API가 아니며 언제든 변경될 수 있으므로, 의존하기 전에 현재 브라우저 트래픽으로 다시 확인하는 것이 좋습니다.
+`wts-cert-api.tossinvest.com`은 민감한 host로 취급하세요. 공개 페이지에서 보이는 데이터나 메타데이터이고, catalog/script-backed endpoint family에 속하며, 쿠키·인증 헤더·계좌 식별자·개인 데이터가 필요 없을 때만 사용합니다.
 
 요청이 막히거나 로그인/확인 화면으로 이어지면 자동 재시도를 멈추고, 현재 공개 웹 페이지에서 같은 데이터가 노출되는지 먼저 다시 확인하세요. 이 프로젝트는 서비스 보호 장치나 접근 제어 흐름을 우회하지 않습니다.
 

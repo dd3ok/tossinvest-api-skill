@@ -54,18 +54,20 @@ calling application, not in this public skill.
 |---|---|
 | `/api/v2/index-infos/{indexCode}` | Object: `code`, `name`, `logoImageUrl`, `priceFeedType`, optional trading-window fields such as `tradingStartAt`, `tradingEndAt`, and `isMarketOpen`; commodity responses can include `helperText` and `indexUnitDto` |
 | `/api/v1/index-prices/{indexCode}` | Object: `open`, `high`, `low`, `close`, `base`, `changeType`, `high52w`, `low52w`, and related price fields |
-| `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Object: `code`, trading window metadata, and `candles[]`; direct checks on 2026-04-20 returned candles for `KGG01P`, `RFU.GCv1`, `KR1BENCH0010`, and `ROB.US10YT-RR` |
-| `wts-cert-api /api/v3/dashboard/wts/overview/indicator/mini-chart` | Object: `indexMap`; public-looking overview mini-chart metadata |
+| `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Object: `code`, trading window metadata, and `candles[]`; direct checks returned candles for `KGG01P`, `RFU.GCv1`, `KR1BENCH0010`, `ROB.US10YT-RR`, and `VWAP.KRW-BTC` with `securitiesType=crypto` |
+| `/api/v1/crypto-prices?productCodes={codes}` | List: `productCode`, OHLCV fields, `usdPerKrwExchangeRate`, `premium`, `premiumRate` |
+| `/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW` | Object: `code`, `base`, `close` |
+| `wts-cert-api /api/v3/dashboard/wts/overview/indicator/mini-chart` | Object: `indexMap`; public overview mini-chart metadata |
 | `/api/v3/dashboard/wts/overview/indicator/{indexCode}/related-etfs` | Object: `indexCode`, `etfs[]`; empty POST body accepted in verification |
 | `/api/v1/stock-infos/index/net-buying/range` | Object: `code`, `step`, `nextDate`, `investorActivityAmounts[]` |
 | `/api/v1/stock-infos/index/net-buying/daily` | Object: `code`, `nextDate`, `investorActivityAmounts[]` |
 
 `scripts/indices.py` has chart presets for these verified r-chart windows:
 `intraday=1d/min:5`, `quarter=3m/day:1`, and `daily=1y/day:1`. The script uses
-`--securities-type auto` by default: dotted codes such as `RFU.GCv1` and
-`ROB.US10YT-RR` infer `us-s`; non-dotted codes such as `KGG01P` and
-`KR1BENCH0010` infer `kr-s`. Preserve the original case for dotted indicator
-codes.
+`--securities-type auto` by default: `VWAP.KRW-*` codes infer `crypto`, other
+dotted codes such as `RFU.GCv1` and `ROB.US10YT-RR` infer `us-s`, and non-dotted
+codes such as `KGG01P` and `KR1BENCH0010` infer `kr-s`. Preserve the original
+case for dotted indicator codes.
 
 ## Analytics Shapes
 
@@ -97,6 +99,7 @@ codes.
 | `/api/v2/news/tics/{ticsId}` | Object: `pagingParam`, `body[]`, `lastPage` |
 | `wts-cert-api /api/v1/screener/screen/count` | Number count for body `{ "filters": [], "nation": "kr" }` or `"us"`; also accepted `RSI_범위`, selected price-condition filters, and selected technical-analysis `conditions[]` filters in verification |
 | `wts-cert-api /api/v2/screener/screen` | Object: `totalCount`, `page`, `lastPage`, `stocks[]`, `columns[]`; body requires `pagingParam.size` in addition to `filters[]` and `nation`; `pagingParam.number` worked for page selection; observed `sort` shape uses `column`, `label`, `order` |
+| `/api/v1/dashboard/wts/overview/signals?codes={codes}` | Object: `stockCode`, `signals[]`; used for the home live-chart AI summary column |
 
 The checked RSI screen uses filter id `RSI_범위` with condition id
 `NUMBER_RANGE_DEFAULT` and type `NUMBER_RANGE`. Oversold-style requests use
@@ -112,7 +115,8 @@ volume moving-average cross, moving-average alignment, and Bollinger Band cross.
 For sorting, guessed shapes such as `{id, order}` returned HTTP 400. A Playwright
 capture of the screener page showed the working shape
 `{"column":"C_시가총액","label":"시가총액","order":"DESC"}`. Direct checks accepted
-that shape for market capitalization, volume, and analyst-rating columns.
+that shape for market capitalization, volume, analyst-rating, and the current
+preset-specific `C_주가등락률_1W` price-change column.
 
 Direct checks on 2026-04-20 also accepted price-condition filters for 5-day
 price change up/down, 20-day price change up, 5-day consecutive rise/fall,
@@ -161,4 +165,7 @@ Observed result keys:
 | `/api/v1/stock-infos/trade/trend/fixed-trading-trend` | List: date-bounded investor buy/sell/net volume rows. Live KR rows include `netIndividualsBuyVolume` (개인), `netForeignerBuyVolume` (외국인), `netInstitutionBuyVolume` (기관계), `netOtherCorporationBuyVolume` (기타법인), and institution-detail net fields such as `netFinancialInvestmentBuyVolume`, `netInsuranceBuyVolume`, `netOtherFinancialInstitutionsBuyVolume`, `netTrustBuyVolume`, `netPrivateEquityFundBuyVolume`, `netPensionFundBuyVolume`, `netBankBuyVolume`. |
 | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend` | List: date-bounded accumulated net investor-volume rows |
 | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend/detail` | Object: accumulated net investor-volume fields by detail category |
-| `/api/v1/mds/info/credit` | Object: `pagingParam`, `body[]`, `lastPage`; verify each `/mds/info/{type}` variant separately |
+| `/api/v1/mds/info/credit` | Object: `pagingParam`, `body[]`, `lastPage`; rows include margin loan and securities lending balance/rate fields |
+| `/api/v1/mds/info/lending-trading` | Object: `pagingParam`, `body[]`, `lastPage`; rows include `executionQuantity`, `repaymentQuantity`, `lendingTradingBalanceVolume`, `lendingTradingBalanceAmount` |
+| `/api/v1/mds/info/short-selling-trend` | Object: `pagingParam`, `body[]`, `lastPage`; rows include `shortTradingVolume`, `shortTradingAmount`, `shortSellingTradingAmountRatio`, `shortSellingAveragePrice` |
+| `/api/v1/mds/info/cfd` | Object: `pagingParam`, `body[]`, `lastPage`; rows include new/settle/balance buy and sell quantity/rate fields |

@@ -14,6 +14,7 @@ CERT_URL = "https://wts-cert-api.tossinvest.com"
 RSI_FILTER_ID = "RSI_범위"
 NUMBER_RANGE_CONDITION_ID = "NUMBER_RANGE_DEFAULT"
 SORT_COLUMNS = {
+    "price-change-1w": {"column": "C_주가등락률_1W", "label": "주가등락률"},
     "market-cap": {"column": "C_시가총액", "label": "시가총액"},
     "volume": {"column": "C_거래량", "label": "거래량"},
     "analyst-rating": {"column": "C_애널리스트평점", "label": "애널리스트 분석"},
@@ -388,7 +389,7 @@ def main() -> int:
     parser.add_argument(
         "--include-common-presets",
         action="store_true",
-        help="Also fetch public-looking common screener preset metadata",
+        help="Also fetch public common screener preset metadata",
     )
     parser.add_argument(
         "--no-custom-presets",
@@ -398,7 +399,7 @@ def main() -> int:
     parser.add_argument(
         "--include-search-modal",
         action="store_true",
-        help="Also fetch public-looking screener search modal metadata",
+        help="Also fetch public screener search modal metadata",
     )
     parser.add_argument(
         "--technical-filter",
