@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 import unittest
@@ -60,6 +61,75 @@ class DocumentationPromptTests(unittest.TestCase):
             for term in forbidden_terms:
                 with self.subTest(path=path.relative_to(ROOT), term=term):
                     self.assertNotIn(term, text)
+
+    def test_docs_do_not_reference_personal_project_details(self):
+        # Hashes are sha256 of lowercase normalized candidate strings.
+        forbidden_hashes = {
+            "08f65dba38b29733214a82715b4698d02b322983d08b564840acdc1dfb600068",
+            "0f940c2ea4695d33268378481be8b8525425c577210b0775f99000405a03343e",
+            "1a83e48af686640449c1286f1912cce74648ceab4c8b749e61593a29a77a3be1",
+            "24f0de806060dfed92e061d322773330d9bc67cfef69f17b6641bfda449cb09a",
+            "28f85741a9a947b99c827eccf5610eda140e7e8b38716e29486a883938ac4e76",
+            "356f5a9a247726d676d84f1dda7f725a02a010c71e8b9c2f12859adce8971e05",
+            "38dfbf773faa9dbad69b092edbd5a5cea457dea952b35b925095c7dfef62c2ab",
+            "434e291fe59f7af28f7fd75ae87ca6e114012f4d1c31b138d4561e748c342334",
+            "44663d62ea789e6407dca577766961e39050698e9e3472263e40d06b2a597190",
+            "4d04c38646ad9901122b70a9ecb7884f0bbd5ea854008f8cc17988bbaa86a533",
+            "5bf88f4aea2c997524cdc6746f867cb6508fb1e3c6467f8c5e044f9e0cd20b6f",
+            "60fa13b843648523dd7e250cd0dd6432bdbee338a9edd5c45f75c46b1de4f70b",
+            "6696527e9bb2eb0280b0806def9306b8df425c71286e61784bc32119ec1dbe2b",
+            "66bc5ff1cc545a1f91077417caceff5ec0a2d19cbc12a7329e558d8c82bc4759",
+            "8ab4c98f2a766496cae5e3a12fe455677fec529c19438dd360dfa33840c32e64",
+            "9201ffb5facc764a4ae1aae8f6cb99b73d8b0645085d1a389e42cbddbf51f8a2",
+            "a034e770841f870f21a9f31571518dd2a4ce5188c4a21987f3dc8052ca99d501",
+            "a39c1f95756e00e22f5a0a25ec85c36df0c9233cf7fd8bf56babf3c2c03782e0",
+            "aaa2fef426ad29ca5e254d481eae532103829d71804aac78ee46fc18f9964e10",
+            "b7aac842458d20b4b6b62ac568e7adafc82dfdb092d61451d7a92f15c2a47d46",
+            "cc96657ee86f67829f204458910212e545dc81bc5aa32eba628e533f092a4c6b",
+            "d099b4d5fb4911ab2f6f689978b1e1d2b1d0b1e2710ea9b18abaf5b08e36904d",
+            "d17050217ec46731c16900581d9d9ffd6ec1416d1a3b693657ce061668231698",
+            "d45abc86b74581d0550aa6f8c10175bb7ea3d76af38fa759c0fd7a6ed4363136",
+            "d75d504ffbff63759a5018386a9f6248d61f147b9b516dbea53273f8839ca128",
+            "da4b260c37d6cb1c114176c82132dcc91ca19fe0fc75cecf6770c3fabdb399f6",
+            "dcdbef3dc385bab7b104efbd146b2ebaa9328ac1ae71021667823a4aae284377",
+            "de600e2490679134512ae571eda84a5786c5d266b3601d5f9cb38efa30001daa",
+            "e237cb2a2eb43c0c30c6631fe52dbe6bdc496312368abf2879da3645b2d85b1c",
+            "eea56bcbf23f5e355dc638bdc182ac316da3a68ebc181758c7520e767f3a9d2d",
+            "f9c4b99c75b89270841badfd6f09e1557f62d32278b28539b829242876a7da30",
+        }
+        checked_paths = [
+            ROOT / "README.md",
+            ROOT / "SKILL.md",
+            ROOT / "GEMINI.md",
+            ROOT / "SECURITY.md",
+            ROOT / "agents" / "openai.yaml",
+            ROOT / "references" / "api-catalog.md",
+            ROOT / "references" / "capture-workflow.md",
+            ROOT / "references" / "eval-prompts.md",
+            ROOT / "references" / "response-notes.md",
+            ROOT / "references" / "script-cookbook.md",
+            ROOT / "references" / "safety-rules.md",
+            ROOT / ".github" / "RELEASE_CHECKLIST.md",
+        ]
+        for path in checked_paths:
+            text = path.read_text(encoding="utf-8").lower()
+            tokens = re.findall(r"[a-z0-9]+", text)
+            candidates = set(tokens)
+            for size in range(2, 5):
+                for index in range(len(tokens) - size + 1):
+                    window = tokens[index : index + size]
+                    for separator in (" ", "_", "-", "."):
+                        candidates.add(separator.join(window))
+            matched_digests = []
+            for candidate in candidates:
+                digest = hashlib.sha256(candidate.encode()).hexdigest()
+                if digest in forbidden_hashes:
+                    matched_digests.append(digest)
+            self.assertFalse(
+                matched_digests,
+                "Forbidden hashed project-detail digests found in "
+                f"{path.relative_to(ROOT)}: {sorted(set(matched_digests))}",
+            )
 
     def test_project_slug_uses_singular_skill_name(self):
         forbidden_terms = [
@@ -205,6 +275,23 @@ class DocumentationPromptTests(unittest.TestCase):
             "Public prompt examples use `$tossinvest-web-api`, not aliases.", checklist
         )
 
+    def test_readme_documents_current_codex_skill_paths(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("$HOME/.agents/skills", text)
+        self.assertIn(".agents/skills/tossinvest-web-api/", text)
+        self.assertNotIn(".co" + "dex/skills", text)
+
+    def test_readme_distinguishes_gemini_context_from_agent_skills(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("extension-level context", text)
+        self.assertIn("skills/<name>/SKILL.md", text)
+        self.assertFalse((ROOT / "skills").exists())
+
+    def test_skill_uses_single_us_stock_candle_caution(self):
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertEqual(text.count("For US stock candles"), 1)
+        self.assertIn("Use `day:1` or `min:1`", text)
+
     def test_cookbook_documents_page_level_api_smoke_check(self):
         text = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
         self.assertIn("Page API Smoke Checks", text)
@@ -249,6 +336,12 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("TossInvest", text)
         self.assertIn("scripts/stock_chart.py", text)
         self.assertIn("SPX.CBI", text)
+
+    def test_release_checklist_tracks_versioned_release_metadata(self):
+        checklist = (ROOT / ".github" / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
+        self.assertIn("gemini-extension.json", checklist)
+        self.assertIn("matching Git tag", checklist)
+        self.assertIn("GitHub release", checklist)
 
     def test_gitignore_covers_python_build_and_local_artifacts(self):
         text = (ROOT / ".gitignore").read_text(encoding="utf-8")

@@ -41,7 +41,7 @@ https://github.com/dd3ok/tossinvest-api-skill 에서 스킬을 설치해줘.
 수동 설치:
 
 ```bash
-CODEX_SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
+CODEX_SKILLS_DIR="$HOME/.agents/skills"
 mkdir -p "$CODEX_SKILLS_DIR"
 git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git "$CODEX_SKILLS_DIR/tossinvest-web-api"
 ```
@@ -49,7 +49,7 @@ git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git "$CODEX_SK
 이미 clone한 작업 디렉터리를 쓰고 싶다면 symlink로 노출할 수도 있습니다.
 
 ```bash
-CODEX_SKILLS_DIR="${CODEX_HOME:-$HOME/.codex}/skills"
+CODEX_SKILLS_DIR="$HOME/.agents/skills"
 mkdir -p "$CODEX_SKILLS_DIR"
 ln -sfn /path/to/tossinvest-api-skill "$CODEX_SKILLS_DIR/tossinvest-web-api"
 ```
@@ -57,7 +57,7 @@ ln -sfn /path/to/tossinvest-api-skill "$CODEX_SKILLS_DIR/tossinvest-web-api"
 특정 저장소 안에서만 쓰고 싶다면 이 저장소를 아래 위치에 복사하거나 vendor 형태로 포함하세요.
 
 ```text
-.codex/skills/tossinvest-web-api/
+.agents/skills/tossinvest-web-api/
 ```
 
 설치 디렉터리명은 `SKILL.md`의 `name: tossinvest-web-api`와 맞추는 것이 가장 호환성이 좋습니다. Zip/archive로 배포하거나 vendor로 포함할 때도 최종 skill root를 `tossinvest-web-api`로 두세요.
@@ -85,6 +85,8 @@ Claude는 TossInvest/토스증권 공개 주식·시장 데이터 요청이 지�
 ### Gemini CLI
 
 Gemini CLI extension으로 설치할 수 있도록 `gemini-extension.json`과 `GEMINI.md`를 포함합니다. Gemini CLI는 설치한 extension을 복사하므로, GitHub나 로컬 경로에서 설치한 뒤 변경사항을 반영하려면 `gemini extensions update`가 필요합니다.
+
+현재 Gemini 배포는 extension-level context(`gemini-extension.json`의 `contextFileName: GEMINI.md`)를 제공합니다. Gemini CLI의 on-demand agent skill(`skills/<name>/SKILL.md`)은 현재 포함하지 않습니다.
 
 ```bash
 gemini extensions install https://github.com/dd3ok/tossinvest-api-skill.git
@@ -234,7 +236,7 @@ tossinvest-api-skill/
 | `references/` | API 카탈로그, 네트워크 캡처 절차, 응답 노트, 안전 규칙, 스모크 테스트 프롬프트 |
 | `examples/filters/` | 재사용 가능한 스크리너 필터 JSON 예시 |
 | `agents/openai.yaml` | Codex/OpenAI 계열 도구에서 노출할 표시 메타데이터 |
-| `gemini-extension.json`, `GEMINI.md` | Gemini CLI extension 설치를 위한 메타데이터와 컨텍스트 파일 |
+| `gemini-extension.json`, `GEMINI.md` | Gemini CLI extension-level context 설치를 위한 메타데이터와 컨텍스트 파일 |
 | `tests/` | 스크립트 helper와 endpoint path builder를 검증하는 maintainer/CI용 테스트 |
 | `SECURITY.md` | 민감한 endpoint, privacy, credential-handling 관련 제보 절차 |
 | `LICENSE`, `LICENSE.txt` | MIT 라이선스 본문 |

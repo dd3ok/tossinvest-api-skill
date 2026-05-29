@@ -65,7 +65,6 @@ Route details:
 ## Script Use
 
 Use the task routing table to choose a script, then run `python3 scripts/<name>.py --help` for current options. Use [references/script-cookbook.md](references/script-cookbook.md) for expanded recipes and [references/response-notes.md](references/response-notes.md) for observed response shapes.
-For US stock candles, use an observed TossInvest product/source code such as `US20100311002`, not the display ticker (`SPY`, `QQQ`, `NVDA`, `BRK.B`).
 
 Common first-pass checks:
 
