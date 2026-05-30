@@ -221,8 +221,16 @@ def validate_request_usage(
     if _CALENDAR_MONTHLY_PATTERN.fullmatch(request_path):
         if method != "POST":
             raise RuntimeError("Blocked TossInvest endpoint: monthly calendar route must use POST")
+        if body != {}:
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: monthly calendar route requires an empty JSON body"
+            )
     elif method != "GET":
         raise RuntimeError("Blocked TossInvest endpoint: calendar summary routes must use GET")
+    elif body is not None:
+        raise RuntimeError(
+            "Blocked TossInvest endpoint: calendar summary routes do not accept request bodies"
+        )
     if body is not None and body != {}:
         raise RuntimeError(
             "Blocked TossInvest endpoint: calendar routes do not accept request body fields"

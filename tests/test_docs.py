@@ -183,6 +183,7 @@ class DocumentationPromptTests(unittest.TestCase):
         )
         self.assertLessEqual(len(description), 200)
         self.assertIn("public, read-only TossInvest", description)
+        self.assertIn("calendar", description)
         for broad_trigger in [
             "AI signals",
             "accounts",
@@ -257,7 +258,7 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "토스증권 Web API"', text)
-        self.assertIn("토스증권 공개 주식·시장·지수·랭킹·스크리너 데이터", text)
+        self.assertIn("토스증권 공개 주식·시장·캘린더·지수·랭킹·스크리너 데이터", text)
         self.assertIn("A005930", text)
         self.assertIn("조회해줘", text)
 

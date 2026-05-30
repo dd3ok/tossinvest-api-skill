@@ -14,9 +14,10 @@
 - 재무제표, 실적 추정, valuation, 배당, 안정성 지표
 - 공시, 뉴스, feed discovery, theme/TICS, 관련 테마
 - KOSPI 같은 지수, FX chart, 환율 widget, 채권/원자재 indicator
+- 증시 캘린더, 경제지표 일정, 실적 발표 일정, 국내/해외 calendar tab
 - 국내/미국 live-chart top100, 투자자 매매 동향, broker ranking, screener 조건 검색
 
-설치 후에는 TossInvest/토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 랭킹, 스크리너를 조회할 수 있습니다.
+설치 후에는 TossInvest/토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회할 수 있습니다.
 
 Observed in the 2026-05-29 recheck:
 

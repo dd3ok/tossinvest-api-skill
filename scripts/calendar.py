@@ -59,6 +59,32 @@ def filter_monthly_events(
     ]
 
 
+def apply_event_window(
+    payload: dict[str, Any],
+    *,
+    limit: int | None,
+    offset: int,
+    summary_only: bool,
+) -> dict[str, Any]:
+    offset = api.require_int_range("offset", offset, minimum=0, maximum=10_000)
+    if limit is not None:
+        limit = api.require_int_range("limit", limit, minimum=1, maximum=10_000)
+    if "events" not in payload:
+        return payload
+    events = payload["events"]
+    if not isinstance(events, list):
+        raise RuntimeError("Unexpected TossInvest response: calendar events is not a list")
+    windowed = dict(payload)
+    windowed["filteredEvents"] = len(events)
+    windowed["offset"] = offset
+    windowed["limit"] = limit
+    if summary_only:
+        windowed.pop("events", None)
+        return windowed
+    windowed["events"] = events[offset : None if limit is None else offset + limit]
+    return windowed
+
+
 def fetch_calendar(
     year_month: str,
     kind: str,
@@ -208,11 +234,33 @@ def main() -> int:
         default="all",
         help="Monthly country filter; domestic/overseas kinds override this",
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Maximum monthly events to print after filtering",
+    )
+    parser.add_argument(
+        "--offset",
+        type=int,
+        default=0,
+        help="Monthly event offset after filtering",
+    )
+    parser.add_argument(
+        "--summary-only",
+        action="store_true",
+        help="For monthly event kinds, print counts and filters without the events array",
+    )
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
     payload = fetch_calendar(args.year_month, args.kind, args.category, args.country)
+    payload = apply_event_window(
+        payload,
+        limit=args.limit,
+        offset=args.offset,
+        summary_only=args.summary_only,
+    )
     api.emit_output(api.render_json(payload), args.output)
     return 0
 

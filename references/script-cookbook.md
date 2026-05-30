@@ -99,6 +99,8 @@ python3 scripts/calendar.py --year-month 2026-05 --kind economic --country us
 python3 scripts/calendar.py --year-month 2026-05 --kind earnings --country kr
 python3 scripts/calendar.py --year-month 2026-05 --kind domestic
 python3 scripts/calendar.py --year-month 2026-05 --kind overseas
+python3 scripts/calendar.py --year-month 2026-05 --kind economic --country us --limit 20
+python3 scripts/calendar.py --year-month 2026-05 --summary-only
 python3 scripts/calendar.py --kind key-events
 python3 scripts/calendar.py --kind weekly-summary
 ```

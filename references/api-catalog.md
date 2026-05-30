@@ -467,8 +467,8 @@ Monthly calendar category filters observed in the page bundle:
 | 전체 | `--kind monthly` | All events except `excludeFromAll=true` |
 | 경제지표 | `--kind economic` | `event.id.group == "ECONOMIC"` |
 | 실적 | `--kind earnings` | `event.id.group` is `KRX_EARNINGS_ANNOUNCEMENT` or `USD_EARNINGS_ANNOUNCEMENT` |
-| 국내 | `--kind domestic` or `--country kr` | Economic `view.economicIndicatorValue.countryType == "kr"` or earnings `stockEarnings.countryType == "kr"` |
-| 해외 | `--kind overseas` or `--country us` | Economic `view.economicIndicatorValue.countryType == "us"` or earnings `stockEarnings.countryType == "us"` |
+| 국내 | `--kind domestic` or `--country kr` | Applies the same category behavior as the selected category, then filters economic `view.economicIndicatorValue.countryType == "kr"` or earnings `stockEarnings.countryType == "kr"`; with default `--category all`, still excludes `excludeFromAll=true` |
+| 해외 | `--kind overseas` or `--country us` | Applies the same category behavior as the selected category, then filters economic `view.economicIndicatorValue.countryType == "us"` or earnings `stockEarnings.countryType == "us"`; with default `--category all`, still excludes `excludeFromAll=true` |
 
 The page bundle also exposes earnings stock-category labels such as `HOLDING`
 and `WATCHLIST`; do not script those as public filters unless a current

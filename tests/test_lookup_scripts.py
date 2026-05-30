@@ -453,6 +453,56 @@ class CalendarScriptTests(unittest.TestCase):
             ],
         )
 
+    def test_apply_event_window_limits_and_summarizes_output(self):
+        events = [{"date": f"2026-05-{day:02d}"} for day in range(1, 6)]
+        payload = {
+            "kind": "monthly",
+            "yearMonth": "2026-05",
+            "category": "all",
+            "country": "all",
+            "totalEvents": 10,
+            "events": events,
+        }
+
+        windowed = calendar.apply_event_window(payload, limit=2, offset=1, summary_only=False)
+
+        self.assertEqual(windowed["filteredEvents"], 5)
+        self.assertEqual(windowed["offset"], 1)
+        self.assertEqual(windowed["limit"], 2)
+        self.assertEqual(
+            [event["date"] for event in windowed["events"]], ["2026-05-02", "2026-05-03"]
+        )
+
+        summary = calendar.apply_event_window(payload, limit=None, offset=0, summary_only=True)
+        self.assertEqual(summary["filteredEvents"], 5)
+        self.assertNotIn("events", summary)
+
+        empty_window = calendar.apply_event_window(payload, limit=2, offset=99, summary_only=False)
+        self.assertEqual(empty_window["filteredEvents"], 5)
+        self.assertEqual(empty_window["events"], [])
+
+        summary_payload = {"kind": "key-events", "eventsCount": 3}
+        self.assertEqual(
+            calendar.apply_event_window(
+                summary_payload,
+                limit=1,
+                offset=1,
+                summary_only=True,
+            ),
+            summary_payload,
+        )
+
+    def test_apply_event_window_rejects_invalid_bounds(self):
+        payload = {"events": []}
+        with self.assertRaisesRegex(ValueError, "limit must be at least 1"):
+            calendar.apply_event_window(payload, limit=0, offset=0, summary_only=False)
+        with self.assertRaisesRegex(ValueError, "limit must be at most 10000"):
+            calendar.apply_event_window(payload, limit=10_001, offset=0, summary_only=False)
+        with self.assertRaisesRegex(ValueError, "offset must be at least 0"):
+            calendar.apply_event_window(payload, limit=None, offset=-1, summary_only=False)
+        with self.assertRaisesRegex(ValueError, "offset must be at most 10000"):
+            calendar.apply_event_window(payload, limit=None, offset=10_001, summary_only=False)
+
     def test_fetch_calendar_rejects_unverified_selectors(self):
         with self.assertRaisesRegex(ValueError, "kind must be one of"):
             calendar.fetch_calendar("2026-05", "account", "all", "all")
