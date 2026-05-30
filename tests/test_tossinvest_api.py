@@ -130,6 +130,22 @@ class TossInvestApiTests(unittest.TestCase):
             api.CERT_BASE_URL,
             "/api/v1/dashboard/wts/overview/indicator/commodity?market=kr",
         )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v4/calendar/monthly/2026-05",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v1/calendar/ai-summary/key-events",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v1/nova-calendar/ai/summary/weekly",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v2/dashboard/wts/overview/calendar/economic-events",
+        )
 
         with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
             api.validate_request_target(
@@ -150,6 +166,51 @@ class TossInvestApiTests(unittest.TestCase):
             api.validate_request_target(
                 api.CERT_BASE_URL,
                 "/api/v1/dashboard/wts/overview/indicator/bond/account",
+            )
+        with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v4/calendar/monthly/2026-5",
+            )
+        with self.assertRaisesRegex(RuntimeError, "Blocked TossInvest endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v4/calendar/monthly/2026-05/account",
+            )
+        with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/calendar/ai-summary/key-events-extra",
+            )
+        with self.assertRaisesRegex(RuntimeError, "query parameters"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v4/calendar/monthly/2026-05?stockCategory=WATCHLIST",
+            )
+        with self.assertRaisesRegex(RuntimeError, "query parameters"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/calendar/ai-summary/key-events?filter=HOLDING",
+            )
+        with self.assertRaisesRegex(RuntimeError, "request body fields"):
+            api.request_json(
+                "/api/v4/calendar/monthly/2026-05",
+                method="POST",
+                body={"stockCategory": "WATCHLIST"},
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "must use POST"):
+            api.request_json(
+                "/api/v4/calendar/monthly/2026-05",
+                method="GET",
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "must use GET"):
+            api.request_json(
+                "/api/v1/calendar/ai-summary/key-events",
+                method="POST",
+                body={},
+                base_url=api.CERT_BASE_URL,
             )
 
     def test_request_json_rejects_sensitive_body_keys_before_network(self):

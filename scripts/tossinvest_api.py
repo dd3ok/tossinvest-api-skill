@@ -8,6 +8,7 @@ import csv
 import io
 import json
 import os
+import re
 import socket
 import sys
 import traceback
@@ -22,7 +23,14 @@ DEFAULT_TIMEOUT = 30
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 
 _ALLOWED_INFO_PREFIXES = ("/api/v1/", "/api/v2/", "/api/v3/", "/api/v4/")
+_CALENDAR_CERT_EXACT_PATHS = (
+    "/api/v1/calendar/ai-summary/key-events",
+    "/api/v1/nova-calendar/ai/summary/weekly",
+    "/api/v2/dashboard/wts/overview/calendar/economic-events",
+)
+_CALENDAR_MONTHLY_PATTERN = re.compile(r"^/api/v4/calendar/monthly/\d{4}-(0[1-9]|1[0-2])$")
 _ALLOWED_CERT_EXACT_PATHS = (
+    *_CALENDAR_CERT_EXACT_PATHS,
     "/api/v1/dashboard/wts/overview/rankings/by-investors",
     "/api/v1/dashboard/wts/overview/indicator/bond",
     "/api/v1/dashboard/wts/overview/indicator/commodity",
@@ -34,6 +42,7 @@ _ALLOWED_CERT_EXACT_PATHS = (
     "/api/v2/screener/screen/search/modal",
     "/api/v3/dashboard/wts/overview/indicator/mini-chart",
 )
+_ALLOWED_CERT_PATH_PATTERNS = (_CALENDAR_MONTHLY_PATTERN,)
 _DENIED_PATH_MARKERS = (
     "/account",
     "/accounts",
@@ -102,6 +111,7 @@ def request_json(
     validate_request_target(base_url, path)
     if body is not None:
         validate_no_sensitive_keys(body)
+    validate_request_usage(base_url, path, method, body)
     data = None if body is None else json.dumps(body, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         base_url + path,
@@ -178,13 +188,51 @@ def validate_request_target(base_url: str, path: str) -> None:
         )
 
     if host == urllib.parse.urlsplit(CERT_BASE_URL).netloc:
-        if request_path in _ALLOWED_CERT_EXACT_PATHS:
+        if _is_calendar_cert_path(request_path):
+            if parsed_path.query:
+                raise RuntimeError(
+                    "Blocked TossInvest endpoint: calendar routes do not accept query parameters"
+                )
+            return
+        if request_path in _ALLOWED_CERT_EXACT_PATHS or any(
+            pattern.fullmatch(request_path) for pattern in _ALLOWED_CERT_PATH_PATTERNS
+        ):
             return
         raise RuntimeError(
             f"Blocked TossInvest endpoint: {request_path} is not an approved cert-api endpoint"
         )
 
     raise RuntimeError(f"Blocked TossInvest endpoint: unapproved host {host}")
+
+
+def validate_request_usage(
+    base_url: str,
+    path: str,
+    method: str,
+    body: Any | None,
+) -> None:
+    parsed_base = urllib.parse.urlsplit(base_url)
+    if parsed_base.netloc.lower() != urllib.parse.urlsplit(CERT_BASE_URL).netloc:
+        return
+    request_path = _validation_path(urllib.parse.urlsplit(path).path)
+    if not _is_calendar_cert_path(request_path):
+        return
+    method = method.upper()
+    if _CALENDAR_MONTHLY_PATTERN.fullmatch(request_path):
+        if method != "POST":
+            raise RuntimeError("Blocked TossInvest endpoint: monthly calendar route must use POST")
+    elif method != "GET":
+        raise RuntimeError("Blocked TossInvest endpoint: calendar summary routes must use GET")
+    if body is not None and body != {}:
+        raise RuntimeError(
+            "Blocked TossInvest endpoint: calendar routes do not accept request body fields"
+        )
+
+
+def _is_calendar_cert_path(request_path: str) -> bool:
+    return request_path in _CALENDAR_CERT_EXACT_PATHS or bool(
+        _CALENDAR_MONTHLY_PATTERN.fullmatch(request_path)
+    )
 
 
 def _validation_path(path: str) -> str:

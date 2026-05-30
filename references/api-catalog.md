@@ -432,8 +432,8 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | WTS news feed | `observed` | GET | `/api/v1/dashboard/wts/news` | Feed/news panel data; `scripts/feed.py` uses the POST form documented under Feed And News APIs |
 | Home live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Body maps URL params to `id={live-chart}`, `tag={market}`, `duration`; returns `products[]`, usually 100 rows |
 | Realtime investor rankings | `script-backed` | GET | `/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Observed under `wts-cert-api`; public page ranking widget, but keep sensitive-host caution |
-| Economic calendar | `observed` | GET | `/api/v1/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
-| Calendar AI key events | `observed` | GET | `/api/v1/calendar/ai-summary/key-events` | Direct 2026-05-29 check returned `eci` and `earnings[]`; public market-calendar context |
+| Economic calendar | `script-backed` | GET | `/api/v2/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
+| Calendar AI key events | `script-backed` | GET | `/api/v1/calendar/ai-summary/key-events` | Direct 2026-05-30 check returned `eci` and `earnings[]`; public market-calendar context |
 | Theme list | `script-backed` | GET | `/api/v1/tics/all` | Observed result includes `baseDateTime`, `ticsItems[]` |
 | Theme ranking by tag | `script-backed` | GET | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Observed tags include market-style values such as `kr`/`us`; result contains ranking metadata and rows |
 | Theme details | `script-backed` | GET | `/api/v1/tics/{ticsId}/details` | Returned `id`, `title`, `summary`, `description`, `companyCount`, `etfCount`, `stocks[]` |
@@ -444,6 +444,35 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 
 Screener endpoints are documented only in [Screener APIs](#screener-apis) to keep
 their `wts-cert-api` handling and filter-body constraints in one place.
+
+## Calendar APIs
+
+Observed on `https://www.tossinvest.com/calendar` during the 2026-05-30
+recheck. These endpoints live under `wts-cert-api`, so keep exact or
+pattern-scoped allowlisting and do not use cookies, auth headers, account
+identifiers, or personalized filters. `scripts/calendar.py` applies the public
+page's monthly event filters locally.
+
+| Purpose | Status | Method | URL | Notes |
+|---|---|---:|---|---|
+| Monthly market calendar | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v4/calendar/monthly/{YYYY-MM}` | Empty JSON body; returns `events[]`; validate `{YYYY-MM}` as month `01`-`12` only |
+| Calendar key events | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/calendar/ai-summary/key-events` | Returns `eci.indicators[]` and `earnings[]` for the public key-events block |
+| Weekly AI summary | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/nova-calendar/ai/summary/weekly` | Returns `title`, `contents`, `additionalContents`, `cacheCreatedAt`, and `contentSources[]`; treat as public page text, not investment advice |
+| Overview economic events | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/calendar/economic-events` | Compact public economic-event list used by overview widgets |
+
+Monthly calendar category filters observed in the page bundle:
+
+| UI tab | `scripts/calendar.py` selector | Event rule |
+|---|---|---|
+| 전체 | `--kind monthly` | All events except `excludeFromAll=true` |
+| 경제지표 | `--kind economic` | `event.id.group == "ECONOMIC"` |
+| 실적 | `--kind earnings` | `event.id.group` is `KRX_EARNINGS_ANNOUNCEMENT` or `USD_EARNINGS_ANNOUNCEMENT` |
+| 국내 | `--kind domestic` or `--country kr` | Economic `view.economicIndicatorValue.countryType == "kr"` or earnings `stockEarnings.countryType == "kr"` |
+| 해외 | `--kind overseas` or `--country us` | Economic `view.economicIndicatorValue.countryType == "us"` or earnings `stockEarnings.countryType == "us"` |
+
+The page bundle also exposes earnings stock-category labels such as `HOLDING`
+and `WATCHLIST`; do not script those as public filters unless a current
+unauthenticated capture proves they are non-personalized public data.
 
 Direct checks on 2026-04-20 for `scripts/theme.py --tag kr --include-all --tics-id 289 --include-details --company-ranking marketcap --company-ranking revenue --company-ranking operating-margin` returned `ranking`, `allThemes`, `details`, `related`, `news`, `fluctuations`, and all three requested company ranking groups.
 
@@ -684,7 +713,10 @@ These endpoints were observed during public page loads but live under `wts-cert-
 | Overview indicator v3 | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator?market=kr` | Public dashboard metadata; re-check before scripting |
 | Overview ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Public dashboard ranking body only |
 | Live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Public dashboard ranking body only |
-| Economic calendar | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/calendar/economic-events` | Public calendar metadata; re-check before scripting |
+| Monthly calendar | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v4/calendar/monthly/{YYYY-MM}` | Public calendar metadata; exact month pattern only |
+| Calendar key events | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/calendar/ai-summary/key-events` | Public calendar metadata and AI summary labels only |
+| Calendar weekly summary | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/nova-calendar/ai/summary/weekly` | Public page summary text only; not investment advice |
+| Economic calendar | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/calendar/economic-events` | Public calendar metadata |
 | Investor rankings | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Public-looking ranking widget only |
 
 The `/stocks/{code}/order` bundle also references order prepare/create/correct/cancel, account, orderable amount, and trading mutation APIs. Exclude them from this skill.

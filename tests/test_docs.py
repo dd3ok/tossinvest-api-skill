@@ -226,7 +226,16 @@ class DocumentationPromptTests(unittest.TestCase):
         section = text.split("## When To Use", 1)[1].split("## When Not To Use", 1)[0]
         self.assertIn("public TossInvest", section)
         self.assertIn("quotes", section)
+        self.assertIn("market calendars", section)
         self.assertIn("read-only browser endpoint", section)
+
+    def test_skill_routes_calendar_without_personalized_filters(self):
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Market calendar, economic indicators, earnings dates", text)
+        self.assertIn("`scripts/calendar.py`", text)
+        self.assertIn("public `/calendar` page datasets", text)
+        self.assertIn("do not treat these calendar labels as investment advice", text)
+        self.assertIn("Do not use holding or watchlist earnings filters", text)
 
     def test_endpoint_drift_guidance_is_explicit_and_routed(self):
         skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -304,6 +313,7 @@ class DocumentationPromptTests(unittest.TestCase):
         for expected in [
             "scripts/quote.py --code A005930 --ticks 5",
             "scripts/financials.py --code A005930 --kind comprehensive",
+            "scripts/calendar.py --year-month 2026-05 --kind economic --country us",
             "scripts/page_api_check.py --code A005930",
         ]:
             with self.subTest(expected=expected):
