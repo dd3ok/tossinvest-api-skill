@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use for public, read-only TossInvest/토스증권 stock, news, filings, financials, market, calendar, index, ranking, screener data visible on tossinvest.com, and endpoint re-verification.
+description: Use for public, read-only TossInvest/토스증권 stock, news, filings, financials, market, calendar, index, ranking, screener data visible on tossinvest.com, and public endpoint re-verification.
 license: MIT
 ---
 
