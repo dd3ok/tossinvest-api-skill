@@ -5,6 +5,7 @@ Additional bundle/API check: 2026-04-20 against `buildId=SUN83tZwsh5murULLiDPr`
 Additional page check: 2026-04-20 for `/stocks/A005930/order`, home ranking variants, `/indices/KGG01P`, `/feed/recommended`, and `/feed/news`
 Additional direct recheck: 2026-04-29 for US `c-chart` product candles and US overview indicator codes.
 Additional page/API recheck: 2026-05-29 for home tabs, stock detail tabs, `/screener`, `/feed/news`, `/indices/KGG01P`, `/indices/exchange-rate`, and `/indices/VWAP.KRW-BTC`.
+Additional page/API recheck: 2026-06-01 for `/calendar`, `/calendar/economic-indicator`, index-page calendar subsets, stock-news paging, and observed drift/excluded page calls.
 Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
@@ -40,6 +41,7 @@ Endpoint status values are conservative confidence labels, not stability guarant
 | `script-backed` | A bundled script calls this exact endpoint or endpoint family. Re-run the script or direct request before relying on current production behavior. |
 | `observed` | Observed from public browser traffic, bundled JavaScript, or prior direct checks, but not wrapped as a first-class script path. |
 | `needs-recheck` | Observed indirectly, feature-flagged, host-sensitive, user-context-sensitive, or otherwise requiring a fresh browser/API check before use. |
+| `observed-drift` | Current public traffic uses or also exposes this endpoint, but the script still uses a safer mirror, older route, or intentionally narrower route. Do not call from scripts until separately reviewed. |
 | `excluded` | Observed but outside this skill's read-only stock-information scope. Do not call from this skill. |
 
 For duplicated families, the domain section is the source of truth. Cross-reference
@@ -302,7 +304,7 @@ Observed from stock detail, analytics bundles, and direct response checks.
 |---|---|---:|---|---|
 | Company filings list | `script-backed` | GET | `/api/v1/stock-detail/companies/{companyCode}/filings` | Query: `number`, `size`, optional `key`; observed result includes `pagingParam`, `body[]`, `lastPage` |
 | Filing detail | `observed` | GET | `/api/v1/stock-infos/filings/companies/{companyCode}/report/{reportId}` | Query may include `reportItem`; observed in bundle for filing detail modal |
-| Company news | `script-backed` | GET | `/api/v2/news/companies/{companyCode}` | Query can include `size`; observed result includes `pagingParam`, `body[]`, `lastPage` |
+| Company news | `script-backed` | GET | `/api/v2/news/companies/{companyCode}` | Query can include `size`, `number`, `orderBy=latest`, and `orderBy=relevant`; observed result includes `pagingParam`, `body[]`, `lastPage` |
 | News detail | `script-backed` | GET | `/api/v2/news/{newsId}` | Detail payload for a news item |
 | Exclude headline news | `observed` | GET | `/api/v2/forum/news/headline/exclude/{newsId}` | Related/headline news excluding a selected item |
 
@@ -311,6 +313,8 @@ Examples:
 ```text
 GET https://wts-info-api.tossinvest.com/api/v1/stock-detail/companies/005930/filings?number=1&size=3
 GET https://wts-info-api.tossinvest.com/api/v2/news/companies/005930?size=3
+GET https://wts-info-api.tossinvest.com/api/v2/news/companies/005930?size=20&number=2&orderBy=latest
+GET https://wts-info-api.tossinvest.com/api/v2/news/companies/005930?size=20&orderBy=relevant
 ```
 
 ## Transaction Status APIs
@@ -448,14 +452,18 @@ their `wts-cert-api` handling and filter-body constraints in one place.
 ## Calendar APIs
 
 Observed on `https://www.tossinvest.com/calendar` during the 2026-05-30
-recheck. These endpoints live under `wts-cert-api`, so keep exact or
-pattern-scoped allowlisting and do not use cookies, auth headers, account
-identifiers, or personalized filters. `scripts/calendar.py` applies the public
-page's monthly event filters locally.
+recheck, and on public `/calendar/economic-indicator` plus index-page calendar
+subsets during the 2026-06-01 recheck. These endpoints live under
+`wts-cert-api`, so keep exact or pattern-scoped allowlisting and do not use
+cookies, auth headers, account identifiers, or personalized filters.
+`scripts/calendar.py` applies the public page's monthly event filters locally.
 
 | Purpose | Status | Method | URL | Notes |
 |---|---|---:|---|---|
 | Monthly market calendar | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v4/calendar/monthly/{YYYY-MM}` | Empty JSON body; returns `events[]`; validate `{YYYY-MM}` as month `01`-`12` only |
+| Index-page calendar subset | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v4/calendar/monthly/{YYYY-MM}/index?countryType=kr|us` | Empty JSON body; returns `events[]` for the index page's country-specific calendar block |
+| Economic indicator detail | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/calendar/economic-indicators/{ric}?announceDate={YYYY-MM-DD}` | Public `/calendar/economic-indicator` detail payload; result keys include `announcementDate`, `announcementTime`, `indicatorDetail`, `historicalData`, `relatedArticles`, `upcomingIndicators`, and `upcomingLive` |
+| Economic indicator AI analysis | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/nova-calendar/ai/analysis/indicators?announceDateTime={YYYY-MM-DDTHH:mm:ss}&ricId={ric}` | Public detail-page AI analysis text; derive `announceDateTime` and `ricId` from the detail response when possible |
 | Calendar key events | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/calendar/ai-summary/key-events` | Returns `eci.indicators[]` and `earnings[]` for the public key-events block |
 | Weekly AI summary | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/nova-calendar/ai/summary/weekly` | Returns `title`, `contents`, `additionalContents`, `cacheCreatedAt`, and `contentSources[]`; treat as public page text, not investment advice |
 | Overview economic events | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/calendar/economic-events` | Compact public economic-event list used by overview widgets |
@@ -473,6 +481,12 @@ Monthly calendar category filters observed in the page bundle:
 The page bundle also exposes earnings stock-category labels such as `HOLDING`
 and `WATCHLIST`; do not script those as public filters unless a current
 unauthenticated capture proves they are non-personalized public data.
+
+The index-page subset route is separate from the main `/calendar` page. It
+accepts only `countryType=kr|us`, uses an empty POST body, and should not be
+extended to arbitrary query keys. The economic-indicator detail route is linked
+from monthly economic events via `view.economicIndicatorValue.ric` plus the
+event `date`.
 
 Direct checks on 2026-04-20 for `scripts/theme.py --tag kr --include-all --tics-id 289 --include-details --company-ranking marketcap --company-ranking revenue --company-ranking operating-margin` returned `ranking`, `allThemes`, `details`, `related`, `news`, `fluctuations`, and all three requested company ranking groups.
 
@@ -711,15 +725,31 @@ These endpoints were observed during public page loads but live under `wts-cert-
 | Stock red flags | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/stock-infos/{productCode}/red-flags` | Public page metadata; re-check before scripting |
 | Overview indicator | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/index?market=kr` | Public dashboard metadata only |
 | Overview indicator v3 | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator?market=kr` | Public dashboard metadata; re-check before scripting |
+| Overview indicator v4 | `observed-drift` | GET | `https://wts-cert-api.tossinvest.com/api/v4/dashboard/wts/overview/indicator` | Public dashboard metadata observed on 2026-06-01 home traffic; not script-backed |
 | Overview ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Public dashboard ranking body only |
 | Live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Public dashboard ranking body only |
 | Monthly calendar | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v4/calendar/monthly/{YYYY-MM}` | Public calendar metadata; exact month pattern only |
+| Index-page calendar subset | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v4/calendar/monthly/{YYYY-MM}/index?countryType=kr|us` | Public index-page calendar metadata; exact path/query shape only |
+| Economic indicator detail | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/calendar/economic-indicators/{ric}?announceDate={YYYY-MM-DD}` | Public economic-indicator detail page data only |
+| Economic indicator AI analysis | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/nova-calendar/ai/analysis/indicators` | Query is exactly `announceDateTime` plus `ricId`; public detail-page text only |
 | Calendar key events | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/calendar/ai-summary/key-events` | Public calendar metadata and AI summary labels only |
 | Calendar weekly summary | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/nova-calendar/ai/summary/weekly` | Public page summary text only; not investment advice |
 | Economic calendar | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/calendar/economic-events` | Public calendar metadata |
 | Investor rankings | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Public-looking ranking widget only |
 
 The `/stocks/{code}/order` bundle also references order prepare/create/correct/cancel, account, orderable amount, and trading mutation APIs. Exclude them from this skill.
+
+Observed 2026-06-01 drift and excluded endpoints:
+
+| Endpoint | Status | Reason |
+|---|---|---|
+| `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator` | `observed-drift` | Home traffic exposes newer overview indicator aggregate; current scripts use narrower indicator routes |
+| `https://wts-cert-api.tossinvest.com/api/v4/dashboard/wts/overview/indicator` | `observed-drift` | Home traffic exposes newer overview indicator aggregate; not routed until separately scoped |
+| `https://wts-info-api.tossinvest.com/api/v2/dashboard/wts/overview/signals` | `observed-drift` | Home traffic also exposes a v2 signals route; `dashboard_ranking.py --kind signals` remains on the verified public v1 helper |
+| `https://wts-api.tossinvest.com/api/v1/exchange/current-quote/for-buy` | `excluded` | `wts-api` exchange quote route observed on exchange-rate page; keep out until exact host/path safety review |
+| `https://wts-api.tossinvest.com/api/v1/exchange/current-quote/for-sell` | `excluded` | Same as above |
+| `https://wts-cert-api.tossinvest.com/api/v1/community/top-rankings/{ranking}` | `excluded` | Community/social ranking surface, outside market-data skill scope |
+| `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | `observed-drift` | Feed page currently calls cert-host mirror; `feed.py` still uses the working info-api route and should not widen cert allowlist without separate review |
 
 ## Excluded Non-Stock Calls
 
@@ -755,6 +785,8 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/indices/KGG01P` | Index info, price, chart, indicator/news widgets |
 | `https://www.tossinvest.com/indices/exchange-rate` | FX chart and exchange-rate widgets |
 | `https://www.tossinvest.com/indices/VWAP.KRW-BTC` | Crypto-like index info/price, `r-chart/crypto`, crypto prices, related news |
+| `https://www.tossinvest.com/calendar` | Monthly market calendar, economic/earnings and domestic/overseas local filters, weekly/key-event summary text |
+| `https://www.tossinvest.com/calendar/economic-indicator?date=2026-06-01&ric=USPMI%3DECI` | Economic indicator detail, historical data, related articles, upcoming indicators, AI analysis text |
 | `https://www.tossinvest.com/screener` | Screener presets, filter metadata, result count, result screen |
 | `https://www.tossinvest.com/feed/recommended` | Recommended community/feed posts |
 | `https://www.tossinvest.com/feed/news` | Dashboard news categories and news detail |

@@ -13,17 +13,34 @@ import tossinvest_api as api
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 
 _YEAR_MONTH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+_DATE_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
+_DATE_TIME_RE = re.compile(
+    r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d$"
+)
+_RIC_RE = re.compile(r"^[A-Z0-9_.=-]{2,48}$")
 MONTHLY_KINDS = {"monthly", "economic", "earnings", "domestic", "overseas"}
+INDEX_KINDS = {"index-events"}
+DETAIL_KINDS = {"economic-detail"}
 SPECIAL_KINDS = {"key-events", "weekly-summary", "overview-economic"}
-KINDS = MONTHLY_KINDS | SPECIAL_KINDS
+KINDS = MONTHLY_KINDS | INDEX_KINDS | DETAIL_KINDS | SPECIAL_KINDS
 CATEGORIES = {"all", "economic", "earnings"}
 COUNTRIES = {"all", "kr", "us"}
+INDEX_COUNTRIES = {"kr", "us"}
 EARNINGS_GROUPS = {"KRX_EARNINGS_ANNOUNCEMENT", "USD_EARNINGS_ANNOUNCEMENT"}
 
 
 def build_monthly_path(year_month: str) -> str:
     year_month = validate_year_month(year_month)
     return f"/api/v4/calendar/monthly/{year_month}"
+
+
+def build_index_monthly_path(year_month: str, index_country: str) -> str:
+    year_month = validate_year_month(year_month)
+    index_country = _require_choice("index-country", index_country, INDEX_COUNTRIES)
+    return api.build_path(
+        f"/api/v4/calendar/monthly/{year_month}/index",
+        {"countryType": index_country},
+    )
 
 
 def build_key_events_path() -> str:
@@ -38,11 +55,64 @@ def build_overview_economic_events_path() -> str:
     return "/api/v2/dashboard/wts/overview/calendar/economic-events"
 
 
+def build_economic_indicator_path(ric: str, announcement_date: str) -> str:
+    return api.build_path(
+        f"/api/v1/calendar/economic-indicators/{validate_ric(ric)}",
+        {"announceDate": validate_date(announcement_date)},
+    )
+
+
+def build_economic_indicator_analysis_path(announcement_datetime: str, ric: str) -> str:
+    return api.build_path(
+        "/api/v1/nova-calendar/ai/analysis/indicators",
+        {
+            "announceDateTime": validate_announcement_datetime(announcement_datetime),
+            "ricId": validate_ric(ric),
+        },
+    )
+
+
 def validate_year_month(year_month: str) -> str:
     value = year_month.strip()
     if not _YEAR_MONTH_RE.fullmatch(value):
         raise ValueError("year-month must be YYYY-MM with month 01-12")
     return value
+
+
+def validate_date(value: str) -> str:
+    normalized = value.strip()
+    if not _DATE_RE.fullmatch(normalized):
+        raise ValueError("date must be YYYY-MM-DD")
+    if not _is_valid_calendar_date(normalized):
+        raise ValueError("date must be a valid calendar date")
+    return normalized
+
+
+def validate_announcement_datetime(value: str) -> str:
+    normalized = value.strip()
+    if not _DATE_TIME_RE.fullmatch(normalized):
+        raise ValueError("announcement datetime must be YYYY-MM-DDTHH:MM:SS")
+    if not _is_valid_calendar_date(normalized.split("T", 1)[0]):
+        raise ValueError("announcement datetime must be a valid calendar datetime")
+    return normalized
+
+
+def _is_valid_calendar_date(value: str) -> bool:
+    year, month, day = (int(part) for part in value.split("-"))
+    try:
+        date(year, month, day)
+    except ValueError:
+        return False
+    return True
+
+
+def validate_ric(value: str) -> str:
+    normalized = value.strip().upper()
+    if not _RIC_RE.fullmatch(normalized):
+        raise ValueError(
+            "ric must be 2-48 uppercase letters, numbers, dots, underscores, hyphens, or equals"
+        )
+    return normalized
 
 
 def filter_monthly_events(
@@ -94,6 +164,11 @@ def fetch_calendar(
     kind: str,
     category: str,
     country: str,
+    *,
+    index_country: str = "kr",
+    ric: str | None = None,
+    announcement_date: str | None = None,
+    include_analysis: bool = False,
 ) -> dict[str, Any]:
     kind = _require_choice("kind", kind, KINDS)
     if kind == "key-events":
@@ -114,6 +189,41 @@ def fetch_calendar(
                 base_url=CERT_BASE_URL,
             ),
         }
+    if kind == "index-events":
+        index_country = _require_choice("index-country", index_country, INDEX_COUNTRIES)
+        result = api.get_result(
+            build_index_monthly_path(year_month, index_country),
+            method="POST",
+            body={},
+            base_url=CERT_BASE_URL,
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError(
+                "Unexpected TossInvest response: index calendar result is not a dictionary"
+            )
+        events = result.get("events")
+        if not isinstance(events, list):
+            raise RuntimeError(
+                "Unexpected TossInvest response: index calendar events is not a list"
+            )
+        for event in events:
+            if not isinstance(event, dict):
+                raise RuntimeError(
+                    "Unexpected TossInvest response: index calendar event is not a dictionary"
+                )
+        return {
+            "kind": kind,
+            "yearMonth": validate_year_month(year_month),
+            "indexCountry": index_country,
+            "totalEvents": len(events),
+            "events": events,
+        }
+    if kind == "economic-detail":
+        return fetch_economic_indicator_detail(
+            ric=ric,
+            announcement_date=announcement_date,
+            include_analysis=include_analysis,
+        )
 
     resolved_category, resolved_country = resolve_monthly_filters(kind, category, country)
     result = api.get_result(
@@ -126,7 +236,7 @@ def fetch_calendar(
         raise RuntimeError(
             "Unexpected TossInvest response: monthly calendar result is not a dictionary"
         )
-    events = result.get("events", [])
+    events = result.get("events")
     if not isinstance(events, list):
         raise RuntimeError("Unexpected TossInvest response: monthly calendar events is not a list")
     return {
@@ -137,6 +247,67 @@ def fetch_calendar(
         "totalEvents": len(events),
         "events": filter_monthly_events(events, resolved_category, resolved_country),
     }
+
+
+def fetch_economic_indicator_detail(
+    *,
+    ric: str | None,
+    announcement_date: str | None,
+    include_analysis: bool,
+) -> dict[str, Any]:
+    if ric is None:
+        raise ValueError("--kind economic-detail requires --ric")
+    if announcement_date is None:
+        raise ValueError("--kind economic-detail requires --date")
+    resolved_ric = validate_ric(ric)
+    resolved_date = validate_date(announcement_date)
+    result = api.get_result(
+        build_economic_indicator_path(resolved_ric, resolved_date),
+        base_url=CERT_BASE_URL,
+    )
+    if not isinstance(result, dict):
+        raise RuntimeError(
+            "Unexpected TossInvest response: economic indicator result is not a dictionary"
+        )
+    payload: dict[str, Any] = {
+        "kind": "economic-detail",
+        "ric": resolved_ric,
+        "date": resolved_date,
+        "result": result,
+    }
+    if include_analysis:
+        announcement_datetime, analysis_ric = _analysis_inputs_from_detail(result)
+        analysis = api.get_result(
+            build_economic_indicator_analysis_path(announcement_datetime, analysis_ric),
+            base_url=CERT_BASE_URL,
+        )
+        if not isinstance(analysis, dict):
+            raise RuntimeError(
+                "Unexpected TossInvest response: economic indicator analysis is not a dictionary"
+            )
+        payload["analysis"] = analysis
+    return payload
+
+
+def _analysis_inputs_from_detail(result: dict[str, Any]) -> tuple[str, str]:
+    announcement_date = result.get("announcementDate")
+    announcement_time = result.get("announcementTime")
+    indicator_detail = result.get("indicatorDetail")
+    ric = indicator_detail.get("ric") if isinstance(indicator_detail, dict) else None
+    if not isinstance(announcement_date, str) or not isinstance(announcement_time, str):
+        raise RuntimeError(
+            "Unexpected TossInvest response: economic indicator announcement date/time is missing"
+        )
+    if not isinstance(ric, str):
+        raise RuntimeError("Unexpected TossInvest response: economic indicator ric is missing")
+    try:
+        return validate_announcement_datetime(
+            f"{announcement_date}T{announcement_time}"
+        ), validate_ric(ric)
+    except ValueError as exc:
+        raise RuntimeError(
+            "Unexpected TossInvest response: malformed announcement datetime or RIC"
+        ) from exc
 
 
 def resolve_monthly_filters(kind: str, category: str, country: str) -> tuple[str, str]:
@@ -227,7 +398,8 @@ def main() -> int:
         default="monthly",
         help=(
             "monthly data alias or summary endpoint: economic, earnings, domestic, "
-            "overseas, key-events, weekly-summary, overview-economic"
+            "overseas, index-events, economic-detail, key-events, weekly-summary, "
+            "overview-economic"
         ),
     )
     parser.add_argument(
@@ -245,24 +417,50 @@ def main() -> int:
     parser.add_argument(
         "--limit",
         type=int,
-        help="Maximum monthly events to print after filtering",
+        help="Maximum events to print after filtering for event-list kinds",
     )
     parser.add_argument(
         "--offset",
         type=int,
         default=0,
-        help="Monthly event offset after filtering",
+        help="Event offset after filtering for event-list kinds",
     )
     parser.add_argument(
         "--summary-only",
         action="store_true",
-        help="For monthly event kinds, print counts and filters without the events array",
+        help="For event-list kinds, print counts and filters without the events array",
+    )
+    parser.add_argument(
+        "--index-country",
+        default="kr",
+        choices=sorted(INDEX_COUNTRIES),
+        help="Country selector for --kind index-events",
+    )
+    parser.add_argument("--ric", help="Economic indicator RIC for --kind economic-detail")
+    parser.add_argument(
+        "--date",
+        dest="announcement_date",
+        help="Announcement date YYYY-MM-DD for --kind economic-detail",
+    )
+    parser.add_argument(
+        "--include-analysis",
+        action="store_true",
+        help="Also fetch public AI analysis text for --kind economic-detail",
     )
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
-    payload = fetch_calendar(args.year_month, args.kind, args.category, args.country)
+    payload = fetch_calendar(
+        args.year_month,
+        args.kind,
+        args.category,
+        args.country,
+        index_country=args.index_country,
+        ric=args.ric,
+        announcement_date=args.announcement_date,
+        include_analysis=args.include_analysis,
+    )
     payload = apply_event_window(
         payload,
         limit=args.limit,

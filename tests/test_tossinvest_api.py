@@ -147,6 +147,21 @@ class TossInvestApiTests(unittest.TestCase):
             api.CERT_BASE_URL,
             "/api/v2/dashboard/wts/overview/calendar/economic-events",
         )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v4/calendar/monthly/2026-06/index?countryType=us",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v1/calendar/economic-indicators/USPMI=ECI?announceDate=2026-06-01",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            (
+                "/api/v1/nova-calendar/ai/analysis/indicators"
+                "?announceDateTime=2026-06-01T23%3A00%3A00&ricId=USPMI%3DECI"
+            ),
+        )
 
         with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
             api.validate_request_target(
@@ -193,6 +208,47 @@ class TossInvestApiTests(unittest.TestCase):
                 api.CERT_BASE_URL,
                 "/api/v1/calendar/ai-summary/key-events?filter=HOLDING",
             )
+        with self.assertRaisesRegex(RuntimeError, "countryType"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v4/calendar/monthly/2026-06/index?countryType=watchlist",
+            )
+        with self.assertRaisesRegex(RuntimeError, "announceDate"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/calendar/economic-indicators/USPMI=ECI?announceDate=2026-6-1",
+            )
+        with self.assertRaisesRegex(RuntimeError, "valid calendar date"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/calendar/economic-indicators/USPMI=ECI?announceDate=2026-02-31",
+            )
+        with self.assertRaisesRegex(RuntimeError, "duplicate query parameter announceDate"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                (
+                    "/api/v1/calendar/economic-indicators/USPMI=ECI"
+                    "?announceDate=2026-06-01&announceDate=2026-06-02"
+                ),
+            )
+        with self.assertRaisesRegex(RuntimeError, "Blocked TossInvest endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/calendar/economic-indicators/../account?announceDate=2026-06-01",
+            )
+        with self.assertRaisesRegex(RuntimeError, "unexpected query"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/calendar/economic-indicators/USPMI=ECI?announceDate=2026-06-01&filter=HOLDING",
+            )
+        with self.assertRaisesRegex(RuntimeError, "announceDateTime"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                (
+                    "/api/v1/nova-calendar/ai/analysis/indicators"
+                    "?announceDateTime=2026-06-01&ricId=USPMI%3DECI"
+                ),
+            )
         with self.assertRaisesRegex(RuntimeError, "requires an empty JSON body"):
             api.request_json(
                 "/api/v4/calendar/monthly/2026-05",
@@ -224,6 +280,19 @@ class TossInvestApiTests(unittest.TestCase):
             api.request_json(
                 "/api/v1/calendar/ai-summary/key-events",
                 method="GET",
+                body={},
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "must use POST"):
+            api.request_json(
+                "/api/v4/calendar/monthly/2026-06/index?countryType=us",
+                method="GET",
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "must use GET"):
+            api.request_json(
+                "/api/v1/calendar/economic-indicators/USPMI=ECI?announceDate=2026-06-01",
+                method="POST",
                 body={},
                 base_url=api.CERT_BASE_URL,
             )

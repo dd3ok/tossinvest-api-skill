@@ -51,7 +51,10 @@ Route details:
 - Use `scripts/dashboard_ranking.py --kind signals --signal-code A005930` only to fetch TossInvest UI-provided home AI-summary label fields. Do not interpret these labels as buy/sell signals or personalized investment advice.
 - Treat credit, lending-trading, short-selling-trend, and CFD routes as public transaction-status page datasets only. Use `scripts/trading_trend.py --type credit`, `--type lending-trading`, `--type short-selling-trend`, or `--type cfd` for those datasets; do not use them for account credit limits, margin eligibility, borrowing, orderability, leverage decisions, or trading advice.
 - Use `scripts/indices.py --code VWAP.KRW-BTC --include-chart --include-crypto-prices` for crypto-like index pages; `--securities-type auto` maps `VWAP.KRW-*` codes to `crypto`.
-- Use `scripts/calendar.py --year-month 2026-05 --kind economic --country us` for public `/calendar` page datasets. Calendar AI summaries and labels are public page text; do not treat these calendar labels as investment advice, buy/sell signals, or personalized recommendations. Do not use holding or watchlist earnings filters unless a current unauthenticated capture proves they are non-personalized public data.
+- Use `scripts/calendar.py --year-month 2026-05 --kind economic --country us` for public `/calendar` page datasets.
+- Use `scripts/calendar.py --kind economic-detail --ric USPMI=ECI --date 2026-06-01` only for public economic-indicator detail pages.
+- Use `scripts/calendar.py --kind index-events --index-country us` only for public index-page calendar subsets.
+- Calendar AI summaries and labels are public page text; do not treat these calendar labels as investment advice, buy/sell signals, or personalized recommendations. Do not use holding or watchlist earnings filters unless a current unauthenticated capture proves they are non-personalized public data.
 - Use `scripts/feed.py --kind news --news-type INDEX --index-code KGG01P` for index news; `ALL_HIGHLIGHT`, `HOT`, and `SOARING_STOCK` need no index code. Personalized popular news remains excluded.
 - Use `scripts/screener_count.py --sort price-change-1w` when a current preset exposes `C_주가등락률_1W`.
 
@@ -76,6 +79,7 @@ python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
 python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
 python3 scripts/calendar.py --year-month 2026-05 --kind economic --country us
+python3 scripts/calendar.py --kind economic-detail --ric USPMI=ECI --date 2026-06-01 --include-analysis
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 python3 scripts/page_api_check.py --code A005930 --pages order,analytics,news,transaction-status
 ```

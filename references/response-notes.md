@@ -90,6 +90,15 @@ case for dotted indicator codes.
 | `/api/v2/news/companies/{companyCode}` | Object: `pagingParam`, `body[]`, `lastPage` |
 | `/api/v2/news/{newsId}` | News detail object; verify exact keys per current response before transforming |
 
+## Calendar Shapes
+
+| Endpoint | Observed `result` shape |
+|---|---|
+| `wts-cert-api /api/v4/calendar/monthly/{YYYY-MM}` | Object: `events[]`, `includeMajorStock`; monthly page filters are applied client-side by `calendar.py` |
+| `wts-cert-api /api/v4/calendar/monthly/{YYYY-MM}/index?countryType=kr|us` | Object: `events[]`, `includeMajorStock`; public index-page calendar subset |
+| `wts-cert-api /api/v1/calendar/economic-indicators/{ric}` | Object: `category`, `frequency`, `name`, `announcementDate`, `announcementTime`, `indicatorDetail`, `historicalData[]`, `relatedNews`, `relatedArticles[]`, `upcomingIndicators`, `upcomingLive` |
+| `wts-cert-api /api/v1/nova-calendar/ai/analysis/indicators` | Object: `title`, `contents`, `cacheCreatedAt`; public page AI text only |
+
 ## Discovery And Screener Shapes
 
 | Endpoint | Observed `result` shape |

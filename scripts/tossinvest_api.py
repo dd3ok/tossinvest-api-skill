@@ -15,6 +15,7 @@ import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -25,10 +26,22 @@ CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 _ALLOWED_INFO_PREFIXES = ("/api/v1/", "/api/v2/", "/api/v3/", "/api/v4/")
 _CALENDAR_CERT_EXACT_PATHS = (
     "/api/v1/calendar/ai-summary/key-events",
+    "/api/v1/nova-calendar/ai/analysis/indicators",
     "/api/v1/nova-calendar/ai/summary/weekly",
     "/api/v2/dashboard/wts/overview/calendar/economic-events",
 )
 _CALENDAR_MONTHLY_PATTERN = re.compile(r"^/api/v4/calendar/monthly/\d{4}-(0[1-9]|1[0-2])$")
+_CALENDAR_INDEX_MONTHLY_PATTERN = re.compile(
+    r"^/api/v4/calendar/monthly/\d{4}-(0[1-9]|1[0-2])/index$"
+)
+_CALENDAR_ECONOMIC_INDICATOR_PATTERN = re.compile(
+    r"^/api/v1/calendar/economic-indicators/[A-Z0-9_.=-]{2,48}$"
+)
+_DATE_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
+_DATE_TIME_PATTERN = re.compile(
+    r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d$"
+)
+_RIC_PATTERN = re.compile(r"^[A-Z0-9_.=-]{2,48}$")
 _ALLOWED_CERT_EXACT_PATHS = (
     *_CALENDAR_CERT_EXACT_PATHS,
     "/api/v1/dashboard/wts/overview/rankings/by-investors",
@@ -42,7 +55,11 @@ _ALLOWED_CERT_EXACT_PATHS = (
     "/api/v2/screener/screen/search/modal",
     "/api/v3/dashboard/wts/overview/indicator/mini-chart",
 )
-_ALLOWED_CERT_PATH_PATTERNS = (_CALENDAR_MONTHLY_PATTERN,)
+_ALLOWED_CERT_PATH_PATTERNS = (
+    _CALENDAR_MONTHLY_PATTERN,
+    _CALENDAR_INDEX_MONTHLY_PATTERN,
+    _CALENDAR_ECONOMIC_INDICATOR_PATTERN,
+)
 _DENIED_PATH_MARKERS = (
     "/account",
     "/accounts",
@@ -170,10 +187,9 @@ def validate_request_target(base_url: str, path: str) -> None:
     if parsed_path.scheme or parsed_path.netloc:
         raise RuntimeError("Blocked TossInvest endpoint: path must be relative")
     request_path = _validation_path(parsed_path.path)
+    query_pairs = urllib.parse.parse_qsl(parsed_path.query, keep_blank_values=True)
     if parsed_path.query:
-        validate_no_sensitive_keys(
-            dict(urllib.parse.parse_qsl(parsed_path.query, keep_blank_values=True))
-        )
+        validate_no_sensitive_keys({key: value for key, value in query_pairs})
     lowered_path = request_path.lower()
 
     for marker in _DENIED_PATH_MARKERS:
@@ -189,10 +205,7 @@ def validate_request_target(base_url: str, path: str) -> None:
 
     if host == urllib.parse.urlsplit(CERT_BASE_URL).netloc:
         if _is_calendar_cert_path(request_path):
-            if parsed_path.query:
-                raise RuntimeError(
-                    "Blocked TossInvest endpoint: calendar routes do not accept query parameters"
-                )
+            _validate_calendar_cert_query(request_path, query_pairs)
             return
         if request_path in _ALLOWED_CERT_EXACT_PATHS or any(
             pattern.fullmatch(request_path) for pattern in _ALLOWED_CERT_PATH_PATTERNS
@@ -218,7 +231,9 @@ def validate_request_usage(
     if not _is_calendar_cert_path(request_path):
         return
     method = method.upper()
-    if _CALENDAR_MONTHLY_PATTERN.fullmatch(request_path):
+    if _CALENDAR_MONTHLY_PATTERN.fullmatch(
+        request_path
+    ) or _CALENDAR_INDEX_MONTHLY_PATTERN.fullmatch(request_path):
         if method != "POST":
             raise RuntimeError("Blocked TossInvest endpoint: monthly calendar route must use POST")
         if body != {}:
@@ -240,7 +255,80 @@ def validate_request_usage(
 def _is_calendar_cert_path(request_path: str) -> bool:
     return request_path in _CALENDAR_CERT_EXACT_PATHS or bool(
         _CALENDAR_MONTHLY_PATTERN.fullmatch(request_path)
+        or _CALENDAR_INDEX_MONTHLY_PATTERN.fullmatch(request_path)
+        or _CALENDAR_ECONOMIC_INDICATOR_PATTERN.fullmatch(request_path)
     )
+
+
+def _validate_calendar_cert_query(request_path: str, pairs: list[tuple[str, str]]) -> None:
+    if _CALENDAR_INDEX_MONTHLY_PATTERN.fullmatch(request_path):
+        params = _single_query_params(pairs)
+        if set(params) != {"countryType"}:
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: unexpected query parameters for index calendar route"
+            )
+        if params["countryType"] not in {"kr", "us"}:
+            raise RuntimeError("Blocked TossInvest endpoint: countryType must be kr or us")
+        return
+
+    if _CALENDAR_ECONOMIC_INDICATOR_PATTERN.fullmatch(request_path):
+        params = _single_query_params(pairs)
+        if set(params) != {"announceDate"}:
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: unexpected query parameters for calendar economic indicator route"
+            )
+        if not _DATE_PATTERN.fullmatch(params["announceDate"]):
+            raise RuntimeError("Blocked TossInvest endpoint: announceDate must be YYYY-MM-DD")
+        if not _is_valid_date(params["announceDate"]):
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: announceDate must be a valid calendar date"
+            )
+        return
+
+    if request_path == "/api/v1/nova-calendar/ai/analysis/indicators":
+        params = _single_query_params(pairs)
+        if set(params) != {"announceDateTime", "ricId"}:
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: unexpected query parameters for calendar AI analysis route"
+            )
+        if not _DATE_TIME_PATTERN.fullmatch(params["announceDateTime"]):
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: announceDateTime must be YYYY-MM-DDTHH:MM:SS"
+            )
+        if not _is_valid_datetime(params["announceDateTime"]):
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: announceDateTime must be a valid calendar datetime"
+            )
+        if not _RIC_PATTERN.fullmatch(params["ricId"]):
+            raise RuntimeError("Blocked TossInvest endpoint: ricId is not an approved RIC shape")
+        return
+
+    if pairs:
+        raise RuntimeError(
+            "Blocked TossInvest endpoint: calendar routes do not accept query parameters"
+        )
+
+
+def _single_query_params(pairs: list[tuple[str, str]]) -> dict[str, str]:
+    params: dict[str, str] = {}
+    for key, value in pairs:
+        if key in params:
+            raise RuntimeError(f"Blocked TossInvest endpoint: duplicate query parameter {key}")
+        params[key] = value
+    return params
+
+
+def _is_valid_date(value: str) -> bool:
+    year, month, day = (int(part) for part in value.split("-"))
+    try:
+        date(year, month, day)
+    except ValueError:
+        return False
+    return True
+
+
+def _is_valid_datetime(value: str) -> bool:
+    return _is_valid_date(value.split("T", 1)[0])
 
 
 def _validation_path(path: str) -> str:
