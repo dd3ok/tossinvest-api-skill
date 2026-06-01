@@ -9,6 +9,7 @@ Use this cookbook when `SKILL.md` has selected the right script family but the t
 - [Financials And Investor Trend](#financials-and-investor-trend)
 - [Themes And TICS](#themes-and-tics)
 - [Indices, FX, And Indicators](#indices-fx-and-indicators)
+- [Market Calendar](#market-calendar)
 - [Rankings And Feed](#rankings-and-feed)
 - [Screener](#screener)
 - [Pension Fund Trend](#pension-fund-trend)
@@ -84,6 +85,30 @@ python3 scripts/indices.py --code KGG01P --include-product-exchange-rate
 Preserve case-sensitive dotted indicator codes such as `RFU.GCv1`. The default
 `--securities-type auto` behavior infers `VWAP.KRW-*` crypto codes as `crypto`,
 other dotted codes as `us-s`, and non-dotted codes as `kr-s`.
+
+## Market Calendar
+
+`calendar.py` reads public `/calendar` page data from current `wts-cert-api`
+calendar endpoints. The monthly API returns all events for the month; the
+script applies the public page's economic/earnings and domestic/overseas tab
+filters locally.
+
+```bash
+python3 scripts/calendar.py --year-month 2026-05
+python3 scripts/calendar.py --year-month 2026-05 --kind economic --country us
+python3 scripts/calendar.py --year-month 2026-05 --kind earnings --country kr
+python3 scripts/calendar.py --year-month 2026-05 --kind domestic
+python3 scripts/calendar.py --year-month 2026-05 --kind overseas
+python3 scripts/calendar.py --year-month 2026-05 --kind economic --country us --limit 20
+python3 scripts/calendar.py --year-month 2026-05 --summary-only
+python3 scripts/calendar.py --kind key-events
+python3 scripts/calendar.py --kind weekly-summary
+```
+
+Calendar AI summaries and event labels are public page text, not investment
+advice, buy/sell signals, or personalized recommendations. Do not use holding
+or watchlist earnings filters unless current unauthenticated browser traffic
+proves those filters are non-personalized public data.
 
 ## Rankings And Feed
 

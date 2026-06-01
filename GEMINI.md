@@ -11,6 +11,8 @@ Prefer the bundled Python scripts for deterministic lookups:
   RSI, SMA, EMA, MACD, and Bollinger Bands.
 - `scripts/indices.py` for market indices, FX charts, exchange-rate widgets,
   dashboard indicator metadata, and crypto-like `VWAP.KRW-*` index pages.
+- `scripts/calendar.py` for public `/calendar` monthly events, economic
+  indicators, earnings dates, domestic/overseas tabs, and calendar AI summaries.
 - `scripts/dashboard_ranking.py`, `scripts/screener_count.py`, `scripts/theme.py`,
   `scripts/news.py`, `scripts/filings.py`, `scripts/financials.py`, and
   `scripts/trading_trend.py` for their named domains.
@@ -41,6 +43,11 @@ Current endpoint notes:
 - Use `dashboard_ranking.py --kind signals --signal-code A005930` only for
   TossInvest UI-provided home AI-summary label fields; these are not buy/sell signals
   or personalized investment advice.
+- Use `calendar.py --year-month 2026-05 --kind economic --country us` for
+  public market-calendar page data. Calendar AI summaries and event labels are
+  not buy/sell signals, personalized recommendations, or investment advice.
+  Do not use holding/watchlist earnings filters unless a current unauthenticated
+  capture proves they are non-personalized public data.
 - Use `trading_trend.py --type credit|lending-trading|short-selling-trend|cfd`
   for public transaction-status page datasets only; these are not account limits, orderability, leverage decisions, or trading advice.
 - Use `feed.py --kind news --news-type INDEX --index-code KGG01P` for index

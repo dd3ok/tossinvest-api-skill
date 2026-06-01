@@ -1,3 +1,4 @@
+import importlib.util
 import subprocess
 import sys
 import unittest
@@ -5,6 +6,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+
+_calendar_spec = importlib.util.spec_from_file_location(
+    "tossinvest_calendar_script",
+    ROOT / "scripts" / "calendar.py",
+)
+calendar = importlib.util.module_from_spec(_calendar_spec)
+assert _calendar_spec.loader is not None
+_calendar_spec.loader.exec_module(calendar)
 
 import dashboard_ranking
 import feed
@@ -332,9 +341,199 @@ class IndicesScriptTests(unittest.TestCase):
         )
 
 
+class CalendarScriptTests(unittest.TestCase):
+    def test_build_calendar_paths_use_current_public_routes(self):
+        self.assertEqual(
+            calendar.build_monthly_path("2026-05"),
+            "/api/v4/calendar/monthly/2026-05",
+        )
+        self.assertEqual(
+            calendar.build_key_events_path(),
+            "/api/v1/calendar/ai-summary/key-events",
+        )
+        self.assertEqual(
+            calendar.build_weekly_summary_path(),
+            "/api/v1/nova-calendar/ai/summary/weekly",
+        )
+        self.assertEqual(
+            calendar.build_overview_economic_events_path(),
+            "/api/v2/dashboard/wts/overview/calendar/economic-events",
+        )
+
+    def test_build_monthly_path_rejects_invalid_months(self):
+        for value in ["2026-00", "2026-13", "202605", "../2026-05"]:
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "year-month must be YYYY-MM"):
+                    calendar.build_monthly_path(value)
+
+    def test_filter_monthly_events_maps_category_and_country_tabs(self):
+        events = [
+            {
+                "id": {"group": "ECONOMIC"},
+                "date": "2026-05-01",
+                "view": {"economicIndicatorValue": {"countryType": "us"}},
+            },
+            {
+                "id": {"group": "ECONOMIC"},
+                "date": "2026-05-02",
+                "view": {"economicIndicatorValue": {"countryType": "kr"}},
+            },
+            {
+                "id": {"group": "KRX_EARNINGS_ANNOUNCEMENT"},
+                "date": "2026-05-03",
+                "stockEarnings": {"countryType": "kr"},
+            },
+            {
+                "id": {"group": "USD_EARNINGS_ANNOUNCEMENT"},
+                "date": "2026-05-04",
+                "stockEarnings": {"countryType": "us"},
+            },
+            {
+                "id": {"group": "HOLIDAY", "uniqueName": "20260505_CHILDREN_HOLIDAY_KR"},
+                "date": "2026-05-05",
+            },
+            {
+                "id": {"group": "COMPANY_EVENT"},
+                "date": "2026-05-06",
+                "excludeFromAll": True,
+            },
+        ]
+
+        self.assertEqual(
+            [event["date"] for event in calendar.filter_monthly_events(events, "economic", "us")],
+            ["2026-05-01"],
+        )
+        self.assertEqual(
+            [event["date"] for event in calendar.filter_monthly_events(events, "earnings", "kr")],
+            ["2026-05-03"],
+        )
+        self.assertEqual(
+            [event["date"] for event in calendar.filter_monthly_events(events, "all", "kr")],
+            ["2026-05-02", "2026-05-03", "2026-05-05"],
+        )
+
+    def test_filter_monthly_events_rejects_non_dictionary_events(self):
+        with self.assertRaisesRegex(RuntimeError, "monthly calendar event is not a dictionary"):
+            calendar.filter_monthly_events([{"date": "2026-05-01"}, "bad-event"], "all", "all")
+
+    def test_fetch_monthly_payload_applies_kind_aliases_before_network_result(self):
+        calls = []
+
+        def fake_get_result(path, **kwargs):
+            calls.append((path, kwargs))
+            return {
+                "events": [
+                    {
+                        "id": {"group": "USD_EARNINGS_ANNOUNCEMENT"},
+                        "date": "2026-05-04",
+                        "stockEarnings": {"countryType": "us"},
+                    },
+                    {
+                        "id": {"group": "KRX_EARNINGS_ANNOUNCEMENT"},
+                        "date": "2026-05-03",
+                        "stockEarnings": {"countryType": "kr"},
+                    },
+                ]
+            }
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            payload = calendar.fetch_calendar("2026-05", "overseas", "all", "all")
+        finally:
+            calendar.api.get_result = original_get_result
+
+        self.assertEqual(payload["kind"], "overseas")
+        self.assertEqual(payload["category"], "all")
+        self.assertEqual(payload["country"], "us")
+        self.assertEqual([event["date"] for event in payload["events"]], ["2026-05-04"])
+        self.assertEqual(
+            calls,
+            [
+                (
+                    "/api/v4/calendar/monthly/2026-05",
+                    {"method": "POST", "body": {}, "base_url": calendar.CERT_BASE_URL},
+                )
+            ],
+        )
+
+    def test_fetch_monthly_payload_rejects_non_dictionary_result(self):
+        def fake_get_result(path, **kwargs):
+            return None
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(
+                RuntimeError, "monthly calendar result is not a dictionary"
+            ):
+                calendar.fetch_calendar("2026-05", "monthly", "all", "all")
+        finally:
+            calendar.api.get_result = original_get_result
+
+    def test_apply_event_window_limits_and_summarizes_output(self):
+        events = [{"date": f"2026-05-{day:02d}"} for day in range(1, 6)]
+        payload = {
+            "kind": "monthly",
+            "yearMonth": "2026-05",
+            "category": "all",
+            "country": "all",
+            "totalEvents": 10,
+            "events": events,
+        }
+
+        windowed = calendar.apply_event_window(payload, limit=2, offset=1, summary_only=False)
+
+        self.assertEqual(windowed["filteredEvents"], 5)
+        self.assertEqual(windowed["offset"], 1)
+        self.assertEqual(windowed["limit"], 2)
+        self.assertEqual(
+            [event["date"] for event in windowed["events"]], ["2026-05-02", "2026-05-03"]
+        )
+
+        summary = calendar.apply_event_window(payload, limit=None, offset=0, summary_only=True)
+        self.assertEqual(summary["filteredEvents"], 5)
+        self.assertNotIn("events", summary)
+
+        empty_window = calendar.apply_event_window(payload, limit=2, offset=99, summary_only=False)
+        self.assertEqual(empty_window["filteredEvents"], 5)
+        self.assertEqual(empty_window["events"], [])
+
+        summary_payload = {"kind": "key-events", "eventsCount": 3}
+        self.assertEqual(
+            calendar.apply_event_window(
+                summary_payload,
+                limit=1,
+                offset=1,
+                summary_only=True,
+            ),
+            summary_payload,
+        )
+
+    def test_apply_event_window_rejects_invalid_bounds(self):
+        payload = {"events": []}
+        with self.assertRaisesRegex(ValueError, "limit must be at least 1"):
+            calendar.apply_event_window(payload, limit=0, offset=0, summary_only=False)
+        with self.assertRaisesRegex(ValueError, "limit must be at most 10000"):
+            calendar.apply_event_window(payload, limit=10_001, offset=0, summary_only=False)
+        with self.assertRaisesRegex(ValueError, "offset must be at least 0"):
+            calendar.apply_event_window(payload, limit=None, offset=-1, summary_only=False)
+        with self.assertRaisesRegex(ValueError, "offset must be at most 10000"):
+            calendar.apply_event_window(payload, limit=None, offset=10_001, summary_only=False)
+
+    def test_fetch_calendar_rejects_unverified_selectors(self):
+        with self.assertRaisesRegex(ValueError, "kind must be one of"):
+            calendar.fetch_calendar("2026-05", "account", "all", "all")
+        with self.assertRaisesRegex(ValueError, "category must be one of"):
+            calendar.fetch_calendar("2026-05", "monthly", "account", "all")
+        with self.assertRaisesRegex(ValueError, "country must be one of"):
+            calendar.fetch_calendar("2026-05", "monthly", "all", "account")
+
+
 class JsonOnlyScriptCliTests(unittest.TestCase):
     def test_json_only_scripts_accept_format_json_alias(self):
         script_names = [
+            "calendar.py",
             "dashboard_ranking.py",
             "feed.py",
             "financials.py",

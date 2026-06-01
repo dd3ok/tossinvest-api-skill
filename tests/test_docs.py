@@ -138,6 +138,7 @@ class DocumentationPromptTests(unittest.TestCase):
             "TossInvest API " + "Skills",
         ]
         checked_paths = [
+            ROOT / ".github" / "ISSUE_TEMPLATE" / "config.yml",
             ROOT / "README.md",
             ROOT / "SECURITY.md",
             ROOT / "scripts" / "tossinvest_api.py",
@@ -183,6 +184,7 @@ class DocumentationPromptTests(unittest.TestCase):
         )
         self.assertLessEqual(len(description), 200)
         self.assertIn("public, read-only TossInvest", description)
+        self.assertIn("calendar", description)
         for broad_trigger in [
             "AI signals",
             "accounts",
@@ -226,7 +228,16 @@ class DocumentationPromptTests(unittest.TestCase):
         section = text.split("## When To Use", 1)[1].split("## When Not To Use", 1)[0]
         self.assertIn("public TossInvest", section)
         self.assertIn("quotes", section)
+        self.assertIn("market calendars", section)
         self.assertIn("read-only browser endpoint", section)
+
+    def test_skill_routes_calendar_without_personalized_filters(self):
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Market calendar, economic indicators, earnings dates", text)
+        self.assertIn("`scripts/calendar.py`", text)
+        self.assertIn("public `/calendar` page datasets", text)
+        self.assertIn("do not treat these calendar labels as investment advice", text)
+        self.assertIn("Do not use holding or watchlist earnings filters", text)
 
     def test_endpoint_drift_guidance_is_explicit_and_routed(self):
         skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -248,7 +259,7 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "토스증권 Web API"', text)
-        self.assertIn("토스증권 공개 주식·시장·지수·랭킹·스크리너 데이터", text)
+        self.assertIn("토스증권 공개 주식·시장·캘린더·지수·랭킹·스크리너 데이터", text)
         self.assertIn("A005930", text)
         self.assertIn("조회해줘", text)
 
@@ -301,9 +312,12 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_eval_prompts_cover_core_script_routes(self):
         text = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")
+        self.assertIn("토스증권에서 2026-05 경제지표 일정과 실적 발표일", text)
+        self.assertIn("does not mention `/calendar`", text)
         for expected in [
             "scripts/quote.py --code A005930 --ticks 5",
             "scripts/financials.py --code A005930 --kind comprehensive",
+            "scripts/calendar.py --year-month 2026-05 --kind economic --country us",
             "scripts/page_api_check.py --code A005930",
         ]:
             with self.subTest(expected=expected):

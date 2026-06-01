@@ -3,6 +3,7 @@ import sys
 import unittest
 import urllib.error
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -130,6 +131,22 @@ class TossInvestApiTests(unittest.TestCase):
             api.CERT_BASE_URL,
             "/api/v1/dashboard/wts/overview/indicator/commodity?market=kr",
         )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v4/calendar/monthly/2026-05",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v1/calendar/ai-summary/key-events",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v1/nova-calendar/ai/summary/weekly",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v2/dashboard/wts/overview/calendar/economic-events",
+        )
 
         with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
             api.validate_request_target(
@@ -151,6 +168,111 @@ class TossInvestApiTests(unittest.TestCase):
                 api.CERT_BASE_URL,
                 "/api/v1/dashboard/wts/overview/indicator/bond/account",
             )
+        with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v4/calendar/monthly/2026-5",
+            )
+        with self.assertRaisesRegex(RuntimeError, "Blocked TossInvest endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v4/calendar/monthly/2026-05/account",
+            )
+        with self.assertRaisesRegex(RuntimeError, "not an approved cert-api endpoint"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/calendar/ai-summary/key-events-extra",
+            )
+        with self.assertRaisesRegex(RuntimeError, "query parameters"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v4/calendar/monthly/2026-05?stockCategory=WATCHLIST",
+            )
+        with self.assertRaisesRegex(RuntimeError, "query parameters"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/calendar/ai-summary/key-events?filter=HOLDING",
+            )
+        with self.assertRaisesRegex(RuntimeError, "requires an empty JSON body"):
+            api.request_json(
+                "/api/v4/calendar/monthly/2026-05",
+                method="POST",
+                body={"stockCategory": "WATCHLIST"},
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "requires an empty JSON body"):
+            api.request_json(
+                "/api/v4/calendar/monthly/2026-05",
+                method="POST",
+                body=None,
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "must use POST"):
+            api.request_json(
+                "/api/v4/calendar/monthly/2026-05",
+                method="GET",
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "must use GET"):
+            api.request_json(
+                "/api/v1/calendar/ai-summary/key-events",
+                method="POST",
+                body={},
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "do not accept request bodies"):
+            api.request_json(
+                "/api/v1/calendar/ai-summary/key-events",
+                method="GET",
+                body={},
+                base_url=api.CERT_BASE_URL,
+            )
+
+    def test_calendar_request_body_serialization_matches_observed_routes(self):
+        captured = []
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self):
+                return b'{"result":{"ok":true}}'
+
+        def fake_urlopen(request, timeout):
+            captured.append(
+                {
+                    "data": request.data,
+                    "headers": {key.lower(): value for key, value in request.header_items()},
+                    "method": request.get_method(),
+                    "timeout": timeout,
+                    "url": request.full_url,
+                }
+            )
+            return FakeResponse()
+
+        with patch.object(api.urllib.request, "urlopen", fake_urlopen):
+            api.request_json(
+                "/api/v4/calendar/monthly/2026-05",
+                method="POST",
+                body={},
+                base_url=api.CERT_BASE_URL,
+            )
+            api.request_json(
+                "/api/v1/calendar/ai-summary/key-events",
+                method="GET",
+                body=None,
+                base_url=api.CERT_BASE_URL,
+            )
+
+        self.assertEqual(captured[0]["method"], "POST")
+        self.assertEqual(captured[0]["data"], b"{}")
+        self.assertEqual(captured[0]["headers"].get("content-type"), "application/json")
+        self.assertEqual(captured[1]["method"], "GET")
+        self.assertIsNone(captured[1]["data"])
+        self.assertNotIn("content-type", captured[1]["headers"])
 
     def test_request_json_rejects_sensitive_body_keys_before_network(self):
         with self.assertRaisesRegex(RuntimeError, "sensitive key accountNo"):

@@ -14,15 +14,17 @@
 - 재무제표, 실적 추정, valuation, 배당, 안정성 지표
 - 공시, 뉴스, feed discovery, theme/TICS, 관련 테마
 - KOSPI 같은 지수, FX chart, 환율 widget, 채권/원자재 indicator
+- 증시 캘린더, 경제지표 일정, 실적 발표 일정, 국내/해외 calendar tab
 - 국내/미국 live-chart top100, 투자자 매매 동향, broker ranking, screener 조건 검색
 
-설치 후에는 TossInvest/토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 랭킹, 스크리너를 조회할 수 있습니다.
+설치 후에는 TossInvest/토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회할 수 있습니다.
 
 Observed in the 2026-05-29 recheck:
 
 - Home live-chart AI summary label fields via `dashboard_ranking.py --kind signals`; these are public UI labels, not buy/sell signals.
 - Transaction-status public page datasets for credit, lending trading, short-selling trend, and CFD via `trading_trend.py`; these are not account limits, orderability, leverage decisions, or trading advice.
 - Index-like crypto pages such as `VWAP.KRW-BTC`, including `r-chart/crypto` and `/api/v1/crypto-prices`.
+- Market calendar data from `/calendar`, including public monthly events, economic indicators, earnings dates, domestic/overseas filters, key events, and weekly AI summary text. These are not investment advice or buy/sell signals.
 - Current feed/news labels: major news (`ALL_HIGHLIGHT`), latest news (`HOT`), soaring-stock news (`SOARING_STOCK`), and index news (`INDEX`).
 - Current screener presets, including the `C_주가등락률_1W` price-change sort column.
 
@@ -124,6 +126,7 @@ python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
 python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
 python3 scripts/financials.py --code A005930 --kind comprehensive
+python3 scripts/calendar.py --year-month 2026-05 --kind economic --country us
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 ```
 
