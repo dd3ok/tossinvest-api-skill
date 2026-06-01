@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use for public, read-only TossInvest/토스증권 stock, market, calendar, index, ranking, and screener data visible on tossinvest.com, including public endpoint re-verification.
+description: Use for public, read-only TossInvest/토스증권 stock, news, filings, financials, market, calendar, index, ranking, screener data visible on tossinvest.com, and public endpoint re-verification.
 license: MIT
 ---
 
@@ -83,6 +83,8 @@ python3 scripts/calendar.py --kind economic-detail --ric USPMI=ECI --date 2026-0
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 python3 scripts/page_api_check.py --code A005930 --pages order,analytics,news,transaction-status
 ```
+
+`page_api_check.py --pages order` is an order page read-only smoke check only; it does not call order placement or mutation APIs.
 
 For US stock candles, use an observed TossInvest product/source code such as `US20100311002`, not the display ticker (`SPY`, `QQQ`, `NVDA`, `BRK.B`). Use `day:1` or `min:1` unless a current browser capture verifies another accepted range.
 
