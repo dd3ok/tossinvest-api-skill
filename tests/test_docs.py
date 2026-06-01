@@ -258,6 +258,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("orderBy=latest", catalog)
         self.assertIn("orderBy=relevant", catalog)
         self.assertIn("scripts/news.py --code A005930 --page 2 --order-by latest", cookbook)
+        self.assertIn("scripts/news.py --code A005930 --page 2 --order-by relevant", cookbook)
 
     def test_catalog_records_observed_excluded_drift_endpoints(self):
         catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")

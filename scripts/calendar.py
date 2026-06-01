@@ -300,9 +300,14 @@ def _analysis_inputs_from_detail(result: dict[str, Any]) -> tuple[str, str]:
         )
     if not isinstance(ric, str):
         raise RuntimeError("Unexpected TossInvest response: economic indicator ric is missing")
-    return validate_announcement_datetime(f"{announcement_date}T{announcement_time}"), validate_ric(
-        ric
-    )
+    try:
+        return validate_announcement_datetime(
+            f"{announcement_date}T{announcement_time}"
+        ), validate_ric(ric)
+    except ValueError as exc:
+        raise RuntimeError(
+            "Unexpected TossInvest response: malformed announcement datetime or RIC"
+        ) from exc
 
 
 def resolve_monthly_filters(kind: str, category: str, country: str) -> tuple[str, str]:
@@ -412,18 +417,18 @@ def main() -> int:
     parser.add_argument(
         "--limit",
         type=int,
-        help="Maximum monthly events to print after filtering",
+        help="Maximum events to print after filtering for event-list kinds",
     )
     parser.add_argument(
         "--offset",
         type=int,
         default=0,
-        help="Monthly event offset after filtering",
+        help="Event offset after filtering for event-list kinds",
     )
     parser.add_argument(
         "--summary-only",
         action="store_true",
-        help="For monthly event kinds, print counts and filters without the events array",
+        help="For event-list kinds, print counts and filters without the events array",
     )
     parser.add_argument(
         "--index-country",

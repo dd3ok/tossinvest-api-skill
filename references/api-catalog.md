@@ -452,10 +452,11 @@ their `wts-cert-api` handling and filter-body constraints in one place.
 ## Calendar APIs
 
 Observed on `https://www.tossinvest.com/calendar` during the 2026-05-30
-recheck. These endpoints live under `wts-cert-api`, so keep exact or
-pattern-scoped allowlisting and do not use cookies, auth headers, account
-identifiers, or personalized filters. `scripts/calendar.py` applies the public
-page's monthly event filters locally.
+recheck, and on public `/calendar/economic-indicator` plus index-page calendar
+subsets during the 2026-06-01 recheck. These endpoints live under
+`wts-cert-api`, so keep exact or pattern-scoped allowlisting and do not use
+cookies, auth headers, account identifiers, or personalized filters.
+`scripts/calendar.py` applies the public page's monthly event filters locally.
 
 | Purpose | Status | Method | URL | Notes |
 |---|---|---:|---|---|

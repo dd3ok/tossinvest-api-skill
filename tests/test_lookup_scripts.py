@@ -682,6 +682,54 @@ class CalendarScriptTests(unittest.TestCase):
         finally:
             calendar.api.get_result = original_get_result
 
+    def test_fetch_economic_detail_analysis_rejects_malformed_response_datetime(self):
+        def fake_get_result(path, **kwargs):
+            return {
+                "announcementDate": "2026-02-31",
+                "announcementTime": "23:00:00",
+                "indicatorDetail": {"ric": "USPMI=ECI"},
+            }
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(RuntimeError, "malformed announcement datetime or RIC"):
+                calendar.fetch_calendar(
+                    "2026-06",
+                    "economic-detail",
+                    "all",
+                    "all",
+                    ric="USPMI=ECI",
+                    announcement_date="2026-06-01",
+                    include_analysis=True,
+                )
+        finally:
+            calendar.api.get_result = original_get_result
+
+    def test_fetch_economic_detail_analysis_rejects_malformed_response_ric(self):
+        def fake_get_result(path, **kwargs):
+            return {
+                "announcementDate": "2026-06-01",
+                "announcementTime": "23:00:00",
+                "indicatorDetail": {"ric": "../account"},
+            }
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(RuntimeError, "malformed announcement datetime or RIC"):
+                calendar.fetch_calendar(
+                    "2026-06",
+                    "economic-detail",
+                    "all",
+                    "all",
+                    ric="USPMI=ECI",
+                    announcement_date="2026-06-01",
+                    include_analysis=True,
+                )
+        finally:
+            calendar.api.get_result = original_get_result
+
     def test_fetch_economic_detail_rejects_non_dictionary_analysis(self):
         def fake_get_result(path, **kwargs):
             if path.startswith("/api/v1/calendar/economic-indicators/"):

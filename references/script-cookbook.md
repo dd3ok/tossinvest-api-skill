@@ -129,6 +129,7 @@ python3 scripts/feed.py --kind news --news-type SOARING_STOCK
 python3 scripts/feed.py --kind news --news-type INDEX --index-code KGG01P
 python3 scripts/feed.py --kind recommended
 python3 scripts/news.py --code A005930 --page 2 --order-by latest --size 20
+python3 scripts/news.py --code A005930 --page 2 --order-by relevant --size 5
 ```
 
 ## Screener
