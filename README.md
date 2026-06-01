@@ -19,12 +19,13 @@
 
 설치 후에는 TossInvest/토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회할 수 있습니다.
 
-Observed in the 2026-05-29 recheck:
+Observed in recent public rechecks:
 
 - Home live-chart AI summary label fields via `dashboard_ranking.py --kind signals`; these are public UI labels, not buy/sell signals.
 - Transaction-status public page datasets for credit, lending trading, short-selling trend, and CFD via `trading_trend.py`; these are not account limits, orderability, leverage decisions, or trading advice.
 - Index-like crypto pages such as `VWAP.KRW-BTC`, including `r-chart/crypto` and `/api/v1/crypto-prices`.
 - Market calendar data from `/calendar`, including public monthly events, economic indicators, earnings dates, domestic/overseas filters, key events, and weekly AI summary text. These are not investment advice or buy/sell signals.
+- Public economic-indicator detail pages and index-page calendar subsets, using exact public `wts-cert-api` path/query allowlists.
 - Current feed/news labels: major news (`ALL_HIGHLIGHT`), latest news (`HOT`), soaring-stock news (`SOARING_STOCK`), and index news (`INDEX`).
 - Current screener presets, including the `C_주가등락률_1W` price-change sort column.
 
@@ -127,6 +128,8 @@ python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-per
 python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
 python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/calendar.py --year-month 2026-05 --kind economic --country us
+python3 scripts/calendar.py --kind economic-detail --ric USPMI=ECI --date 2026-06-01 --include-analysis
+python3 scripts/calendar.py --year-month 2026-06 --kind index-events --index-country us
 python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
 ```
 

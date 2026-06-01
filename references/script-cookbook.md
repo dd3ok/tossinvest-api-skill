@@ -101,14 +101,20 @@ python3 scripts/calendar.py --year-month 2026-05 --kind domestic
 python3 scripts/calendar.py --year-month 2026-05 --kind overseas
 python3 scripts/calendar.py --year-month 2026-05 --kind economic --country us --limit 20
 python3 scripts/calendar.py --year-month 2026-05 --summary-only
+python3 scripts/calendar.py --kind economic-detail --ric USPMI=ECI --date 2026-06-01
+python3 scripts/calendar.py --kind economic-detail --ric USPMI=ECI --date 2026-06-01 --include-analysis
+python3 scripts/calendar.py --year-month 2026-06 --kind index-events --index-country us
 python3 scripts/calendar.py --kind key-events
 python3 scripts/calendar.py --kind weekly-summary
 ```
 
 Calendar AI summaries and event labels are public page text, not investment
-advice, buy/sell signals, or personalized recommendations. Do not use holding
-or watchlist earnings filters unless current unauthenticated browser traffic
-proves those filters are non-personalized public data.
+advice, buy/sell signals, or personalized recommendations. `--limit` and
+`--offset` are local output windows, not server paging. Derive `economic-detail`
+`--ric` and `--date` from a monthly economic event. `index-events` reads the
+index-page calendar subset for `--index-country kr|us`. Do not use holding or
+watchlist earnings filters unless current unauthenticated browser traffic proves
+those filters are non-personalized public data.
 
 ## Rankings And Feed
 
@@ -122,6 +128,7 @@ python3 scripts/feed.py --kind news --news-type ALL_HIGHLIGHT
 python3 scripts/feed.py --kind news --news-type SOARING_STOCK
 python3 scripts/feed.py --kind news --news-type INDEX --index-code KGG01P
 python3 scripts/feed.py --kind recommended
+python3 scripts/news.py --code A005930 --page 2 --order-by latest --size 20
 ```
 
 ## Screener

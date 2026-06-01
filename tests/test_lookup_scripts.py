@@ -359,12 +359,42 @@ class CalendarScriptTests(unittest.TestCase):
             calendar.build_overview_economic_events_path(),
             "/api/v2/dashboard/wts/overview/calendar/economic-events",
         )
+        self.assertEqual(
+            calendar.build_index_monthly_path("2026-06", "us"),
+            "/api/v4/calendar/monthly/2026-06/index?countryType=us",
+        )
+        self.assertEqual(
+            calendar.build_economic_indicator_path("USPMI=ECI", "2026-06-01"),
+            "/api/v1/calendar/economic-indicators/USPMI=ECI?announceDate=2026-06-01",
+        )
+        self.assertEqual(
+            calendar.build_economic_indicator_analysis_path(
+                "2026-06-01T23:00:00",
+                "USPMI=ECI",
+            ),
+            (
+                "/api/v1/nova-calendar/ai/analysis/indicators"
+                "?announceDateTime=2026-06-01T23%3A00%3A00&ricId=USPMI%3DECI"
+            ),
+        )
 
     def test_build_monthly_path_rejects_invalid_months(self):
         for value in ["2026-00", "2026-13", "202605", "../2026-05"]:
             with self.subTest(value=value):
                 with self.assertRaisesRegex(ValueError, "year-month must be YYYY-MM"):
                     calendar.build_monthly_path(value)
+
+    def test_calendar_detail_builders_reject_unverified_values(self):
+        with self.assertRaisesRegex(ValueError, "date must be YYYY-MM-DD"):
+            calendar.build_economic_indicator_path("USPMI=ECI", "2026-6-1")
+        with self.assertRaisesRegex(ValueError, "date must be a valid calendar date"):
+            calendar.build_economic_indicator_path("USPMI=ECI", "2026-02-31")
+        with self.assertRaisesRegex(ValueError, "announcement datetime"):
+            calendar.build_economic_indicator_analysis_path("2026-06-01 23:00:00", "USPMI=ECI")
+        with self.assertRaisesRegex(ValueError, "ric must"):
+            calendar.build_economic_indicator_path("../account", "2026-06-01")
+        with self.assertRaisesRegex(ValueError, "index-country must be one of"):
+            calendar.build_index_monthly_path("2026-06", "all")
 
     def test_filter_monthly_events_maps_category_and_country_tabs(self):
         events = [
@@ -468,6 +498,215 @@ class CalendarScriptTests(unittest.TestCase):
                 RuntimeError, "monthly calendar result is not a dictionary"
             ):
                 calendar.fetch_calendar("2026-05", "monthly", "all", "all")
+        finally:
+            calendar.api.get_result = original_get_result
+
+    def test_fetch_monthly_payload_rejects_missing_events(self):
+        def fake_get_result(path, **kwargs):
+            return {}
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(RuntimeError, "monthly calendar events is not a list"):
+                calendar.fetch_calendar("2026-05", "monthly", "all", "all")
+        finally:
+            calendar.api.get_result = original_get_result
+
+    def test_fetch_index_monthly_payload_uses_index_calendar_route(self):
+        calls = []
+
+        def fake_get_result(path, **kwargs):
+            calls.append((path, kwargs))
+            return {"events": [{"id": {"group": "ECONOMIC"}, "date": "2026-06-01"}]}
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            payload = calendar.fetch_calendar(
+                "2026-06",
+                "index-events",
+                "all",
+                "all",
+                index_country="us",
+            )
+        finally:
+            calendar.api.get_result = original_get_result
+
+        self.assertEqual(payload["kind"], "index-events")
+        self.assertEqual(payload["indexCountry"], "us")
+        self.assertEqual(payload["totalEvents"], 1)
+        self.assertEqual(
+            calls,
+            [
+                (
+                    "/api/v4/calendar/monthly/2026-06/index?countryType=us",
+                    {"method": "POST", "body": {}, "base_url": calendar.CERT_BASE_URL},
+                )
+            ],
+        )
+
+    def test_fetch_index_monthly_payload_rejects_missing_events(self):
+        def fake_get_result(path, **kwargs):
+            return {}
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(RuntimeError, "index calendar events is not a list"):
+                calendar.fetch_calendar(
+                    "2026-06",
+                    "index-events",
+                    "all",
+                    "all",
+                    index_country="us",
+                )
+        finally:
+            calendar.api.get_result = original_get_result
+
+    def test_fetch_economic_detail_can_include_ai_analysis(self):
+        calls = []
+
+        def fake_get_result(path, **kwargs):
+            calls.append((path, kwargs))
+            if path.startswith("/api/v1/calendar/economic-indicators/"):
+                return {
+                    "announcementDate": "2026-06-01",
+                    "announcementTime": "23:00:00",
+                    "indicatorDetail": {"ric": "USPMI=ECI"},
+                }
+            return {"title": "AI analysis", "contents": "public summary"}
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            payload = calendar.fetch_calendar(
+                "2026-06",
+                "economic-detail",
+                "all",
+                "all",
+                ric="USPMI=ECI",
+                announcement_date="2026-06-01",
+                include_analysis=True,
+            )
+        finally:
+            calendar.api.get_result = original_get_result
+
+        self.assertEqual(payload["kind"], "economic-detail")
+        self.assertEqual(payload["ric"], "USPMI=ECI")
+        self.assertIn("analysis", payload)
+        self.assertEqual(
+            calls,
+            [
+                (
+                    "/api/v1/calendar/economic-indicators/USPMI=ECI?announceDate=2026-06-01",
+                    {"base_url": calendar.CERT_BASE_URL},
+                ),
+                (
+                    (
+                        "/api/v1/nova-calendar/ai/analysis/indicators"
+                        "?announceDateTime=2026-06-01T23%3A00%3A00&ricId=USPMI%3DECI"
+                    ),
+                    {"base_url": calendar.CERT_BASE_URL},
+                ),
+            ],
+        )
+
+    def test_fetch_economic_detail_rejects_non_dictionary_result(self):
+        def fake_get_result(path, **kwargs):
+            return None
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(
+                RuntimeError, "economic indicator result is not a dictionary"
+            ):
+                calendar.fetch_calendar(
+                    "2026-06",
+                    "economic-detail",
+                    "all",
+                    "all",
+                    ric="USPMI=ECI",
+                    announcement_date="2026-06-01",
+                )
+        finally:
+            calendar.api.get_result = original_get_result
+
+    def test_fetch_economic_detail_analysis_requires_announcement_fields(self):
+        def fake_get_result(path, **kwargs):
+            return {
+                "announcementDate": "2026-06-01",
+                "indicatorDetail": {"ric": "USPMI=ECI"},
+            }
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(
+                RuntimeError, "economic indicator announcement date/time is missing"
+            ):
+                calendar.fetch_calendar(
+                    "2026-06",
+                    "economic-detail",
+                    "all",
+                    "all",
+                    ric="USPMI=ECI",
+                    announcement_date="2026-06-01",
+                    include_analysis=True,
+                )
+        finally:
+            calendar.api.get_result = original_get_result
+
+    def test_fetch_economic_detail_analysis_requires_detail_ric(self):
+        def fake_get_result(path, **kwargs):
+            return {
+                "announcementDate": "2026-06-01",
+                "announcementTime": "23:00:00",
+                "indicatorDetail": {},
+            }
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(RuntimeError, "economic indicator ric is missing"):
+                calendar.fetch_calendar(
+                    "2026-06",
+                    "economic-detail",
+                    "all",
+                    "all",
+                    ric="USPMI=ECI",
+                    announcement_date="2026-06-01",
+                    include_analysis=True,
+                )
+        finally:
+            calendar.api.get_result = original_get_result
+
+    def test_fetch_economic_detail_rejects_non_dictionary_analysis(self):
+        def fake_get_result(path, **kwargs):
+            if path.startswith("/api/v1/calendar/economic-indicators/"):
+                return {
+                    "announcementDate": "2026-06-01",
+                    "announcementTime": "23:00:00",
+                    "indicatorDetail": {"ric": "USPMI=ECI"},
+                }
+            return None
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(
+                RuntimeError, "economic indicator analysis is not a dictionary"
+            ):
+                calendar.fetch_calendar(
+                    "2026-06",
+                    "economic-detail",
+                    "all",
+                    "all",
+                    ric="USPMI=ECI",
+                    announcement_date="2026-06-01",
+                    include_analysis=True,
+                )
         finally:
             calendar.api.get_result = original_get_result
 
@@ -807,9 +1046,19 @@ class ScreenerCountScriptTests(unittest.TestCase):
 class NewsScriptTests(unittest.TestCase):
     def test_build_company_news_path_uses_company_code(self):
         self.assertEqual(
-            news.build_company_news_path("A005930", 3),
-            "/api/v2/news/companies/005930?size=3",
+            news.build_company_news_path("A005930", 3, 2, "latest"),
+            "/api/v2/news/companies/005930?size=3&number=2&orderBy=latest",
         )
+        self.assertEqual(
+            news.build_company_news_path("A005930", 20, 1, "relevant"),
+            "/api/v2/news/companies/005930?size=20&orderBy=relevant",
+        )
+
+    def test_build_company_news_path_rejects_invalid_paging_and_order(self):
+        with self.assertRaisesRegex(ValueError, "page must be at least 1"):
+            news.build_company_news_path("A005930", 3, 0, "latest")
+        with self.assertRaisesRegex(ValueError, "order-by must be one of"):
+            news.build_company_news_path("A005930", 3, 1, "account")
 
 
 class FinancialsScriptTests(unittest.TestCase):

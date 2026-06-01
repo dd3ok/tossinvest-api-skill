@@ -236,8 +236,43 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("Market calendar, economic indicators, earnings dates", text)
         self.assertIn("`scripts/calendar.py`", text)
         self.assertIn("public `/calendar` page datasets", text)
+        self.assertIn("--kind economic-detail", text)
+        self.assertIn("--kind index-events", text)
         self.assertIn("do not treat these calendar labels as investment advice", text)
         self.assertIn("Do not use holding or watchlist earnings filters", text)
+
+    def test_calendar_catalog_and_cookbook_cover_detail_and_index_subset(self):
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        self.assertIn("/api/v1/calendar/economic-indicators/{ric}", catalog)
+        self.assertIn("/api/v1/nova-calendar/ai/analysis/indicators", catalog)
+        self.assertIn("/api/v4/calendar/monthly/{YYYY-MM}/index", catalog)
+        self.assertIn("countryType=kr|us", catalog)
+        self.assertIn("scripts/calendar.py --kind economic-detail", cookbook)
+        self.assertIn("scripts/calendar.py --year-month 2026-06 --kind index-events", cookbook)
+
+    def test_news_docs_cover_paging_and_ordering(self):
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        self.assertIn("number", catalog)
+        self.assertIn("orderBy=latest", catalog)
+        self.assertIn("orderBy=relevant", catalog)
+        self.assertIn("scripts/news.py --code A005930 --page 2 --order-by latest", cookbook)
+
+    def test_catalog_records_observed_excluded_drift_endpoints(self):
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        for expected in [
+            "/api/v3/dashboard/wts/overview/indicator",
+            "/api/v4/dashboard/wts/overview/indicator",
+            "/api/v2/dashboard/wts/overview/signals",
+            "/api/v1/exchange/current-quote/for-buy",
+            "/api/v1/community/top-rankings",
+            "/api/v4/feed/recommend/ranking-posts",
+        ]:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, catalog)
+        self.assertIn("observed-drift", catalog)
+        self.assertIn("excluded", catalog)
 
     def test_endpoint_drift_guidance_is_explicit_and_routed(self):
         skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")

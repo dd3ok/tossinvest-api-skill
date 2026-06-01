@@ -12,7 +12,9 @@ Prefer the bundled Python scripts for deterministic lookups:
 - `scripts/indices.py` for market indices, FX charts, exchange-rate widgets,
   dashboard indicator metadata, and crypto-like `VWAP.KRW-*` index pages.
 - `scripts/calendar.py` for public `/calendar` monthly events, economic
-  indicators, earnings dates, domestic/overseas tabs, and calendar AI summaries.
+  indicators, economic-indicator detail pages, earnings dates,
+  domestic/overseas tabs, index-page calendar subsets, and calendar AI
+  summaries.
 - `scripts/dashboard_ranking.py`, `scripts/screener_count.py`, `scripts/theme.py`,
   `scripts/news.py`, `scripts/filings.py`, `scripts/financials.py`, and
   `scripts/trading_trend.py` for their named domains.
@@ -46,6 +48,9 @@ Current endpoint notes:
 - Use `calendar.py --year-month 2026-05 --kind economic --country us` for
   public market-calendar page data. Calendar AI summaries and event labels are
   not buy/sell signals, personalized recommendations, or investment advice.
+  Use `--kind economic-detail --ric ... --date ...` only for public
+  `/calendar/economic-indicator` detail pages and `--kind index-events` only
+  for public index-page calendar subsets.
   Do not use holding/watchlist earnings filters unless a current unauthenticated
   capture proves they are non-personalized public data.
 - Use `trading_trend.py --type credit|lending-trading|short-selling-trend|cfd`
