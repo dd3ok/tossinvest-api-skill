@@ -138,6 +138,7 @@ class DocumentationPromptTests(unittest.TestCase):
             "TossInvest API " + "Skills",
         ]
         checked_paths = [
+            ROOT / ".github" / "ISSUE_TEMPLATE" / "config.yml",
             ROOT / "README.md",
             ROOT / "SECURITY.md",
             ROOT / "scripts" / "tossinvest_api.py",
@@ -311,6 +312,8 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_eval_prompts_cover_core_script_routes(self):
         text = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")
+        self.assertIn("토스증권에서 2026-05 경제지표 일정과 실적 발표일", text)
+        self.assertIn("does not mention `/calendar`", text)
         for expected in [
             "scripts/quote.py --code A005930 --ticks 5",
             "scripts/financials.py --code A005930 --kind comprehensive",

@@ -74,6 +74,14 @@ Expected behavior:
 - Does not use holding/watchlist earnings filters unless current unauthenticated browser traffic proves they are non-personalized public data.
 
 ```text
+토스증권에서 2026-05 경제지표 일정과 실적 발표일을 국내/해외로 나눠 조회해줘.
+```
+
+Expected behavior:
+- Routes to `scripts/calendar.py` from the natural TossInvest calendar wording even though the prompt does not mention `/calendar`.
+- Uses public monthly event filters only; does not request login, account, holding, watchlist, or personalized earnings filters.
+
+```text
 TossInvest theme/TICS 289의 상세 정보, 관련 테마, 뉴스, 등락 데이터, 회사 랭킹을 조회해줘.
 ```
 
