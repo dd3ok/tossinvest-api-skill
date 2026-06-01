@@ -412,6 +412,10 @@ class CalendarScriptTests(unittest.TestCase):
             ["2026-05-02", "2026-05-03", "2026-05-05"],
         )
 
+    def test_filter_monthly_events_rejects_non_dictionary_events(self):
+        with self.assertRaisesRegex(RuntimeError, "monthly calendar event is not a dictionary"):
+            calendar.filter_monthly_events([{"date": "2026-05-01"}, "bad-event"], "all", "all")
+
     def test_fetch_monthly_payload_applies_kind_aliases_before_network_result(self):
         calls = []
 
@@ -452,6 +456,20 @@ class CalendarScriptTests(unittest.TestCase):
                 )
             ],
         )
+
+    def test_fetch_monthly_payload_rejects_non_dictionary_result(self):
+        def fake_get_result(path, **kwargs):
+            return None
+
+        original_get_result = calendar.api.get_result
+        try:
+            calendar.api.get_result = fake_get_result
+            with self.assertRaisesRegex(
+                RuntimeError, "monthly calendar result is not a dictionary"
+            ):
+                calendar.fetch_calendar("2026-05", "monthly", "all", "all")
+        finally:
+            calendar.api.get_result = original_get_result
 
     def test_apply_event_window_limits_and_summarizes_output(self):
         events = [{"date": f"2026-05-{day:02d}"} for day in range(1, 6)]

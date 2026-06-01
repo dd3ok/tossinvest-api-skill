@@ -52,11 +52,15 @@ def filter_monthly_events(
 ) -> list[dict[str, Any]]:
     category = _require_choice("category", category, CATEGORIES)
     country = _require_choice("country", country, COUNTRIES)
-    return [
-        event
-        for event in events
-        if _matches_category(event, category) and _matches_country(event, country)
-    ]
+    filtered = []
+    for event in events:
+        if not isinstance(event, dict):
+            raise RuntimeError(
+                "Unexpected TossInvest response: monthly calendar event is not a dictionary"
+            )
+        if _matches_category(event, category) and _matches_country(event, country):
+            filtered.append(event)
+    return filtered
 
 
 def apply_event_window(
@@ -118,6 +122,10 @@ def fetch_calendar(
         body={},
         base_url=CERT_BASE_URL,
     )
+    if not isinstance(result, dict):
+        raise RuntimeError(
+            "Unexpected TossInvest response: monthly calendar result is not a dictionary"
+        )
     events = result.get("events", [])
     if not isinstance(events, list):
         raise RuntimeError("Unexpected TossInvest response: monthly calendar events is not a list")
