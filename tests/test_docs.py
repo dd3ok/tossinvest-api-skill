@@ -185,6 +185,9 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertLessEqual(len(description), 200)
         self.assertIn("public, read-only TossInvest", description)
         self.assertIn("calendar", description)
+        self.assertIn("news", description)
+        self.assertIn("filings", description)
+        self.assertIn("financials", description)
         for broad_trigger in [
             "AI signals",
             "accounts",
@@ -295,7 +298,9 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "토스증권 Web API"', text)
-        self.assertIn("토스증권 공개 주식·시장·캘린더·지수·랭킹·스크리너 데이터", text)
+        self.assertIn(
+            "토스증권 공개 주식·뉴스·공시·재무·시장·캘린더·지수·랭킹·스크리너 데이터", text
+        )
         self.assertIn("A005930", text)
         self.assertIn("조회해줘", text)
 
@@ -341,10 +346,13 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_cookbook_documents_page_level_api_smoke_check(self):
         text = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("Page API Smoke Checks", text)
         self.assertIn("scripts/page_api_check.py --code A005930", text)
         self.assertIn("order,analytics,news,transaction-status", text)
         self.assertIn("does not call order placement", text)
+        self.assertIn("order page read-only smoke", text)
+        self.assertIn("order page read-only smoke", skill_text)
 
     def test_eval_prompts_cover_core_script_routes(self):
         text = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")

@@ -163,6 +163,9 @@ cleanly for a single product. It checks only read-only stock information endpoin
 groups and does not call order placement, order amendment, account, balance, or
 orderable-amount APIs.
 
+The `order` page group is an order page read-only smoke check only. It does not
+call order placement, amendment, cancellation, or account-impacting APIs.
+
 ```bash
 python3 scripts/page_api_check.py --code A005930
 python3 scripts/page_api_check.py --code A005930 --pages order,analytics,news,transaction-status
