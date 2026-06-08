@@ -252,6 +252,14 @@ class IndicesScriptTests(unittest.TestCase):
             "/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=week&from=2026-04-20&count=5",
         )
         self.assertEqual(
+            indices.build_net_buying_range_path("KGG01P", "month", "2026-06-08", 5),
+            "/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=month&from=2026-06-08&count=5",
+        )
+        self.assertEqual(
+            indices.build_net_buying_range_path("KGG01P", "year", "2026-06-08", 5),
+            "/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=year&from=2026-06-08&count=5",
+        )
+        self.assertEqual(
             indices.build_net_buying_daily_path("KGG01P", "2026-04-20", 35),
             "/api/v1/stock-infos/index/net-buying/daily?code=KGG01P&count=35&from=2026-04-20",
         )

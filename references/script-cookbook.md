@@ -74,11 +74,14 @@ additional detail and company-ranking endpoints.
 ```bash
 python3 scripts/indices.py --code KGG01P --include-chart --include-fx-chart --include-exchange-rates --format json
 python3 scripts/indices.py --code KGG01P --include-mini-chart --include-related-etfs --include-net-buying --net-buying-from 2026-04-20
+python3 scripts/indices.py --code KGG01P --include-net-buying --net-buying-range month --net-buying-from 2026-06-08
+python3 scripts/indices.py --code KGG01P --include-net-buying --net-buying-range year --net-buying-from 2026-06-08
+python3 scripts/indices.py --code KGG01P --include-fx-chart --fx-range 1y --fx-step week:1
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type bond
 python3 scripts/indices.py --code KGG01P --include-indicators --indicator-type commodity
 python3 scripts/indices.py --code RFU.GCv1 --include-chart --chart-preset daily
 python3 scripts/indices.py --code KR1BENCH0010 --include-chart --chart-preset quarter
-python3 scripts/indices.py --code VWAP.KRW-BTC --include-chart --include-crypto-prices
+python3 scripts/indices.py --code VWAP.KRW-BTC --include-chart --range 1w --step min:10 --include-crypto-prices
 python3 scripts/indices.py --code KGG01P --include-product-exchange-rate
 ```
 
