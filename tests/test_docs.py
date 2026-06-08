@@ -176,33 +176,24 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_skill_frontmatter_uses_validator_compatible_fields(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         frontmatter = text.split("---", 2)[1]
-        self.assertRegex(frontmatter, r"\ndescription: Use ")
+        self.assertRegex(frontmatter, r"\ndescription: Use this skill when ")
         description = next(
             line.removeprefix("description: ")
             for line in frontmatter.splitlines()
             if line.startswith("description: ")
         )
-        self.assertLessEqual(len(description), 200)
+        self.assertLessEqual(len(description), 1024)
         self.assertIn("public, read-only TossInvest", description)
+        self.assertIn("crypto-like index pages", description)
+        self.assertIn("public endpoint re-verification", description)
+        self.assertIn("Do not use for login", description)
         self.assertIn("calendar", description)
         self.assertIn("news", description)
         self.assertIn("filings", description)
         self.assertIn("financials", description)
-        for broad_trigger in [
-            "AI signals",
-            "accounts",
-            "credit",
-            "investment advice",
-            "lending trading",
-            "login",
-            "short-selling",
-            "trading",
-            "CFD",
-            "VWAP.KRW-*",
-        ]:
-            with self.subTest(broad_trigger=broad_trigger):
-                self.assertNotIn(broad_trigger, frontmatter)
-        self.assertNotIn("\ncompatibility:", frontmatter)
+        self.assertIn("\ncompatibility: Requires Python 3.10+", frontmatter)
+        self.assertIn("network access", frontmatter)
+        self.assertIn("public API hosts", frontmatter)
 
     def test_skill_routes_disambiguate_financial_and_signal_labels(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -277,6 +268,33 @@ class DocumentationPromptTests(unittest.TestCase):
                 self.assertIn(expected, catalog)
         self.assertIn("observed-drift", catalog)
         self.assertIn("excluded", catalog)
+
+    def test_index_page_recheck_docs_cover_current_public_widgets(self):
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        evals = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")
+        self.assertIn("2026-06-08", catalog)
+        self.assertIn("range=week|month|year", catalog)
+        self.assertIn("/api/v1/c-chart/{securitiesType}/{indexCode}/day:1", catalog)
+        self.assertIn("reference-only, not script-backed yet", catalog)
+        self.assertIn("observed daily quote-table paging", notes)
+        self.assertIn("productType=INDEX|CURRENCY", catalog)
+        self.assertIn("availableLanguages", catalog)
+        self.assertIn("1w/min:10", catalog)
+        self.assertIn("1y/week:1", catalog)
+        self.assertIn("5y/month:1", catalog)
+        self.assertIn("high52w", notes)
+        self.assertIn("changeType", notes)
+        self.assertIn("--net-buying-range month", cookbook)
+        self.assertIn("--fx-range 1y --fx-step week:1", cookbook)
+        self.assertIn("## Index / FX / Crypto-like Page Defaults", skill)
+        self.assertIn("Do not use `1y/day:1`", skill)
+        self.assertIn("## Agent Decision Defaults", cookbook)
+        self.assertIn("range=day, quarter", cookbook)
+        self.assertIn("FX 1y/day:1", evals)
+        self.assertIn("--range 1w --step min:10 --include-crypto-prices", evals)
 
     def test_endpoint_drift_guidance_is_explicit_and_routed(self):
         skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -363,6 +381,11 @@ class DocumentationPromptTests(unittest.TestCase):
             "scripts/financials.py --code A005930 --kind comprehensive",
             "scripts/calendar.py --year-month 2026-05 --kind economic --country us",
             "scripts/page_api_check.py --code A005930",
+            "scripts/indices.py --code KGG01P --include-net-buying --net-buying-range month",
+            "scripts/indices.py --code KGG01P --include-fx-chart --fx-range 1y --fx-step week:1",
+            "scripts/indices.py --code VWAP.KRW-BTC --range 1w --step min:10 --include-crypto-prices",
+            "refuses account/auth workflow",
+            "no personalized investment advice",
         ]:
             with self.subTest(expected=expected):
                 self.assertIn(expected, text)

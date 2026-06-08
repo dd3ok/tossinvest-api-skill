@@ -54,12 +54,13 @@ calling application, not in this public skill.
 |---|---|
 | `/api/v2/index-infos/{indexCode}` | Object: `code`, `name`, `logoImageUrl`, `priceFeedType`, optional trading-window fields such as `tradingStartAt`, `tradingEndAt`, and `isMarketOpen`; commodity responses can include `helperText` and `indexUnitDto` |
 | `/api/v1/index-prices/{indexCode}` | Object: `open`, `high`, `low`, `close`, `base`, `changeType`, `high52w`, `low52w`, and related price fields |
-| `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Object: `code`, trading window metadata, and `candles[]`; direct checks returned candles for `KGG01P`, `RFU.GCv1`, `KR1BENCH0010`, `ROB.US10YT-RR`, and `VWAP.KRW-BTC` with `securitiesType=crypto` |
-| `/api/v1/crypto-prices?productCodes={codes}` | List: `productCode`, OHLCV fields, `usdPerKrwExchangeRate`, `premium`, `premiumRate` |
+| `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Object: `code`, trading window metadata, and `candles[]`; direct checks returned candles for `KGG01P`, `RFU.GCv1`, `KR1BENCH0010`, `ROB.US10YT-RR`, and `VWAP.KRW-BTC` with `securitiesType=crypto`; current page controls include crypto `1w/min:10`, `1y/week:1`, `5y/month:1` and FX `1y/week:1`, `5y/month:1` |
+| `/api/v1/c-chart/{securitiesType}/{indexCode}/day:1` | Object: `code`, `nextDateTime`, `exchangeRate`, optional `exchange`, and `candles[]`; observed daily quote-table paging uses cursor paging via `from`; reference-only, not script-backed yet |
+| `/api/v1/crypto-prices?productCodes={codes}` | List: `productCode`, OHLCV fields, `changeType`, `high52w`, `low52w`, `usdPerKrwExchangeRate`, `premium`, `premiumRate` |
 | `/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW` | Object: `code`, `base`, `close` |
 | `wts-cert-api /api/v3/dashboard/wts/overview/indicator/mini-chart` | Object: `indexMap`; public overview mini-chart metadata |
 | `/api/v3/dashboard/wts/overview/indicator/{indexCode}/related-etfs` | Object: `indexCode`, `etfs[]`; empty POST body accepted in verification |
-| `/api/v1/stock-infos/index/net-buying/range` | Object: `code`, `step`, `nextDate`, `investorActivityAmounts[]` |
+| `/api/v1/stock-infos/index/net-buying/range` | Object: `code`, `step`, `nextDate`, `investorActivityAmounts[]`; current public page accepts `range=week|month|year` |
 | `/api/v1/stock-infos/index/net-buying/daily` | Object: `code`, `nextDate`, `investorActivityAmounts[]` |
 
 `scripts/indices.py` has chart presets for these verified r-chart windows:

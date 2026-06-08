@@ -204,6 +204,25 @@ class IndicesScriptTests(unittest.TestCase):
             indices.build_indicator_path("account", "kr")
         with self.assertRaisesRegex(ValueError, "net_range must be one of"):
             indices.build_net_buying_range_path("KGG01P", "account", "2026-04-20", 5)
+        with self.assertRaisesRegex(ValueError, "net_range must be one of"):
+            indices.build_net_buying_range_path("KGG01P", "quarter", "2026-04-20", 5)
+
+    def test_cli_rejects_invalid_net_buying_range_before_network(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "indices.py"),
+                "--include-net-buying",
+                "--net-buying-range",
+                "quarter",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("invalid choice", result.stderr)
+        self.assertIn("quarter", result.stderr)
 
     def test_build_index_info_path_uses_index_code(self):
         self.assertEqual(indices.build_index_info_path("KGG01P"), "/api/v2/index-infos/KGG01P")
@@ -250,6 +269,14 @@ class IndicesScriptTests(unittest.TestCase):
         self.assertEqual(
             indices.build_net_buying_range_path("KGG01P", "week", "2026-04-20", 5),
             "/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=week&from=2026-04-20&count=5",
+        )
+        self.assertEqual(
+            indices.build_net_buying_range_path("KGG01P", "month", "2026-06-08", 5),
+            "/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=month&from=2026-06-08&count=5",
+        )
+        self.assertEqual(
+            indices.build_net_buying_range_path("KGG01P", "year", "2026-06-08", 5),
+            "/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=year&from=2026-06-08&count=5",
         )
         self.assertEqual(
             indices.build_net_buying_daily_path("KGG01P", "2026-04-20", 35),

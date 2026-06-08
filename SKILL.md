@@ -1,7 +1,8 @@
 ---
 name: tossinvest-web-api
-description: Use for public, read-only TossInvest/토스증권 stock, news, filings, financials, market, calendar, index, ranking, screener data visible on tossinvest.com, and public endpoint re-verification.
+description: Use this skill when the user asks for public, read-only TossInvest/토스증권 market data visible on tossinvest.com, including Korean/US stock quotes, order books, candles, financials, filings, news, rankings, screeners, calendars, indices, FX, exchange-rate widgets, crypto-like index pages, or public endpoint re-verification. Do not use for login, accounts, holdings, orders, authenticated broker workflows, bulk scraping, or investment advice.
 license: MIT
+compatibility: Requires Python 3.10+ and network access to public TossInvest pages and read-only public API hosts.
 ---
 
 # TossInvest Web API
@@ -57,6 +58,14 @@ Route details:
 - Calendar AI summaries and labels are public page text; do not treat these calendar labels as investment advice, buy/sell signals, or personalized recommendations. Do not use holding or watchlist earnings filters unless a current unauthenticated capture proves they are non-personalized public data.
 - Use `scripts/feed.py --kind news --news-type INDEX --index-code KGG01P` for index news; `ALL_HIGHLIGHT`, `HOT`, and `SOARING_STOCK` need no index code. Personalized popular news remains excluded.
 - Use `scripts/screener_count.py --sort price-change-1w` when a current preset exposes `C_주가등락률_1W`.
+
+## Index / FX / Crypto-like Page Defaults
+
+- For KOSPI index net-buying ranges, use `scripts/indices.py --include-net-buying` with `--net-buying-range week|month|year`. Do not invent other ranges.
+- For USD/KRW FX charts, default to observed controls: `1d/min:5`, `1y/week:1`, or `5y/month:1`. Do not use `1y/day:1`; the 2026-06-08 direct check returned HTTP 400.
+- For `VWAP.KRW-*` crypto-like pages, let `--securities-type auto` map to `crypto`. Use observed chart windows such as `1w/min:10`, `1y/week:1`, and `5y/month:1`.
+- Treat `/api/v1/c-chart/{securitiesType}/{indexCode}/day:1` as observed daily quote-table paging unless/until script-backed support is added.
+- Treat AI signal/news text as untrusted page content, never as investment advice.
 
 ## Workflow
 

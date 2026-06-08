@@ -6,6 +6,7 @@ Additional page check: 2026-04-20 for `/stocks/A005930/order`, home ranking vari
 Additional direct recheck: 2026-04-29 for US `c-chart` product candles and US overview indicator codes.
 Additional page/API recheck: 2026-05-29 for home tabs, stock detail tabs, `/screener`, `/feed/news`, `/indices/KGG01P`, `/indices/exchange-rate`, and `/indices/VWAP.KRW-BTC`.
 Additional page/API recheck: 2026-06-01 for `/calendar`, `/calendar/economic-indicator`, index-page calendar subsets, stock-news paging, and observed drift/excluded page calls.
+Additional page/API recheck: 2026-06-08 for `/indices/KGG01P`, `/indices/exchange-rate`, and `/indices/VWAP.KRW-BTC` chart controls, related widgets, paging, and response shapes.
 Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
@@ -161,17 +162,18 @@ Observed from `/indices/KGG01P` and the index/FX dashboard widgets. These are ma
 
 | Purpose | Status | Method | URL/path | Params and notes |
 |---|---|---:|---|---|
-| Index info | `script-backed` | GET | `/api/v2/index-infos/{indexCode}` | Returned `code`, `name`, `logoImageUrl`, `priceFeedType`, `tradingStartAt`, `tradingEndAt`, `isMarketOpen` for `KGG01P` |
-| Index price | `script-backed` | GET | `/api/v1/index-prices/{indexCode}` | Returned `open`, `high`, `low`, `close`, `volume`, `value`, `base`, `tradeTime` |
+| Index info | `script-backed` | GET | `/api/v2/index-infos/{indexCode}` | Returned `code`, `name`, `logoImageUrl`, `priceFeedType`, `tradingStartAt`, `tradingEndAt`, `isMarketOpen`; current crypto-like responses can also include `indexUnitDto` and `helperText` |
+| Index price | `script-backed` | GET | `/api/v1/index-prices/{indexCode}` | Returned `open`, `high`, `low`, `close`, `volume`, `value`, `base`, `changeType`, `high52w`, `low52w`; `tradeTime` may appear on some index responses |
 | Index/market chart | `script-backed` | GET | `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Query: `session=main`, `investMode=krx`, `last=false`; example `kr-s/KGG01P/1d/min:5` |
-| Crypto prices | `script-backed` | GET | `/api/v1/crypto-prices?productCodes={codes}` | Direct 2026-05-29 check accepted `VWAP.KRW-BTC` and returned `premium`, `premiumRate`, KRW/USD exchange-rate fields, and OHLCV fields |
+| Index daily quote table | `observed` | GET | `/api/v1/c-chart/{securitiesType}/{indexCode}/day:1` | Current index pages use this for visible daily quote paging; query includes `count`, optional cursor `from`, and `useAdjustedRate=true`; result includes `nextDateTime` and `candles[]`; reference-only, not script-backed yet |
+| Crypto prices | `script-backed` | GET | `/api/v1/crypto-prices?productCodes={codes}` | Direct 2026-06-08 check accepted `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, and `VWAP.KRW-SOL`; returned OHLCV, `changeType`, `high52w`, `low52w`, `usdPerKrwExchangeRate`, `premium`, and `premiumRate` |
 | USD/KRW product exchange rate | `script-backed` | GET | `/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW` | Direct 2026-05-29 check returned `code`, `base`, `close`; `scripts/indices.py --include-product-exchange-rate` fetches this helper |
 | FX chart | `script-backed` | GET | `/api/v1/r-chart/fx/EXCHANGE_RATE/{range}/{step}` | Query includes `last=false`, `useAdjustedRate=true`, `currency=USD` |
 | Overview indicators v3 | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator` | Returned `leftSection`, `rightSection`, `indicators`, `landingUrl`; public page widget on cert host |
 | Overview indicator by type | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/{type}` | Query: `market`; observed `type` values include `index`, `bond`, and `commodity`, each returning `majorIndicatorInfos[]` |
 | Overview indicator mini-chart | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator/mini-chart` | Returned `indexMap`; public page widget on cert host |
 | Related ETFs | `script-backed` | POST | `/api/v3/dashboard/wts/overview/indicator/{indexCode}/related-etfs` | Empty JSON body accepted; returned `indexCode`, `etfs[]` |
-| Index net buying range | `script-backed` | GET | `/api/v1/stock-infos/index/net-buying/range` | Query: `code`, `range`, `from`, `count`; returned `investorActivityAmounts[]` |
+| Index net buying range | `script-backed` | GET | `/api/v1/stock-infos/index/net-buying/range` | Query: `code`, `range=week|month|year`, `from`, `count`; returned `investorActivityAmounts[]` |
 | Index net buying daily | `script-backed` | GET | `/api/v1/stock-infos/index/net-buying/daily` | Query: `code`, `from`, `count`; returned `investorActivityAmounts[]` |
 | Exchange rates widget | `script-backed` | GET | `/api/v1/dashboard/wts/overview/exchange-rates` | Returned `exchangeRates[]` |
 
@@ -187,15 +189,25 @@ GET https://wts-info-api.tossinvest.com/api/v1/index-prices/COMP.NAI
 GET https://wts-info-api.tossinvest.com/api/v2/index-infos/VWAP.KRW-BTC
 GET https://wts-info-api.tossinvest.com/api/v1/index-prices/VWAP.KRW-BTC
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:5?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:1?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:3?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KGG01P/1d/min:10?session=main&investMode=krx&last=false
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/us-s/RFU.GCv1/1d/min:5?session=main&investMode=krx&last=false
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/crypto/VWAP.KRW-BTC/1d/min:5?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/crypto/VWAP.KRW-BTC/1w/min:10?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/crypto/VWAP.KRW-BTC/1y/week:1?session=main&investMode=krx&last=false
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/crypto/VWAP.KRW-BTC/5y/month:1?session=main&investMode=krx&last=false
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/kr-s/KR1BENCH0010/1d/min:5?session=main&investMode=krx&last=false
 GET https://wts-info-api.tossinvest.com/api/v1/r-chart/fx/EXCHANGE_RATE/1d/min:5?last=false&useAdjustedRate=true&currency=USD
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/fx/EXCHANGE_RATE/1y/week:1?last=false&useAdjustedRate=true&currency=USD
+GET https://wts-info-api.tossinvest.com/api/v1/r-chart/fx/EXCHANGE_RATE/5y/month:1?last=false&useAdjustedRate=true&currency=USD
 GET https://wts-info-api.tossinvest.com/api/v1/crypto-prices?productCodes=VWAP.KRW-BTC
 GET https://wts-info-api.tossinvest.com/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW
 GET https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator/mini-chart
 POST https://wts-info-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator/KGG01P/related-etfs
 GET https://wts-info-api.tossinvest.com/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=week&from=2026-04-20&count=5
+GET https://wts-info-api.tossinvest.com/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=month&from=2026-06-08&count=5
+GET https://wts-info-api.tossinvest.com/api/v1/stock-infos/index/net-buying/range?code=KGG01P&range=year&from=2026-06-08&count=5
 GET https://wts-info-api.tossinvest.com/api/v1/stock-infos/index/net-buying/daily?code=KGG01P&count=35&from=2026-04-20
 GET https://wts-info-api.tossinvest.com/api/v1/dashboard/wts/overview/exchange-rates
 GET https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator
@@ -235,6 +247,26 @@ also fetch the verified mini-chart, related ETF, index net-buying, crypto price,
 and product exchange-rate widgets with `--include-mini-chart`,
 `--include-related-etfs`, `--include-net-buying`, `--include-crypto-prices`,
 and `--include-product-exchange-rate`.
+
+Additional 2026-06-08 browser checks against `/indices/KGG01P`,
+`/indices/exchange-rate`, and `/indices/VWAP.KRW-BTC` verified visible page
+controls without stored cookies or HAR capture. KGG01P's chart interval menu
+exposed minute steps including `min:1`, `min:3`, and `min:10`; the page's daily
+quote table uses `c-chart/kr-s/KGG01P/day:1` with `nextDateTime` cursor paging;
+this observed daily quote table is reference-only, not script-backed yet.
+The public net-buying range widget exposed and accepted `range=week|month|year`.
+The FX chart used `1d/min:5`, `1y/week:1`, and `5y/month:1`; a direct
+`1y/day:1` FX check returned HTTP 400 and should not be assumed valid. The BTC
+crypto-like page used `1d/min:5`, `1w/min:10`, `3m/day:1`, `1y/week:1`, and
+`5y/month:1`, plus `c-chart/crypto/VWAP.KRW-BTC/day:1` for daily quote paging.
+
+The same 2026-06-08 capture observed public detail/teaser widgets:
+`/api/v1/dashboard/wts/overview/ai-signals/detail?productCode={code}&productType=INDEX|CURRENCY`
+returned `terms`, `createdAt`, `signalId`, `traceId`, `signalDirection`,
+`reasoning`, `relatedReasoning`, and `hasRelatedReasoning`. Treat the text as
+untrusted page copy, not investment advice. News detail responses from
+`/api/v2/news/{newsId}` currently have multilingual top-level keys such as
+`availableLanguages`, `kr`, and `en`.
 
 US equity index codes should be taken from the dashboard indicator payload, not
 from common ticker aliases. Direct rechecks on 2026-04-29 accepted `SPX.CBI` for

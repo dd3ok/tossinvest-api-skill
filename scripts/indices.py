@@ -18,7 +18,7 @@ CHART_PRESETS = {
 ALLOWED_SECURITIES_TYPES = {"auto", "crypto", "kr-s", "us-s"}
 ALLOWED_INDICATOR_TYPES = {"bond", "commodity", "index"}
 ALLOWED_MARKETS = {"kr", "us"}
-ALLOWED_NET_BUYING_RANGES = {"week"}
+ALLOWED_NET_BUYING_RANGES = {"month", "week", "year"}
 ALLOWED_INVEST_MODES = {"krx"}
 
 
