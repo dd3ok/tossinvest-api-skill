@@ -278,6 +278,23 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("observed-drift", catalog)
         self.assertIn("excluded", catalog)
 
+    def test_index_page_recheck_docs_cover_current_public_widgets(self):
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        self.assertIn("2026-06-08", catalog)
+        self.assertIn("range=week|month|year", catalog)
+        self.assertIn("/api/v1/c-chart/{securitiesType}/{indexCode}/day:1", catalog)
+        self.assertIn("productType=INDEX|CURRENCY", catalog)
+        self.assertIn("availableLanguages", catalog)
+        self.assertIn("1w/min:10", catalog)
+        self.assertIn("1y/week:1", catalog)
+        self.assertIn("5y/month:1", catalog)
+        self.assertIn("high52w", notes)
+        self.assertIn("changeType", notes)
+        self.assertIn("--net-buying-range month", cookbook)
+        self.assertIn("--fx-range 1y --fx-step week:1", cookbook)
+
     def test_endpoint_drift_guidance_is_explicit_and_routed(self):
         skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("## Lookup Failures\n", skill_text)
