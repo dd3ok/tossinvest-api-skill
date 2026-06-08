@@ -165,7 +165,7 @@ Observed from `/indices/KGG01P` and the index/FX dashboard widgets. These are ma
 | Index info | `script-backed` | GET | `/api/v2/index-infos/{indexCode}` | Returned `code`, `name`, `logoImageUrl`, `priceFeedType`, `tradingStartAt`, `tradingEndAt`, `isMarketOpen`; current crypto-like responses can also include `indexUnitDto` and `helperText` |
 | Index price | `script-backed` | GET | `/api/v1/index-prices/{indexCode}` | Returned `open`, `high`, `low`, `close`, `volume`, `value`, `base`, `changeType`, `high52w`, `low52w`; `tradeTime` may appear on some index responses |
 | Index/market chart | `script-backed` | GET | `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Query: `session=main`, `investMode=krx`, `last=false`; example `kr-s/KGG01P/1d/min:5` |
-| Index daily quote table | `observed` | GET | `/api/v1/c-chart/{securitiesType}/{indexCode}/day:1` | Current index pages use this for visible daily quote paging; query includes `count`, optional cursor `from`, and `useAdjustedRate=true`; result includes `nextDateTime` and `candles[]` |
+| Index daily quote table | `observed` | GET | `/api/v1/c-chart/{securitiesType}/{indexCode}/day:1` | Current index pages use this for visible daily quote paging; query includes `count`, optional cursor `from`, and `useAdjustedRate=true`; result includes `nextDateTime` and `candles[]`; reference-only, not script-backed yet |
 | Crypto prices | `script-backed` | GET | `/api/v1/crypto-prices?productCodes={codes}` | Direct 2026-06-08 check accepted `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, and `VWAP.KRW-SOL`; returned OHLCV, `changeType`, `high52w`, `low52w`, `usdPerKrwExchangeRate`, `premium`, and `premiumRate` |
 | USD/KRW product exchange rate | `script-backed` | GET | `/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW` | Direct 2026-05-29 check returned `code`, `base`, `close`; `scripts/indices.py --include-product-exchange-rate` fetches this helper |
 | FX chart | `script-backed` | GET | `/api/v1/r-chart/fx/EXCHANGE_RATE/{range}/{step}` | Query includes `last=false`, `useAdjustedRate=true`, `currency=USD` |
@@ -252,7 +252,8 @@ Additional 2026-06-08 browser checks against `/indices/KGG01P`,
 `/indices/exchange-rate`, and `/indices/VWAP.KRW-BTC` verified visible page
 controls without stored cookies or HAR capture. KGG01P's chart interval menu
 exposed minute steps including `min:1`, `min:3`, and `min:10`; the page's daily
-quote table uses `c-chart/kr-s/KGG01P/day:1` with `nextDateTime` cursor paging.
+quote table uses `c-chart/kr-s/KGG01P/day:1` with `nextDateTime` cursor paging;
+this observed daily quote table is reference-only, not script-backed yet.
 The public net-buying range widget exposed and accepted `range=week|month|year`.
 The FX chart used `1d/min:5`, `1y/week:1`, and `5y/month:1`; a direct
 `1y/day:1` FX check returned HTTP 400 and should not be assumed valid. The BTC

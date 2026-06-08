@@ -204,6 +204,25 @@ class IndicesScriptTests(unittest.TestCase):
             indices.build_indicator_path("account", "kr")
         with self.assertRaisesRegex(ValueError, "net_range must be one of"):
             indices.build_net_buying_range_path("KGG01P", "account", "2026-04-20", 5)
+        with self.assertRaisesRegex(ValueError, "net_range must be one of"):
+            indices.build_net_buying_range_path("KGG01P", "quarter", "2026-04-20", 5)
+
+    def test_cli_rejects_invalid_net_buying_range_before_network(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "indices.py"),
+                "--include-net-buying",
+                "--net-buying-range",
+                "quarter",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("invalid choice", result.stderr)
+        self.assertIn("quarter", result.stderr)
 
     def test_build_index_info_path_uses_index_code(self):
         self.assertEqual(indices.build_index_info_path("KGG01P"), "/api/v2/index-infos/KGG01P")

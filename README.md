@@ -63,7 +63,7 @@ ln -sfn /path/to/tossinvest-api-skill "$CODEX_SKILLS_DIR/tossinvest-web-api"
 .agents/skills/tossinvest-web-api/
 ```
 
-설치 디렉터리명은 `SKILL.md`의 `name: tossinvest-web-api`와 맞추는 것이 가장 호환성이 좋습니다. Zip/archive로 배포하거나 vendor로 포함할 때도 최종 skill root를 `tossinvest-web-api`로 두세요.
+설치 디렉터리명은 `SKILL.md`의 `name: tossinvest-web-api`와 맞추는 것이 가장 호환성이 좋습니다. AgentSkills strict validator는 skill `name`과 부모 디렉터리명 일치를 검사하므로, 저장소 루트를 그대로 쓰더라도 최종 skill root를 `tossinvest-web-api`로 두세요. Zip/archive로 배포하거나 vendor로 포함할 때도 같은 이름을 유지하세요.
 
 ### Claude Code
 
