@@ -4,7 +4,7 @@
 [![최신 릴리스](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skill?sort=semver)](https://github.com/dd3ok/tossinvest-api-skill/releases/latest)
 
 > 토스증권 웹에 노출된 API를 바탕으로 만든 경량 스킬입니다.
-> 공개 주식·시장 데이터를 Codex와 Claude Code에서 안전하게 재조회하도록 돕습니다.
+> 로그인·계좌 인증 없이 공개 주식·시장 데이터를 Codex와 Claude Code에서 안전하게 재조회하도록 돕습니다.
 > 공식 Open API, 증권사 거래 API, 투자 조언 도구가 아닙니다.
 
 ## 공식 Open API와의 구분

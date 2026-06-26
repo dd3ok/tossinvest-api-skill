@@ -51,6 +51,7 @@ class DocumentationPromptTests(unittest.TestCase):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("# 비공식 토스증권 API / TossInvest API Agent Skill", text)
         self.assertIn("토스증권 웹에 노출된 API를 바탕으로 만든 경량 스킬", text)
+        self.assertIn("로그인·계좌 인증 없이 공개 주식·시장 데이터를", text)
         self.assertIn("공개 주식·시장 데이터를 Codex와 Claude Code에서 안전하게 재조회", text)
         self.assertNotIn("30초 요약:", text)
         self.assertNotIn("Observed in recent public rechecks", text)
@@ -366,7 +367,7 @@ class DocumentationPromptTests(unittest.TestCase):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "비공식 토스증권 API"', text)
         self.assertIn(
-            "토스증권 웹에 노출된 공개 주식·시장 데이터를 안전하게 재조회", text
+            "로그인·계좌 인증 없이 토스증권 공개 주식·시장 데이터를 안전하게 재조회", text
         )
         self.assertIn("A005930", text)
         self.assertIn("조회해줘", text)
