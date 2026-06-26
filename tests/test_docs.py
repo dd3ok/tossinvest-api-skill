@@ -81,6 +81,10 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("X-RateLimit-Limit", boundary)
         self.assertIn("developers.tossinvest.com/docs", boundary)
         self.assertIn("did not list a JWKS operation", boundary)
+        self.assertIn("reference-only operational context", boundary)
+        self.assertIn("not a throughput allowance for this skill", boundary)
+        self.assertIn("do not probe unpublished limits", boundary)
+        self.assertIn("not operating budgets for these undocumented web endpoints", safety)
 
     def test_docs_do_not_name_third_party_trading_tools(self):
         forbidden_terms = ["tossinvest" + "-cli", "toss" + "ctl"]
