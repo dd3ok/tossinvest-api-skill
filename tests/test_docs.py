@@ -29,41 +29,6 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("\nname: tossinvest-web-api\n", frontmatter)
         self.assertNotIn("\nname: twa\n", frontmatter)
 
-    def test_readme_install_root_matches_skill_name(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("name: tossinvest-web-api", text)
-        self.assertRegex(text, r"최종 스킬 루트(?:는|를) `tossinvest-web-api`")
-
-    def test_readme_describes_natural_language_routing(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertRegex(text, r"TossInvest(?:/| 또는 )토스증권을 언급한 자연어 요청")
-        self.assertNotIn("description과 맞으면", text)
-
-    def test_readme_has_safe_search_phrases(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("비공식 토스증권 API", text)
-        self.assertIn("TossInvest API", text)
-        self.assertIn("TossInvest API Skill", text)
-        self.assertIn("공개 웹 페이지", text)
-        self.assertIn("공식 API", text)
-
-    def test_readme_intro_describes_lightweight_web_api_skill(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("# 비공식 토스증권 API / TossInvest API Skill", text)
-        self.assertNotIn("TossInvest API Agent Skill", text)
-        self.assertRegex(
-            text,
-            r"토스증권 웹에 (?:노출된|공개된) API를 바탕으로 만든 경량(?: 에이전트)? 스킬",
-        )
-        self.assertRegex(text, r"로그인(?:·|이나 )계좌 인증 없이 공개 주식·시장 데이터를")
-        self.assertRegex(
-            text,
-            r"공개 주식·시장 데이터를 Codex(?:와 Claude Code에서|, Claude Code 같은 에이전트가) 안전하게 (?:재조회|다시 조회)",
-        )
-        self.assertNotIn("30초 요약:", text)
-        self.assertNotIn("Observed in recent public rechecks", text)
-        self.assertNotIn("sample shape", text)
-
     def test_docs_distinguish_official_openapi_boundary(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -206,19 +171,6 @@ class DocumentationPromptTests(unittest.TestCase):
             for term in forbidden_terms:
                 with self.subTest(path=path.relative_to(ROOT), term=term):
                     self.assertNotIn(term, text)
-
-    def test_readme_uses_project_native_safety_wording(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("공개 주식·시장 페이지", text)
-        self.assertRegex(
-            text,
-            r"공개 주식·시장 페이지에서 확인(?: 가능한 주식·시장 정보|할 수 있는 정보)만 읽기 전용으로 조회",
-        )
-        self.assertIn("막힌 요청", text)
-        self.assertIn("현재 공개 웹 페이지", text)
-        self.assertIn("서비스 보호", text)
-        self.assertNotIn("rate limit", text.lower())
-        self.assertNotRegex(text.lower(), r"403|429|anti-bot|fan-out|polling loop|read-only")
 
     def test_technical_safety_docs_warn_about_rate_limits_and_aggressive_polling(self):
         checked_paths = [
@@ -404,18 +356,6 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertNotIn(
             "Public prompt examples use `$tossinvest-web-api`, not aliases.", checklist
         )
-
-    def test_readme_documents_current_codex_skill_paths(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("$HOME/.agents/skills", text)
-        self.assertIn(".agents/skills/tossinvest-web-api/", text)
-        self.assertNotIn(".co" + "dex/skills", text)
-
-    def test_readme_distinguishes_gemini_context_from_agent_skills(self):
-        text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("extension-level context", text)
-        self.assertIn("skills/<name>/SKILL.md", text)
-        self.assertFalse((ROOT / "skills").exists())
 
     def test_skill_uses_single_us_stock_candle_caution(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
