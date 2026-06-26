@@ -3,8 +3,8 @@
 [![TossInvest API Skill CI](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml)
 [![최신 릴리스](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skill?sort=semver)](https://github.com/dd3ok/tossinvest-api-skill/releases/latest)
 
-> 토스증권 웹에 노출된 API를 바탕으로 만든 경량 스킬입니다.
-> 로그인·계좌 인증 없이 공개 주식·시장 데이터를 Codex와 Claude Code에서 안전하게 재조회하도록 돕습니다.
+> 토스증권 웹에 공개된 API를 바탕으로 만든 경량 에이전트 스킬입니다.  
+> 로그인이나 계좌 인증 없이 공개 주식·시장 데이터를 Codex, Claude Code 같은 에이전트가 안전하게 다시 조회하도록 돕습니다.  
 > 공식 Open API, 증권사 거래 API, 투자 조언 도구가 아닙니다.
 
 ## 공식 Open API와의 구분
@@ -24,7 +24,7 @@
 - 증시 캘린더, 경제지표 일정, 실적 발표 일정, 국내·해외 캘린더 탭
 - 국내·미국 실시간 차트 top100, 투자자 매매 동향, 브로커 순위, 스크리너 조건 검색
 
-설치 후에는 TossInvest/토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회할 수 있습니다.
+설치 후에는 TossInvest 또는 토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회할 수 있습니다.
 
 ## 설치
 
@@ -36,7 +36,7 @@ Codex에서는 공개 GitHub URL로 설치를 요청할 수 있습니다.
 https://github.com/dd3ok/tossinvest-api-skill 에서 스킬을 설치해줘.
 ```
 
-설치가 끝나면 Codex를 재시작해 스킬 목록을 다시 로드하세요. 이후 TossInvest/토스증권을 언급한 주식 데이터 요청이 이 스킬로 연결됩니다.
+설치가 끝나면 Codex를 재시작해 스킬 목록을 다시 로드하세요. 이후 TossInvest 또는 토스증권을 언급한 주식 데이터 요청이 이 스킬로 연결됩니다.
 
 수동으로 설치하려면 다음처럼 스킬 디렉터리에 클론합니다.
 
@@ -60,7 +60,7 @@ ln -sfn /path/to/tossinvest-api-skill "$CODEX_SKILLS_DIR/tossinvest-web-api"
 .agents/skills/tossinvest-web-api/
 ```
 
-설치 디렉터리명은 `SKILL.md`의 `name: tossinvest-web-api`와 맞추는 것이 가장 호환성이 좋습니다. AgentSkills의 strict validator는 스킬 `name`과 부모 디렉터리명 일치를 검사하므로, 저장소 루트를 그대로 쓰더라도 최종 스킬 루트를 `tossinvest-web-api`로 두세요. ZIP/아카이브로 배포하거나 벤더 디렉터리로 포함할 때도 같은 이름을 유지하세요.
+설치 디렉터리명은 `SKILL.md`의 `name: tossinvest-web-api`와 맞추는 것이 가장 호환성이 좋습니다. AgentSkills의 strict validator는 스킬 `name`과 부모 디렉터리명 일치를 검사하므로, 저장소 루트를 그대로 쓰더라도 최종 스킬 루트는 `tossinvest-web-api`로 두세요. ZIP/아카이브로 배포하거나 벤더 디렉터리로 포함할 때도 같은 이름을 유지하세요.
 
 ### Claude Code
 
@@ -260,7 +260,7 @@ for f in examples/filters/*.json; do python3 -m json.tool "$f" >/dev/null || exi
 
 이 프로젝트는 TossInvest 공식 API, 증권사 API, 거래 API, 투자 조언 도구가 아닙니다.
 
-공개 주식·시장 페이지에서 확인 가능한 주식·시장 정보만 읽기 전용으로 조회하세요. 다음 용도로는 사용하지 않습니다.
+공개 주식·시장 페이지에서 확인할 수 있는 정보만 읽기 전용으로 조회하세요. 다음 용도로는 사용하지 않습니다.
 
 - 로그인, 인증, 인증서, 쿠키, 인증 헤더, 세션 상태
 - 계좌 잔고, 보유 종목, 이체, 주문, 주문 정정, 주문 취소

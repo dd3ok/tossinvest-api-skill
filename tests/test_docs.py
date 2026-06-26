@@ -32,11 +32,11 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_readme_install_root_matches_skill_name(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("name: tossinvest-web-api", text)
-        self.assertIn("최종 스킬 루트를 `tossinvest-web-api`", text)
+        self.assertRegex(text, r"최종 스킬 루트(?:는|를) `tossinvest-web-api`")
 
     def test_readme_describes_natural_language_routing(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("TossInvest/토스증권을 언급한 자연어 요청", text)
+        self.assertRegex(text, r"TossInvest(?:/| 또는 )토스증권을 언급한 자연어 요청")
         self.assertNotIn("description과 맞으면", text)
 
     def test_readme_has_safe_search_phrases(self):
@@ -51,9 +51,15 @@ class DocumentationPromptTests(unittest.TestCase):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("# 비공식 토스증권 API / TossInvest API Skill", text)
         self.assertNotIn("TossInvest API Agent Skill", text)
-        self.assertIn("토스증권 웹에 노출된 API를 바탕으로 만든 경량 스킬", text)
-        self.assertIn("로그인·계좌 인증 없이 공개 주식·시장 데이터를", text)
-        self.assertIn("공개 주식·시장 데이터를 Codex와 Claude Code에서 안전하게 재조회", text)
+        self.assertRegex(
+            text,
+            r"토스증권 웹에 (?:노출된|공개된) API를 바탕으로 만든 경량(?: 에이전트)? 스킬",
+        )
+        self.assertRegex(text, r"로그인(?:·|이나 )계좌 인증 없이 공개 주식·시장 데이터를")
+        self.assertRegex(
+            text,
+            r"공개 주식·시장 데이터를 Codex(?:와 Claude Code에서|, Claude Code 같은 에이전트가) 안전하게 (?:재조회|다시 조회)",
+        )
         self.assertNotIn("30초 요약:", text)
         self.assertNotIn("Observed in recent public rechecks", text)
         self.assertNotIn("sample shape", text)
@@ -204,8 +210,9 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_readme_uses_project_native_safety_wording(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("공개 주식·시장 페이지", text)
-        self.assertIn(
-            "공개 주식·시장 페이지에서 확인 가능한 주식·시장 정보만 읽기 전용으로 조회", text
+        self.assertRegex(
+            text,
+            r"공개 주식·시장 페이지에서 확인(?: 가능한 주식·시장 정보|할 수 있는 정보)만 읽기 전용으로 조회",
         )
         self.assertIn("막힌 요청", text)
         self.assertIn("현재 공개 웹 페이지", text)
