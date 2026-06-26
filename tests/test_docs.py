@@ -56,9 +56,14 @@ class DocumentationPromptTests(unittest.TestCase):
             ROOT / "references" / "official-openapi-boundary.md"
         ).read_text(encoding="utf-8")
 
-        for text in [skill, gemini, safety, boundary]:
+        for name, text in [
+            ("SKILL.md", skill),
+            ("GEMINI.md", gemini),
+            ("safety-rules.md", safety),
+            ("official-openapi-boundary.md", boundary),
+        ]:
             normalized = " ".join(text.split())
-            with self.subTest(text=text[:20]):
+            with self.subTest(file=name):
                 self.assertIn("official", normalized.lower())
                 self.assertIn("Open API", normalized)
                 self.assertIn("IP registration", normalized)
