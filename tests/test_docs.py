@@ -52,9 +52,9 @@ class DocumentationPromptTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         gemini = (ROOT / "GEMINI.md").read_text(encoding="utf-8")
         safety = (ROOT / "references" / "safety-rules.md").read_text(encoding="utf-8")
-        boundary = (
-            ROOT / "references" / "official-openapi-boundary.md"
-        ).read_text(encoding="utf-8")
+        boundary = (ROOT / "references" / "official-openapi-boundary.md").read_text(
+            encoding="utf-8"
+        )
 
         for name, text in [
             ("SKILL.md", skill),
