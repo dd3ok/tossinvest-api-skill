@@ -7,6 +7,10 @@
 > 공개 주식/시장 페이지에서 관찰되는 웹 내부 API를 안전하게 탐색하고 재조회합니다.
 > 공식 API, 증권사 API, 거래 API, 투자 조언 도구가 아닙니다.
 
+## 공식 Open API와의 구분
+
+이 skill은 `developers.tossinvest.com/docs`의 토스증권 공식 Open API 클라이언트가 아닙니다. 공개 TossInvest 화면에 이미 표시되는 주식/시장 데이터를 조회하도록 돕는 경량 Agent Skill입니다. 그래서 이 skill을 쓰는 데 공식 Open API 앱 설정, OAuth 토큰, 계좌 헤더, IP 등록 절차가 필요하지 않습니다. 공식 Open API 연동, 계좌/자산/주문 업무가 필요하면 이 저장소의 스크립트를 확장하지 말고 공식 문서를 기준으로 별도 클라이언트를 구현하세요.
+
 ## 지원 범위
 
 - 종목 요약, 현재가, 호가, intraday ticks
