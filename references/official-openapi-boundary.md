@@ -10,8 +10,10 @@ Sources:
 - `https://openapi.tossinvest.com/openapi-docs/latest/openapi.json`
 
 Use this reference only to distinguish this skill from the official TossInvest
-Open API or to answer a rate-limit question about the official API. Do not use
-it to add OAuth, account, asset, or order workflows to this skill.
+Open API or to answer a rate-limit question about the official API. Treat the
+official limits as reference-only operational context, not as permission to set
+traffic levels for this unauthenticated web-endpoint skill. Do not use this file
+to add OAuth, account, asset, or order workflows to this skill.
 
 ## Boundary
 
@@ -63,7 +65,10 @@ The bundled scripts continue to use the public page endpoint catalog.
 
 The official docs describe rate limits as client x API group TPS limits. Values
 can change without prior notice, and current limits should be checked from the
-official response headers before making exact operational claims.
+official response headers before making exact operational claims. These official
+TPS values are not a throughput allowance for this skill, because this skill does
+not call the official Open API and the public web endpoints do not publish a
+separate quota.
 
 | Official group | Limit in docs |
 | --- | --- |
@@ -87,4 +92,5 @@ Official normal and 429 responses include:
 
 For this skill, keep the stricter safety rule: stop on 403, 429, login redirects,
 challenge pages, or abnormal responses; do not retry, poll, fan out, or bypass
-service protection.
+service protection; do not probe unpublished limits, including by testing higher
+TPS than the official Open API documents.

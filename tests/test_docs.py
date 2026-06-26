@@ -32,7 +32,7 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_readme_install_root_matches_skill_name(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("name: tossinvest-web-api", text)
-        self.assertIn("최종 skill root를 `tossinvest-web-api`", text)
+        self.assertIn("최종 스킬 루트를 `tossinvest-web-api`", text)
 
     def test_readme_describes_natural_language_routing(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -43,9 +43,20 @@ class DocumentationPromptTests(unittest.TestCase):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("비공식 토스증권 API", text)
         self.assertIn("TossInvest API", text)
-        self.assertIn("Agent Skill", text)
+        self.assertIn("TossInvest API Skill", text)
         self.assertIn("공개 웹 페이지", text)
         self.assertIn("공식 API", text)
+
+    def test_readme_intro_describes_lightweight_web_api_skill(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("# 비공식 토스증권 API / TossInvest API Skill", text)
+        self.assertNotIn("TossInvest API Agent Skill", text)
+        self.assertIn("토스증권 웹에 노출된 API를 바탕으로 만든 경량 스킬", text)
+        self.assertIn("로그인·계좌 인증 없이 공개 주식·시장 데이터를", text)
+        self.assertIn("공개 주식·시장 데이터를 Codex와 Claude Code에서 안전하게 재조회", text)
+        self.assertNotIn("30초 요약:", text)
+        self.assertNotIn("Observed in recent public rechecks", text)
+        self.assertNotIn("sample shape", text)
 
     def test_docs_distinguish_official_openapi_boundary(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -81,6 +92,10 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("X-RateLimit-Limit", boundary)
         self.assertIn("developers.tossinvest.com/docs", boundary)
         self.assertIn("did not list a JWKS operation", boundary)
+        self.assertIn("reference-only operational context", boundary)
+        self.assertIn("not a throughput allowance for this skill", boundary)
+        self.assertIn("do not probe unpublished limits", boundary)
+        self.assertIn("not operating budgets for these undocumented web endpoints", safety)
 
     def test_docs_do_not_name_third_party_trading_tools(self):
         forbidden_terms = ["tossinvest" + "-cli", "toss" + "ctl"]
@@ -188,14 +203,15 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_readme_uses_project_native_safety_wording(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("공개 주식/시장 페이지", text)
-        self.assertEqual(text.count("read-only"), 1)
-        self.assertIn("공개 페이지에서 확인 가능한 read-only 주식/시장 정보 조회", text)
+        self.assertIn("공개 주식·시장 페이지", text)
+        self.assertIn(
+            "공개 주식·시장 페이지에서 확인 가능한 주식·시장 정보만 읽기 전용으로 조회", text
+        )
         self.assertIn("막힌 요청", text)
         self.assertIn("현재 공개 웹 페이지", text)
         self.assertIn("서비스 보호", text)
         self.assertNotIn("rate limit", text.lower())
-        self.assertNotRegex(text.lower(), r"403|429|anti-bot|fan-out|polling loop")
+        self.assertNotRegex(text.lower(), r"403|429|anti-bot|fan-out|polling loop|read-only")
 
     def test_technical_safety_docs_warn_about_rate_limits_and_aggressive_polling(self):
         checked_paths = [
@@ -352,9 +368,9 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
-        self.assertIn('display_name: "토스증권 Web API"', text)
+        self.assertIn('display_name: "비공식 토스증권 API"', text)
         self.assertIn(
-            "토스증권 공개 주식·뉴스·공시·재무·시장·캘린더·지수·랭킹·스크리너 데이터", text
+            "로그인·계좌 인증 없이 토스증권 공개 주식·시장 데이터를 안전하게 재조회", text
         )
         self.assertIn("A005930", text)
         self.assertIn("조회해줘", text)
@@ -430,7 +446,6 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_cookbook_documents_us_product_source_code_caution(self):
         checked_paths = [
             ROOT / "SKILL.md",
-            ROOT / "README.md",
             ROOT / "GEMINI.md",
             ROOT / "references" / "script-cookbook.md",
             ROOT / "references" / "api-catalog.md",
@@ -440,6 +455,10 @@ class DocumentationPromptTests(unittest.TestCase):
                 text = path.read_text(encoding="utf-8")
                 self.assertIn("US20100311002", text)
                 self.assertIn("display ticker", text.lower())
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("US20100311002", readme)
+        self.assertIn("표시 티커", readme)
+        self.assertNotIn("Display ticker/표시 티커", readme)
         api_catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
         self.assertIn("SPY", api_catalog)
         self.assertIn("HTTP 400", api_catalog)
