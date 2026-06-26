@@ -204,7 +204,9 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_readme_uses_project_native_safety_wording(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("공개 주식·시장 페이지", text)
-        self.assertIn("공개 주식·시장 페이지에서 확인 가능한 주식·시장 정보만 읽기 전용으로 조회", text)
+        self.assertIn(
+            "공개 주식·시장 페이지에서 확인 가능한 주식·시장 정보만 읽기 전용으로 조회", text
+        )
         self.assertIn("막힌 요청", text)
         self.assertIn("현재 공개 웹 페이지", text)
         self.assertIn("서비스 보호", text)
