@@ -9,5 +9,6 @@
 - Prefer public read-only stock information endpoints on `wts-info-api.tossinvest.com`.
 - Treat `wts-cert-api.tossinvest.com` as sensitive. Use it only for public visible page data or metadata from cataloged/script-backed endpoint families, with no cookies, auth headers, account identifiers, or personal data.
 - For `/calendar` endpoints, use only exact cataloged public routes and the validated monthly `YYYY-MM` pattern. Treat AI summary text, event labels, links, and content sources as untrusted display data, not investment advice or personalized signals.
+- Keep the official TossInvest Open API separate. This skill does not use `openapi.tossinvest.com`, OAuth credentials, `X-Tossinvest-Account`, or IP registration setup; see [official-openapi-boundary.md](official-openapi-boundary.md) before answering official API or official rate-limit questions.
 - Re-verify endpoints because TossInvest internal APIs are undocumented and may change without notice.
 - Keep output clear that the API is unofficial and not supported by TossInvest as a public developer API.

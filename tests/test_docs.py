@@ -47,12 +47,48 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("공개 웹 페이지", text)
         self.assertIn("공식 API", text)
 
+    def test_docs_distinguish_official_openapi_boundary(self):
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        gemini = (ROOT / "GEMINI.md").read_text(encoding="utf-8")
+        safety = (ROOT / "references" / "safety-rules.md").read_text(encoding="utf-8")
+        boundary = (ROOT / "references" / "official-openapi-boundary.md").read_text(
+            encoding="utf-8"
+        )
+
+        for name, text in [
+            ("SKILL.md", skill),
+            ("GEMINI.md", gemini),
+            ("safety-rules.md", safety),
+            ("official-openapi-boundary.md", boundary),
+        ]:
+            normalized = " ".join(text.split())
+            with self.subTest(file=name):
+                self.assertIn("official", normalized.lower())
+                self.assertIn("Open API", normalized)
+                self.assertIn("IP registration", normalized)
+
+        self.assertIn("공식 Open API", readme)
+        self.assertIn("IP 등록", readme)
+        self.assertIn("does not require official Open API app setup", skill)
+        self.assertIn(
+            "does not use `openapi.tossinvest.com`",
+            " ".join(gemini.split()),
+        )
+        self.assertIn("OAuth credentials", safety)
+        self.assertIn("X-Tossinvest-Account", boundary)
+        self.assertIn("MARKET_DATA_CHART", boundary)
+        self.assertIn("X-RateLimit-Limit", boundary)
+        self.assertIn("developers.tossinvest.com/docs", boundary)
+        self.assertIn("did not list a JWKS operation", boundary)
+
     def test_docs_do_not_name_third_party_trading_tools(self):
         forbidden_terms = ["tossinvest" + "-cli", "toss" + "ctl"]
         checked_paths = [
             ROOT / "README.md",
             ROOT / "SKILL.md",
             ROOT / "references" / "safety-rules.md",
+            ROOT / "references" / "official-openapi-boundary.md",
             ROOT / "references" / "api-catalog.md",
             ROOT / "SECURITY.md",
         ]
@@ -106,6 +142,7 @@ class DocumentationPromptTests(unittest.TestCase):
             ROOT / "references" / "api-catalog.md",
             ROOT / "references" / "capture-workflow.md",
             ROOT / "references" / "eval-prompts.md",
+            ROOT / "references" / "official-openapi-boundary.md",
             ROOT / "references" / "response-notes.md",
             ROOT / "references" / "script-cookbook.md",
             ROOT / "references" / "safety-rules.md",

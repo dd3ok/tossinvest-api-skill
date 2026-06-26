@@ -13,6 +13,10 @@ Use this skill to inspect TossInvest web pages and work with unofficial read-onl
 
 Requires Python 3.10+ and network access.
 
+## Official Open API Boundary
+
+TossInvest has a separate official Open API documented at `developers.tossinvest.com/docs`. This skill is not that OAuth-based client and does not require official Open API app setup, `Authorization` tokens, `X-Tossinvest-Account`, or IP registration. For official Open API integration or exact official rate-limit questions, read [references/official-openapi-boundary.md](references/official-openapi-boundary.md) and the official docs; do not retrofit official account, asset, or order workflows into this skill.
+
 ## When To Use
 
 - Use for public TossInvest stock or market data visible on `tossinvest.com`.
@@ -45,6 +49,7 @@ Requires Python 3.10+ and network access.
 | Recommended feed and news discovery | `scripts/feed.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Screener counts, filter metadata, RSI filters, price/technical presets | `scripts/screener_count.py` | [examples/filters](examples/filters) |
 | Page-level stock API smoke checks | `scripts/page_api_check.py` | [references/script-cookbook.md](references/script-cookbook.md) |
+| Official Open API distinction or official rate-limit question | Official docs only; no bundled script | [references/official-openapi-boundary.md](references/official-openapi-boundary.md) |
 | New endpoint capture or undocumented page analysis | Browser network capture, bundled JavaScript inspection | [references/capture-workflow.md](references/capture-workflow.md), [references/safety-rules.md](references/safety-rules.md) |
 
 Route details:
