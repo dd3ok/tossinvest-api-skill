@@ -1,4 +1,4 @@
-# 비공식 토스증권 API / TossInvest API Agent Skill
+# 비공식 토스증권 API / TossInvest API Skill
 
 [![TossInvest API Skill CI](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml)
 [![최신 릴리스](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skill?sort=semver)](https://github.com/dd3ok/tossinvest-api-skill/releases/latest)

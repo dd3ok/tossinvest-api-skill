@@ -43,13 +43,14 @@ class DocumentationPromptTests(unittest.TestCase):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("비공식 토스증권 API", text)
         self.assertIn("TossInvest API", text)
-        self.assertIn("Agent Skill", text)
+        self.assertIn("TossInvest API Skill", text)
         self.assertIn("공개 웹 페이지", text)
         self.assertIn("공식 API", text)
 
     def test_readme_intro_describes_lightweight_web_api_skill(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("# 비공식 토스증권 API / TossInvest API Agent Skill", text)
+        self.assertIn("# 비공식 토스증권 API / TossInvest API Skill", text)
+        self.assertNotIn("TossInvest API Agent Skill", text)
         self.assertIn("토스증권 웹에 노출된 API를 바탕으로 만든 경량 스킬", text)
         self.assertIn("로그인·계좌 인증 없이 공개 주식·시장 데이터를", text)
         self.assertIn("공개 주식·시장 데이터를 Codex와 Claude Code에서 안전하게 재조회", text)
