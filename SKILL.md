@@ -2,7 +2,6 @@
 name: tossinvest-web-api
 description: Use this skill when the user asks for public, read-only TossInvest/토스증권 market data visible on tossinvest.com, including Korean/US stock quotes, order books, candles, financials, filings, news, rankings, screeners, calendars, indices, FX, exchange-rate widgets, crypto-like index pages, or public endpoint re-verification. Do not use for login, accounts, holdings, orders, authenticated broker workflows, bulk scraping, or investment advice.
 license: MIT
-compatibility: Requires Python 3.10+ and network access to public TossInvest pages and read-only public API hosts.
 ---
 
 # TossInvest Web API

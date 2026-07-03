@@ -203,9 +203,9 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("news", description)
         self.assertIn("filings", description)
         self.assertIn("financials", description)
-        self.assertIn("\ncompatibility: Requires Python 3.10+", frontmatter)
-        self.assertIn("network access", frontmatter)
-        self.assertIn("public API hosts", frontmatter)
+        self.assertNotIn("\ncompatibility:", frontmatter)
+        body = text.split("---", 2)[2]
+        self.assertIn("Requires Python 3.10+ and network access.", body)
 
     def test_skill_routes_disambiguate_financial_and_signal_labels(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
