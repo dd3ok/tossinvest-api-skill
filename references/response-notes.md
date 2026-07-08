@@ -9,6 +9,7 @@ Most checked endpoints returned JSON with a top-level `result` key. Do not assum
 - [Analytics Shapes](#analytics-shapes)
 - [Filings And News Shapes](#filings-and-news-shapes)
 - [Discovery And Screener Shapes](#discovery-and-screener-shapes)
+- [Public Community Shapes](#public-community-shapes)
 - [Financial POST Shapes](#financial-post-shapes)
 - [Transaction Status Shapes](#transaction-status-shapes)
 
@@ -132,6 +133,27 @@ Direct checks on 2026-04-20 also accepted price-condition filters for 5-day
 price change up/down, 20-day price change up, 5-day consecutive rise/fall,
 52-week high within 20 days, and 52-week low within 20 days. These use the same
 `conditions[]` wrapper as the technical presets.
+
+## Public Community Shapes
+
+| Endpoint | Observed `result` shape |
+|---|---|
+| `wts-cert-api /api/v4/comments` | Object: `results[]`, `hasNext`, `key`, `totalCount`; use `lastCommentId={key}` for the next page |
+| `wts-cert-api /api/v2/comments/{commentId}/replies` | Object: `results[]`, `hasNext`, `key`, `totalCount`; v1 replies returned object keys `comment`, `replies`, `topic` |
+| `wts-cert-api /api/v1/boards/STOCK/{productCode}/related` | Object: `about`, `commentCount`, `followingCount`, `isMember`, `logoImageUrl`, `subjectId`, `title` |
+| `wts-cert-api /api/v1/community/board/{productCode}/recommend-profiles` | List of profile suggestions; sanitize before displaying |
+
+Raw comment rows include public profile and interaction fields such as
+`authorUserProfileId`, `author.userProfileId`, `profilePictureUrl`,
+`shortDescription`, `statistic.followerCount`, `isFollowing`, `isBookmarked`,
+and `isMyProfile`. Do not return raw rows from user-facing scripts.
+
+`scripts/community_comments.py` emits sanitized rows with fields such as
+`commentId`, `type`, `authorNickname`, `message`, `board`, `statistic`,
+`holding`, `createdAt`, `updatedAt`, and optional media summary. The sanitizer
+removes profile ids, profile/avatar URLs, follow/bookmark flags, follower counts,
+and replaces obvious phone, email, and long-number strings with tokens such as
+`redacted-phone`.
 
 ## Financial POST Shapes
 

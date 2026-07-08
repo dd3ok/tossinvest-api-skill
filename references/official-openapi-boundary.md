@@ -1,6 +1,6 @@
 # Official Open API Boundary
 
-Checked: 2026-06-26
+Checked: 2026-07-08
 
 Sources:
 
@@ -31,18 +31,19 @@ authenticated client project and read the official docs directly.
 
 ## Official API Shape
 
-Official OpenAPI JSON checked on 2026-06-26:
+Official OpenAPI JSON checked on 2026-07-08:
 
-- OpenAPI version: `1.1.5`
+- OpenAPI version: `1.2.2`
 - Base server: `https://openapi.tossinvest.com`
 - Auth: OAuth 2.0 Client Credentials via `POST /oauth2/token`
 - All official API calls use `Authorization: Bearer {access_token}`
 - Account, asset, and order APIs also require `X-Tossinvest-Account`
-- Coverage: Auth, Market Data, Stock Info, Market Info, Account, Asset, Order,
-  Order History, and Order Info
+- Coverage: Auth, Market Data, Stock Info, Market Info, Ranking, Market
+  Indicators, Account, Asset, Order, Conditional Order, Conditional Order
+  History, Order History, and Order Info
 
 `llms.txt` mentions JWKS in its quick Auth summary, but the canonical OpenAPI
-JSON checked on 2026-06-26 did not list a JWKS operation. Use the OpenAPI JSON as
+JSON checked on 2026-07-08 did not list a JWKS operation. Use the OpenAPI JSON as
 the source of truth for exact official paths.
 
 Official market-data overlap includes:
@@ -60,6 +61,30 @@ Official market-data overlap includes:
 
 This overlap does not make the official paths script-backed in this repository.
 The bundled scripts continue to use the public page endpoint catalog.
+
+Official public market-data READ endpoints present in `1.2.2` but not yet
+script-backed in this skill:
+
+- `GET /api/v1/rankings`
+- `GET /api/v1/market-indicators/prices`
+- `GET /api/v1/market-indicators/{symbol}/candles`
+- `GET /api/v1/market-indicators/{symbol}/investor-trading`
+
+Authenticated official-only READ endpoints must remain reference-only here:
+
+- `GET /api/v1/accounts`
+- `GET /api/v1/holdings`
+- `GET /api/v1/orders`
+- `GET /api/v1/orders/{orderId}`
+- `GET /api/v1/conditional-orders`
+- `GET /api/v1/conditional-orders/{conditionalOrderId}`
+- `GET /api/v1/buying-power`
+- `GET /api/v1/sellable-quantity`
+- `GET /api/v1/commissions`
+
+These are authenticated official-only workflows because they require OAuth and,
+for account, asset, and order information, `X-Tossinvest-Account`. Do not add
+unauthenticated web-endpoint scripts for these operations.
 
 ## Official Rate Limits
 
@@ -79,7 +104,13 @@ separate quota.
 | `MARKET_INFO` | 3 TPS |
 | `MARKET_DATA` | 10 TPS |
 | `MARKET_DATA_CHART` | 5 TPS |
+| `RANKING` | 3 TPS |
+| `MARKET_INDICATOR_PRICE` | 10 TPS |
+| `MARKET_INDICATOR` | 3 TPS |
+| `MARKET_INDICATOR_CHART` | 5 TPS |
 | `ORDER` | 6 TPS; 3 TPS during 09:00-09:10 KST |
+| `CONDITIONAL_ORDER` | 5 TPS |
+| `CONDITIONAL_ORDER_HISTORY` | 5 TPS |
 | `ORDER_HISTORY` | 5 TPS |
 | `ORDER_INFO` | 6 TPS; 3 TPS during 09:00-09:10 KST |
 

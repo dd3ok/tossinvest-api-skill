@@ -37,6 +37,21 @@ _CALENDAR_INDEX_MONTHLY_PATTERN = re.compile(
 _CALENDAR_ECONOMIC_INDICATOR_PATTERN = re.compile(
     r"^/api/v1/calendar/economic-indicators/[A-Z0-9_.=-]{2,48}$"
 )
+_PUBLIC_PRODUCT_CODE_PATTERN = r"[A-Z0-9._-]{2,48}"
+_DIGIT_ID_PATTERN = r"\d{1,30}"
+_PUBLIC_CERT_COMMENT_REPLIES_PATTERNS = (
+    re.compile(rf"^/api/v1/comments/{_DIGIT_ID_PATTERN}/replies$"),
+    re.compile(rf"^/api/v2/comments/{_DIGIT_ID_PATTERN}/replies$"),
+)
+_PUBLIC_CERT_SOCIAL_PATTERNS = (
+    re.compile(rf"^/api/v1/boards/STOCK/{_PUBLIC_PRODUCT_CODE_PATTERN}/related$"),
+    re.compile(rf"^/api/v1/community/board/{_PUBLIC_PRODUCT_CODE_PATTERN}/recommend-profiles$"),
+)
+_PUBLIC_CERT_PRODUCT_STATUS_PATTERNS = (
+    re.compile(rf"^/api/v1/stock-infos/{_PUBLIC_PRODUCT_CODE_PATTERN}/red-flags$"),
+    re.compile(rf"^/api/v1/trading/analysis/productCode/{_PUBLIC_PRODUCT_CODE_PATTERN}$"),
+    re.compile(rf"^/api/v3/trading/order/{_PUBLIC_PRODUCT_CODE_PATTERN}/trading-status$"),
+)
 _DATE_PATTERN = re.compile(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$")
 _DATE_TIME_PATTERN = re.compile(
     r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d$"
@@ -54,6 +69,12 @@ _ALLOWED_CERT_EXACT_PATHS = (
     "/api/v2/screener/screen",
     "/api/v2/screener/screen/search/modal",
     "/api/v3/dashboard/wts/overview/indicator/mini-chart",
+)
+_PUBLIC_CERT_EXACT_READ_PATHS = (
+    "/api/v1/boards/popular-follower",
+    "/api/v1/community/top-rankings/TOP_10_FOLLOWING_INCREASE",
+    "/api/v1/community/top-rankings/TOP_10_PROFIT_ROSS_AMOUNT",
+    "/api/v4/feed/recommend/ranking-posts",
 )
 _ALLOWED_CERT_PATH_PATTERNS = (
     _CALENDAR_MONTHLY_PATTERN,
@@ -191,6 +212,11 @@ def validate_request_target(base_url: str, path: str) -> None:
     if parsed_path.query:
         validate_no_sensitive_keys({key: value for key, value in query_pairs})
     lowered_path = request_path.lower()
+    is_cert_host = host == urllib.parse.urlsplit(CERT_BASE_URL).netloc
+
+    if is_cert_host and _is_public_cert_read_path(request_path):
+        _validate_public_cert_query(request_path, query_pairs)
+        return
 
     for marker in _DENIED_PATH_MARKERS:
         if marker in lowered_path:
@@ -203,7 +229,7 @@ def validate_request_target(base_url: str, path: str) -> None:
             f"Blocked TossInvest endpoint: {request_path} is not in the approved info-api prefixes"
         )
 
-    if host == urllib.parse.urlsplit(CERT_BASE_URL).netloc:
+    if is_cert_host:
         if _is_calendar_cert_path(request_path):
             _validate_calendar_cert_query(request_path, query_pairs)
             return
@@ -228,6 +254,14 @@ def validate_request_usage(
     if parsed_base.netloc.lower() != urllib.parse.urlsplit(CERT_BASE_URL).netloc:
         return
     request_path = _validation_path(urllib.parse.urlsplit(path).path)
+    if _is_public_cert_read_path(request_path):
+        if method.upper() != "GET":
+            raise RuntimeError("Blocked TossInvest endpoint: public cert read routes must use GET")
+        if body is not None:
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: public cert read routes do not accept request bodies"
+            )
+        return
     if not _is_calendar_cert_path(request_path):
         return
     method = method.upper()
@@ -258,6 +292,64 @@ def _is_calendar_cert_path(request_path: str) -> bool:
         or _CALENDAR_INDEX_MONTHLY_PATTERN.fullmatch(request_path)
         or _CALENDAR_ECONOMIC_INDICATOR_PATTERN.fullmatch(request_path)
     )
+
+
+def _is_public_cert_read_path(request_path: str) -> bool:
+    return (
+        request_path == "/api/v4/comments"
+        or request_path in _PUBLIC_CERT_EXACT_READ_PATHS
+        or any(pattern.fullmatch(request_path) for pattern in _PUBLIC_CERT_COMMENT_REPLIES_PATTERNS)
+        or any(pattern.fullmatch(request_path) for pattern in _PUBLIC_CERT_SOCIAL_PATTERNS)
+        or any(pattern.fullmatch(request_path) for pattern in _PUBLIC_CERT_PRODUCT_STATUS_PATTERNS)
+    )
+
+
+def _validate_public_cert_query(request_path: str, pairs: list[tuple[str, str]]) -> None:
+    if request_path == "/api/v4/comments":
+        params = _single_query_params(pairs)
+        allowed = {"subjectType", "subjectId", "commentSortType", "lastCommentId"}
+        if set(params) - allowed:
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: unexpected query parameters for public comments"
+            )
+        required = {"subjectType", "subjectId", "commentSortType"}
+        if not required.issubset(params):
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: public comments require subjectType, subjectId, and commentSortType"
+            )
+        if params["subjectType"] not in {"STOCK", "LOUNGE"}:
+            raise RuntimeError("Blocked TossInvest endpoint: unsupported public comment subjectType")
+        subject_type = params["subjectType"]
+        subject_id = params["subjectId"]
+        if subject_type == "STOCK" and (
+            subject_id.startswith("LOUNGE_")
+            or not re.fullmatch(_PUBLIC_PRODUCT_CODE_PATTERN, subject_id)
+        ):
+            raise RuntimeError("Blocked TossInvest endpoint: unsupported public comment subjectId")
+        if subject_type == "LOUNGE" and not re.fullmatch(r"LOUNGE_\d{1,30}", subject_id):
+            raise RuntimeError("Blocked TossInvest endpoint: unsupported public comment subjectId")
+        if params["commentSortType"] not in {"POPULAR", "RECENT"}:
+            raise RuntimeError("Blocked TossInvest endpoint: unsupported public commentSortType")
+        if "lastCommentId" in params and not re.fullmatch(_DIGIT_ID_PATTERN, params["lastCommentId"]):
+            raise RuntimeError("Blocked TossInvest endpoint: lastCommentId must contain digits")
+        return
+
+    if request_path == "/api/v4/feed/recommend/ranking-posts":
+        params = _single_query_params(pairs)
+        if set(params) - {"lastRecommendId"}:
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: unexpected query parameters for public feed ranking"
+            )
+        if "lastRecommendId" in params and not re.fullmatch(
+            r"[A-Za-z0-9._:-]{1,128}", params["lastRecommendId"]
+        ):
+            raise RuntimeError("Blocked TossInvest endpoint: unsupported lastRecommendId")
+        return
+
+    if pairs:
+        raise RuntimeError(
+            "Blocked TossInvest endpoint: public cert read route does not accept query parameters"
+        )
 
 
 def _validate_calendar_cert_query(request_path: str, pairs: list[tuple[str, str]]) -> None:

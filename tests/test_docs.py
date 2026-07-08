@@ -281,6 +281,47 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("observed-drift", catalog)
         self.assertIn("excluded", catalog)
 
+    def test_public_web_visible_community_and_main_page_are_routed(self):
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        evals = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")
+
+        self.assertIn("scripts/stock_page.py", skill)
+        self.assertIn("scripts/community_comments.py", skill)
+        self.assertIn("sanitized public community comments", skill)
+        self.assertIn("profile ids, avatar URLs, follow/bookmark flags", skill)
+        self.assertIn("/api/v4/comments", catalog)
+        self.assertIn("lastCommentId", catalog)
+        self.assertIn("/api/v2/comments/{commentId}/replies", catalog)
+        self.assertIn("/api/v1/dashboard/wts/overview/ai-signals/detail", catalog)
+        self.assertIn("/api/v3/trading/order/{productCode}/trading-status", catalog)
+        self.assertIn("public-social-sensitive", catalog)
+        self.assertIn("commentId", notes)
+        self.assertIn("authorNickname", notes)
+        self.assertIn("redacted-phone", notes)
+        self.assertIn("scripts/stock_page.py --code SOXL", cookbook)
+        self.assertIn("scripts/community_comments.py --code US20100311002", cookbook)
+        self.assertIn("왜 떨어졌을까", evals)
+
+    def test_official_openapi_catalog_covers_latest_missing_public_reads(self):
+        boundary = (ROOT / "references" / "official-openapi-boundary.md").read_text(
+            encoding="utf-8"
+        )
+        for expected in [
+            "/api/v1/rankings",
+            "/api/v1/market-indicators/prices",
+            "/api/v1/market-indicators/{symbol}/candles",
+            "/api/v1/market-indicators/{symbol}/investor-trading",
+        ]:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, boundary)
+        self.assertIn("/api/v1/accounts", boundary)
+        self.assertIn("/api/v1/holdings", boundary)
+        self.assertIn("/api/v1/commissions", boundary)
+        self.assertIn("authenticated official-only", boundary)
+
     def test_index_page_recheck_docs_cover_current_public_widgets(self):
         catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
         notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")

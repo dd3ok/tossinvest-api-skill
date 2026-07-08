@@ -297,6 +297,129 @@ class TossInvestApiTests(unittest.TestCase):
                 base_url=api.CERT_BASE_URL,
             )
 
+    def test_cert_allowlist_allows_verified_public_social_and_status_reads(self):
+        allowed_paths = [
+            (
+                "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                "&commentSortType=POPULAR"
+            ),
+            (
+                "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                "&commentSortType=RECENT&lastCommentId=287893608"
+            ),
+            (
+                "/api/v4/comments?subjectType=LOUNGE&subjectId=LOUNGE_123"
+                "&commentSortType=RECENT"
+            ),
+            "/api/v2/comments/287893106/replies",
+            "/api/v1/comments/287893106/replies",
+            "/api/v4/feed/recommend/ranking-posts",
+            "/api/v1/boards/STOCK/US20100311002/related",
+            "/api/v1/community/board/US20100311002/recommend-profiles",
+            "/api/v1/community/top-rankings/TOP_10_PROFIT_ROSS_AMOUNT",
+            "/api/v1/stock-infos/US20100311002/red-flags",
+            "/api/v3/trading/order/US20100311002/trading-status",
+            "/api/v1/trading/analysis/productCode/US20100311002",
+        ]
+        for path in allowed_paths:
+            with self.subTest(path=path):
+                api.validate_request_target(api.CERT_BASE_URL, path)
+
+    def test_cert_public_social_allowlist_rejects_unverified_writes_and_queries(self):
+        rejected_paths = [
+            (
+                "/api/v4/comments?subjectType=ACCOUNT&subjectId=123"
+                "&commentSortType=POPULAR"
+            ),
+            (
+                "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                "&commentSortType=FOLLOWING"
+            ),
+            (
+                "/api/v4/comments?subjectType=STOCK&subjectId=LOUNGE_123"
+                "&commentSortType=POPULAR"
+            ),
+            (
+                "/api/v4/comments?subjectType=LOUNGE&subjectId=US20100311002"
+                "&commentSortType=POPULAR"
+            ),
+            (
+                "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                "&commentSortType=POPULAR&accountNo=123"
+            ),
+            "/api/v1/comments/287893106/reaction/LIKE",
+            "/api/v1/comments/287893106/bookmark/true",
+            "/api/v2/comments/report",
+            "/api/v2/comments/upload/picture",
+            "/api/v1/user-profiles/update",
+            "/api/v3/trading/order/US20100311002/create",
+        ]
+        for path in rejected_paths:
+            with self.subTest(path=path):
+                with self.assertRaises(RuntimeError):
+                    api.validate_request_target(api.CERT_BASE_URL, path)
+
+    def test_cert_public_social_reads_must_use_get_without_body(self):
+        with self.assertRaisesRegex(RuntimeError, "public cert read routes must use GET"):
+            api.request_json(
+                (
+                    "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                    "&commentSortType=POPULAR"
+                ),
+                method="POST",
+                body={},
+                base_url=api.CERT_BASE_URL,
+            )
+        with self.assertRaisesRegex(RuntimeError, "public cert read routes do not accept"):
+            api.request_json(
+                "/api/v2/comments/287893106/replies",
+                method="GET",
+                body={},
+                base_url=api.CERT_BASE_URL,
+            )
+
+    def test_public_cert_get_serialization_has_no_body_or_content_type(self):
+        captured = []
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, traceback):
+                return False
+
+            def read(self):
+                return b'{"result":{"comments":[]}}'
+
+        def fake_urlopen(request, timeout):
+            captured.append(
+                {
+                    "data": request.data,
+                    "headers": {key.lower(): value for key, value in request.header_items()},
+                    "method": request.get_method(),
+                    "timeout": timeout,
+                    "url": request.full_url,
+                }
+            )
+            return FakeResponse()
+
+        with patch.object(api.urllib.request, "urlopen", fake_urlopen):
+            payload = api.request_json(
+                (
+                    "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                    "&commentSortType=POPULAR"
+                ),
+                method="GET",
+                body=None,
+                base_url=api.CERT_BASE_URL,
+            )
+
+        self.assertEqual(payload, {"result": {"comments": []}})
+        self.assertEqual(captured[0]["method"], "GET")
+        self.assertIsNone(captured[0]["data"])
+        self.assertNotIn("content-type", captured[0]["headers"])
+        self.assertIn("wts-cert-api.tossinvest.com/api/v4/comments", captured[0]["url"])
+
     def test_calendar_request_body_serialization_matches_observed_routes(self):
         captured = []
 

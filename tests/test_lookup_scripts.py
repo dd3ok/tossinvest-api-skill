@@ -3,6 +3,7 @@ import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -15,6 +16,7 @@ calendar = importlib.util.module_from_spec(_calendar_spec)
 assert _calendar_spec.loader is not None
 _calendar_spec.loader.exec_module(calendar)
 
+import community_comments
 import dashboard_ranking
 import feed
 import filings
@@ -25,6 +27,7 @@ import page_api_check
 import quote
 import screener_count
 import stock_chart
+import stock_page
 import stock_summary
 import theme
 import trading_trend
@@ -848,6 +851,7 @@ class JsonOnlyScriptCliTests(unittest.TestCase):
     def test_json_only_scripts_accept_format_json_alias(self):
         script_names = [
             "calendar.py",
+            "community_comments.py",
             "dashboard_ranking.py",
             "feed.py",
             "financials.py",
@@ -856,6 +860,7 @@ class JsonOnlyScriptCliTests(unittest.TestCase):
             "quote.py",
             "screener_count.py",
             "stock_chart.py",
+            "stock_page.py",
             "stock_summary.py",
             "theme.py",
             "trading_trend.py",
@@ -942,6 +947,326 @@ class FeedScriptTests(unittest.TestCase):
         self.assertEqual(
             feed.build_news_body("INDEX", "KGG01P"),
             {"type": "INDEX", "indexCode": "KGG01P"},
+        )
+
+    def test_recommended_ranking_uses_observed_cert_host(self):
+        calls = []
+
+        def fake_get_result(path, **kwargs):
+            calls.append((path, kwargs))
+            return {"feeds": [], "key": None}
+
+        with patch.object(feed.api, "get_result", fake_get_result):
+            payload = feed.fetch_feed("recommended-ranking", None)
+
+        self.assertEqual(payload["kind"], "recommended-ranking")
+        self.assertEqual(calls[0][0], "/api/v4/feed/recommend/ranking-posts")
+        self.assertEqual(calls[0][1]["base_url"], feed.CERT_BASE_URL)
+
+
+class CommunityCommentsScriptTests(unittest.TestCase):
+    def test_build_stock_comments_path_uses_public_stock_query(self):
+        self.assertEqual(
+            community_comments.build_stock_comments_path("US20100311002", "popular", None),
+            (
+                "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                "&commentSortType=POPULAR"
+            ),
+        )
+        self.assertEqual(
+            community_comments.build_stock_comments_path("US20100311002", "recent", 287893608),
+            (
+                "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                "&commentSortType=RECENT&lastCommentId=287893608"
+            ),
+        )
+
+    def test_build_stock_comments_path_rejects_unverified_inputs(self):
+        with self.assertRaisesRegex(ValueError, "sort must be one of"):
+            community_comments.build_stock_comments_path("US20100311002", "following", None)
+        with self.assertRaisesRegex(ValueError, "last_comment_id must contain digits"):
+            community_comments.build_stock_comments_path("US20100311002", "popular", "abc")
+
+    def test_sanitize_comment_removes_profile_and_personal_flags(self):
+        raw = {
+            "commentId": 287893106,
+            "type": "USER_COMMENT",
+            "authorUserProfileId": "profile-123",
+            "author": {
+                "userProfileId": "profile-123",
+                "nickname": "public nickname",
+                "profilePictureUrl": "https://example.com/avatar.png",
+                "shortDescription": "profile text",
+            },
+            "message": {"title": "title", "message": "call me 010-1234-5678"},
+            "board": {"subjectType": "STOCK", "subjectId": "US20100311002", "topic": "SOXL"},
+            "statistic": {
+                "likeCount": 3,
+                "replyCount": 1,
+                "readCount": 10,
+                "followerCount": 99,
+                "isFollowing": True,
+                "isBookmarked": True,
+                "isMyProfile": False,
+            },
+            "holding": {"shareHoldingStatus": "HOLDING"},
+            "createdAt": "2026-07-08T12:00:00+09:00",
+        }
+
+        sanitized = community_comments.sanitize_comment(raw)
+        dumped = repr(sanitized)
+
+        self.assertEqual(sanitized["commentId"], 287893106)
+        self.assertEqual(sanitized["authorNickname"], "public nickname")
+        self.assertEqual(sanitized["message"]["message"], "call me [redacted-phone]")
+        self.assertNotIn("profile-123", dumped)
+        self.assertNotIn("profilePictureUrl", dumped)
+        self.assertNotIn("followerCount", dumped)
+        self.assertNotIn("isFollowing", dumped)
+        self.assertNotIn("isBookmarked", dumped)
+        self.assertNotIn("isMyProfile", dumped)
+
+    def test_sanitize_comment_redacts_common_phone_formats(self):
+        for raw_phone in [
+            "010 1234 5678",
+            "010.1234.5678",
+            "+82-10-1234-5678",
+            "+82 10 1234 5678",
+        ]:
+            with self.subTest(raw_phone=raw_phone):
+                sanitized = community_comments.sanitize_comment(
+                    {"message": {"message": f"call {raw_phone}"}}
+                )
+                self.assertEqual(sanitized["message"]["message"], "call [redacted-phone]")
+
+    def test_fetch_stock_comments_uses_key_pagination_and_sanitizes_rows(self):
+        responses = [
+            {
+                "results": [
+                    {
+                        "commentId": 1,
+                        "author": {"nickname": "n1", "userProfileId": "u1"},
+                        "message": {"message": "first"},
+                    }
+                ],
+                "hasNext": True,
+                "key": 1,
+            },
+            {
+                "results": [
+                    {
+                        "commentId": 2,
+                        "author": {"nickname": "n2", "userProfileId": "u2"},
+                        "message": {"message": "second"},
+                    }
+                ],
+                "hasNext": False,
+                "key": None,
+            },
+        ]
+        paths = []
+
+        def fake_get_result(path, **kwargs):
+            paths.append((path, kwargs))
+            return responses.pop(0)
+
+        with patch.object(community_comments.api, "get_result", fake_get_result):
+            payload = community_comments.fetch_stock_comments(
+                "US20100311002",
+                sort="popular",
+                pages=2,
+                limit=10,
+                include_replies=False,
+            )
+
+        self.assertEqual(payload["pagesFetched"], 2)
+        self.assertEqual([row["commentId"] for row in payload["comments"]], [1, 2])
+        self.assertIn("lastCommentId=1", paths[1][0])
+        self.assertEqual(paths[0][1]["base_url"], community_comments.CERT_BASE_URL)
+
+    def test_fetch_stock_comments_resolves_display_symbol_before_comment_lookup(self):
+        calls = []
+
+        def fake_get_result(path, **kwargs):
+            calls.append((path, kwargs))
+            if path == "/api/v2/stock-infos/code-or-symbol/NVDA":
+                return {"code": "US19990122001", "symbol": "NVDA"}
+            if path == (
+                "/api/v4/comments?subjectType=STOCK&subjectId=US19990122001"
+                "&commentSortType=POPULAR"
+            ):
+                return {
+                    "results": [{"commentId": 1, "author": {"nickname": "nvidia holder"}}],
+                    "hasNext": False,
+                    "key": None,
+                }
+            raise AssertionError(path)
+
+        with patch.object(community_comments.api, "get_result", fake_get_result):
+            payload = community_comments.fetch_stock_comments(
+                "NVDA",
+                sort="popular",
+                pages=1,
+                limit=5,
+                include_replies=False,
+            )
+
+        self.assertEqual(payload["subjectId"], "US19990122001")
+        self.assertEqual(payload["comments"][0]["authorNickname"], "nvidia holder")
+        self.assertEqual(calls[1][1]["base_url"], community_comments.CERT_BASE_URL)
+
+    def test_fetch_stock_comments_uses_last_emitted_id_when_limit_truncates_page(self):
+        def fake_get_result(path, **kwargs):
+            self.assertEqual(
+                path,
+                (
+                    "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                    "&commentSortType=POPULAR"
+                ),
+            )
+            self.assertEqual(kwargs["base_url"], community_comments.CERT_BASE_URL)
+            return {
+                "results": [
+                    {"commentId": 1, "author": {"nickname": "first"}},
+                    {"commentId": 2, "author": {"nickname": "second"}},
+                ],
+                "hasNext": True,
+                "key": 2,
+            }
+
+        with patch.object(community_comments.api, "get_result", fake_get_result):
+            payload = community_comments.fetch_stock_comments(
+                "US20100311002",
+                sort="popular",
+                pages=1,
+                limit=1,
+                include_replies=False,
+            )
+
+        self.assertEqual([row["commentId"] for row in payload["comments"]], [1])
+        self.assertEqual(payload["nextLastCommentId"], "1")
+
+    def test_fetch_comment_replies_sanitizes_reply_rows(self):
+        def fake_get_result(path, **kwargs):
+            self.assertEqual(path, "/api/v2/comments/287893106/replies")
+            self.assertEqual(kwargs["base_url"], community_comments.CERT_BASE_URL)
+            return {
+                "results": [
+                    {
+                        "commentId": 287893107,
+                        "author": {
+                            "nickname": "reply author",
+                            "userProfileId": "reply-profile",
+                            "profilePictureUrl": "https://example.com/reply.png",
+                        },
+                        "message": {"message": "reply 01012345678"},
+                        "statistic": {"likeCount": 1, "isFollowing": True},
+                    }
+                ]
+            }
+
+        with patch.object(community_comments.api, "get_result", fake_get_result):
+            replies = community_comments.fetch_comment_replies(287893106)
+
+        dumped = repr(replies)
+        self.assertEqual(replies[0]["commentId"], 287893107)
+        self.assertEqual(replies[0]["authorNickname"], "reply author")
+        self.assertEqual(replies[0]["message"]["message"], "reply [redacted-phone]")
+        self.assertNotIn("reply-profile", dumped)
+        self.assertNotIn("profilePictureUrl", dumped)
+        self.assertNotIn("isFollowing", dumped)
+
+    def test_fetch_stock_comments_can_attach_sanitized_replies(self):
+        responses = {
+            "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002&commentSortType=POPULAR": {
+                "results": [{"commentId": 1, "author": {"nickname": "parent"}}],
+                "hasNext": False,
+                "key": None,
+            },
+            "/api/v2/comments/1/replies": {
+                "results": [
+                    {
+                        "commentId": 2,
+                        "author": {"nickname": "child", "userProfileId": "child-profile"},
+                        "message": {"message": "child@example.com"},
+                    }
+                ]
+            },
+        }
+
+        def fake_get_result(path, **kwargs):
+            self.assertEqual(kwargs["base_url"], community_comments.CERT_BASE_URL)
+            return responses[path]
+
+        with patch.object(community_comments.api, "get_result", fake_get_result):
+            payload = community_comments.fetch_stock_comments(
+                "US20100311002",
+                sort="popular",
+                pages=1,
+                limit=10,
+                include_replies=True,
+            )
+
+        self.assertEqual(payload["comments"][0]["replies"][0]["commentId"], 2)
+        self.assertEqual(
+            payload["comments"][0]["replies"][0]["message"]["message"],
+            "[redacted-email]",
+        )
+        self.assertNotIn("child-profile", repr(payload))
+
+
+class StockPageScriptTests(unittest.TestCase):
+    def test_build_ai_signal_detail_path_for_stock(self):
+        self.assertEqual(
+            stock_page.build_ai_signal_detail_path("US20100311002", "stocks"),
+            (
+                "/api/v1/dashboard/wts/overview/ai-signals/detail"
+                "?productCode=US20100311002&productType=STOCKS"
+            ),
+        )
+
+    def test_fetch_stock_page_composes_public_main_card_data(self):
+        calls = []
+
+        def fake_get_result(path, **kwargs):
+            calls.append((path, kwargs))
+            if path == "/api/v2/stock-infos/code-or-symbol/SOXL":
+                return {"code": "US20100311002", "name": "SOXL", "logoImageUrl": "logo.png"}
+            if path == "/api/v3/stock-prices/details?productCodes=US20100311002":
+                return [{"code": "US20100311002", "close": 240515}]
+            if path.startswith("/api/v1/dashboard/wts/overview/ai-signals/detail"):
+                return {"reasoning": {"description": "AI reason"}, "terms": {}}
+            raise AssertionError(path)
+
+        with (
+            patch.object(stock_page.api, "get_result", fake_get_result),
+            patch.object(
+                stock_page.community_comments,
+                "fetch_stock_comments",
+                return_value={"comments": [{"commentId": 1}]},
+            ) as fetch_comments,
+        ):
+            payload = stock_page.fetch_stock_page(
+                "SOXL",
+                include_ai_detail=True,
+                include_comments=True,
+                comment_sort="popular",
+                comment_limit=5,
+                comment_pages=1,
+                include_replies=False,
+            )
+
+        self.assertEqual(payload["productCode"], "US20100311002")
+        self.assertEqual(payload["info"]["logoImageUrl"], "logo.png")
+        self.assertEqual(payload["price"], {"code": "US20100311002", "close": 240515})
+        self.assertEqual(payload["aiSignalDetail"]["reasoning"]["description"], "AI reason")
+        self.assertEqual(payload["community"]["comments"], [{"commentId": 1}])
+        fetch_comments.assert_called_once_with(
+            "US20100311002",
+            sort="popular",
+            pages=1,
+            limit=5,
+            include_replies=False,
         )
 
 

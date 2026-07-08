@@ -8,9 +8,14 @@ from typing import Any
 
 import tossinvest_api as api
 
+CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
+
 FEED_PATHS = {
     "recommended": "/api/v3/feed/recommend/posts",
     "recommended-ranking": "/api/v4/feed/recommend/ranking-posts",
+}
+FEED_BASE_URLS = {
+    "recommended-ranking": CERT_BASE_URL,
 }
 
 NEWS_TYPES = {
@@ -43,9 +48,14 @@ def build_news_body(news_type: str, index_code: str | None) -> dict[str, Any]:
 
 
 def fetch_feed(kind: str, last_recommend_id: str | None) -> dict[str, Any]:
+    if kind not in FEED_PATHS:
+        raise ValueError(f"unknown feed kind: {kind}")
     return {
         "kind": kind,
-        "result": api.get_result(build_feed_path(kind, last_recommend_id)),
+        "result": api.get_result(
+            build_feed_path(kind, last_recommend_id),
+            base_url=FEED_BASE_URLS.get(kind, api.BASE_URL),
+        ),
     }
 
 

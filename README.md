@@ -23,6 +23,7 @@
 - KOSPI 같은 지수, 환율 차트, 환율 위젯, 채권·원자재 지표
 - 증시 캘린더, 경제지표 일정, 실적 발표 일정, 국내·해외 캘린더 탭
 - 국내·미국 실시간 차트 top100, 투자자 매매 동향, 브로커 순위, 스크리너 조건 검색
+- 공개 주식 메인 페이지 AI 상세 내용과 sanitize된 공개 커뮤니티 댓글·답글
 
 설치 후에는 TossInvest 또는 토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회할 수 있습니다.
 
@@ -120,6 +121,8 @@ python3 scripts/stock_chart.py --help
 
 ```bash
 python3 scripts/stock_summary.py --code A005930 --no-overview
+python3 scripts/stock_page.py --code SOXL --comment-limit 5
+python3 scripts/community_comments.py --code NVDA --sort popular --limit 5
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
 python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
@@ -201,6 +204,7 @@ python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-per
 
 ```text
 토스증권 기준으로 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
+토스증권 SOXL 메인에 보이는 왜 떨어졌을까 내용과 커뮤니티 댓글을 같이 조회해줘.
 토스증권에서 A005930의 일봉 캔들을 조회하고 RSI 14와 MACD를 계산해줘.
 TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식을 찾아줘.
 토스증권에서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.

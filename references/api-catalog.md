@@ -11,7 +11,7 @@ Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
 
-This catalog is for read-only stock-information workflows. Include endpoints only when they help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, or screener questions. Do not collect page bootstrapping, telemetry, login/certificate, guest/session, account, order, following/subscription, or personalization endpoints as cataloged APIs.
+This catalog is for read-only public TossInvest workflows. Include endpoints only when they help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, screener, or public community questions visible without login. Do not collect page bootstrapping, telemetry, login/certificate, guest/session, account, order, following/subscription, or personalization endpoints as cataloged APIs.
 
 Re-verify endpoints before depending on them because TossInvest web APIs are undocumented and may change without notice. Keep checks small, sequential, and user-initiated. If TossInvest returns access-denied, throttling, challenge, login, or otherwise unexpected responses, stop and re-check the endpoint in current public browser traffic instead of retrying or working around service-protection behavior.
 
@@ -30,6 +30,7 @@ Re-verify endpoints before depending on them because TossInvest web APIs are und
 - [Feed And News APIs](#feed-and-news-apis)
 - [Screener APIs](#screener-apis)
 - [Cert And Status Helpers](#cert-and-status-helpers)
+- [Public Community And Main-Page APIs](#public-community-and-main-page-apis)
 - [Excluded Non-Stock Calls](#excluded-non-stock-calls)
 - [Known Observed Pages](#known-observed-pages)
 
@@ -44,6 +45,7 @@ Endpoint status values are conservative confidence labels, not stability guarant
 | `needs-recheck` | Observed indirectly, feature-flagged, host-sensitive, user-context-sensitive, or otherwise requiring a fresh browser/API check before use. |
 | `observed-drift` | Current public traffic uses or also exposes this endpoint, but the script still uses a safer mirror, older route, or intentionally narrower route. Do not call from scripts until separately reviewed. |
 | `excluded` | Observed but outside this skill's read-only stock-information scope. Do not call from this skill. |
+| `public-social-sensitive` | Public unauthenticated social/community page data. Script only with bounded pagination and sanitized output. |
 
 For duplicated families, the domain section is the source of truth. Cross-reference
 sections should not widen a status or imply that `needs-recheck` or `excluded`
@@ -461,7 +463,7 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Realtime stock ranking | `observed` | GET | `/api/v1/rankings/realtime/stock?size=10` | Ranking widgets |
 | Dashboard intelligences | `observed` | POST | `/api/v1/dashboard/intelligences/all` | Empty observed body |
 | Observed legacy/detail AI signals | `observed` | POST | `/api/v1/dashboard/wts/overview/ai-signals` | Home/detail signal data; not used by `dashboard_ranking.py --kind signals` |
-| Signal details | `observed` | GET | `/api/v1/dashboard/wts/overview/ai-signals/detail?productCode={productCode}&productType=STOCKS` | Per-stock signal detail |
+| Signal details | `script-backed` | GET | `/api/v1/dashboard/wts/overview/ai-signals/detail?productCode={productCode}&productType=STOCKS` | Per-stock signal detail used by `scripts/stock_page.py`; treat text as page copy, not advice |
 | Overview stock signals | `script-backed` | GET | `/api/v1/dashboard/wts/overview/signals?codes={codes}` | Direct 2026-05-29 check returned `stockCode` and `signals[]`; used for the home live-chart `TossInvest AI summary` column |
 | Exchange rates | `script-backed` | GET | `/api/v1/dashboard/wts/overview/exchange-rates` | FX/overview data |
 | Trading info | `observed` | GET | `/api/v1/dashboard/wts/overview/trading-info` | Market overview data |
@@ -678,7 +680,7 @@ Observed from `/feed/recommended` and `/feed/news`. Keep only feed endpoints tha
 | Purpose | Status | Method | URL/path | Params/body and notes |
 |---|---|---:|---|---|
 | Recommended feed posts | `script-backed` | GET | `/api/v3/feed/recommend/posts` | Optional `lastRecommendId`; returned `feeds[]` and `key.lastRecommendId` |
-| Recommended ranking feed posts | `script-backed` | GET | `/api/v4/feed/recommend/ranking-posts` | Optional `lastRecommendId`; feature-flagged replacement for recommended feed |
+| Recommended ranking feed posts | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | Optional `lastRecommendId`; current public `/feed` traffic uses cert-host mirror |
 | Dashboard/news tab feed | `script-backed` | POST | `/api/v1/dashboard/wts/news` | Body `{ "type": "HOT" }` etc.; result includes `type`, `title`, `news[]` |
 | News detail | `script-backed` | GET | `/api/v2/news/{newsId}` | Detail payload for a selected news item |
 
@@ -754,7 +756,9 @@ These endpoints were observed during public page loads but live under `wts-cert-
 
 | Purpose | Status | Method | URL | Sensitive-host note |
 |---|---|---:|---|---|
-| Stock red flags | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/stock-infos/{productCode}/red-flags` | Public page metadata; re-check before scripting |
+| Stock red flags | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/stock-infos/{productCode}/red-flags` | Public page metadata |
+| Product trading status | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/trading/order/{productCode}/trading-status` | Public product status helper observed on stock pages; only this exact read path is allowed |
+| Trading analysis metadata | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/trading/analysis/productCode/{productCode}` | Public page metadata; may return `null` |
 | Overview indicator | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/index?market=kr` | Public dashboard metadata only |
 | Overview indicator v3 | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator?market=kr` | Public dashboard metadata; re-check before scripting |
 | Overview indicator v4 | `observed-drift` | GET | `https://wts-cert-api.tossinvest.com/api/v4/dashboard/wts/overview/indicator` | Public dashboard metadata observed on 2026-06-01 home traffic; not script-backed |
@@ -771,6 +775,44 @@ These endpoints were observed during public page loads but live under `wts-cert-
 
 The `/stocks/{code}/order` bundle also references order prepare/create/correct/cancel, account, orderable amount, and trading mutation APIs. Exclude them from this skill.
 
+## Public Community And Main-Page APIs
+
+Additional web check: 2026-07-08 for `/?focusedProductCode=US20100311002`,
+`/stocks/US20100311002/community`, `/feed/recommended`, and `/feed/news`.
+These routes rendered without login and returned HTTP 200 from public APIs.
+
+Use `scripts/stock_page.py` when the user asks for the public stock main-page
+bundle: resolved product metadata, price details, AI signal detail, and
+sanitized public comments. Use `scripts/community_comments.py` for comments
+alone; it resolves display symbols through `code-or-symbol` before comment lookup.
+
+| Purpose | Status | Method | Path | Params and notes |
+|---|---|---:|---|---|
+| Stock page composite | `script-backed` | mixed | `scripts/stock_page.py` | Uses `code-or-symbol`, price details, AI detail, and sanitized comments |
+| Public stock comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=STOCK`, `subjectId={productCode}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; script input may be a product code or display symbol |
+| Public comment replies | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/comments/{commentId}/replies` | Sanitized reply rows; v1 replies also observed but v2 is preferred |
+| Stock community related board | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/boards/STOCK/{productCode}/related` | Board metadata only |
+| Stock community recommended profiles | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/community/board/{productCode}/recommend-profiles` | Public profile suggestions; strip profile ids, URLs, avatars, and follow flags before display |
+| Community top rankings | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/community/top-rankings/TOP_10_PROFIT_ROSS_AMOUNT` | Public ranking surface; aggregate or sanitize profile payloads |
+| Feed community ranking posts | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | Public `/feed` traffic; optional `lastRecommendId` |
+
+Observed `GET /api/v4/comments` response shape:
+
+- Top-level keys: `results`, `hasNext`, `key`, `totalCount`
+- Page size observed: 11
+- Pagination: pass `lastCommentId={key}` for the next page
+- Comment row keys include `commentId`, `author`, `authorUserProfileId`,
+  `message`, `statistic`, `holding`, `board`, `createdAt`, and `updatedAt`
+
+Sanitization requirements:
+
+- Keep only UI-useful fields such as `commentId`, `authorNickname`, message
+  text, board topic, holding status, created/updated timestamps, and counts.
+- Remove profile ids, avatar/profile URLs, profile descriptions, follower
+  counts, follow/bookmark/my-profile flags, and account-personalized fields.
+- Redact obvious phone, email, and long-number strings from free-form text.
+- Keep pagination bounded; do not bulk harvest public social content.
+
 Observed 2026-06-01 drift and excluded endpoints:
 
 | Endpoint | Status | Reason |
@@ -780,8 +822,8 @@ Observed 2026-06-01 drift and excluded endpoints:
 | `https://wts-info-api.tossinvest.com/api/v2/dashboard/wts/overview/signals` | `observed-drift` | Home traffic also exposes a v2 signals route; `dashboard_ranking.py --kind signals` remains on the verified public v1 helper |
 | `https://wts-api.tossinvest.com/api/v1/exchange/current-quote/for-buy` | `excluded` | `wts-api` exchange quote route observed on exchange-rate page; keep out until exact host/path safety review |
 | `https://wts-api.tossinvest.com/api/v1/exchange/current-quote/for-sell` | `excluded` | Same as above |
-| `https://wts-cert-api.tossinvest.com/api/v1/community/top-rankings/{ranking}` | `excluded` | Community/social ranking surface, outside market-data skill scope |
-| `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | `observed-drift` | Feed page currently calls cert-host mirror; `feed.py` still uses the working info-api route and should not widen cert allowlist without separate review |
+| `https://wts-cert-api.tossinvest.com/api/v1/community/top-rankings/{ranking}` | `public-social-sensitive` | Public community/social ranking surface; only verified ranking ids are allowed and outputs must be sanitized |
+| `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | `script-backed` | Feed page currently calls cert-host mirror; `feed.py --kind recommended-ranking` uses this route |
 
 ## Excluded Non-Stock Calls
 
@@ -789,9 +831,9 @@ Do not collect these as cataloged APIs, even if they appear in browser network t
 
 - Telemetry, Sentry, logging, deployment refresh, images, fonts, and static assets.
 - Login, certificate, authentication, account, balance, holding, transfer, order, orderable-amount, order mutation, and session-storage calls.
-- Order-adjacent status helpers such as `https://wts-cert-api.tossinvest.com/api/v3/trading/order/{productCode}/trading-status`; keep them unscripted unless a future safety review explicitly reclassifies them.
+- Order-adjacent status helpers except the verified public read-only `https://wts-cert-api.tossinvest.com/api/v3/trading/order/{productCode}/trading-status`; keep all mutation, orderability, prepare, create, correct, and cancel routes excluded.
 - Guest bootstrap/upsert, experiment variables, tab/session initialization, and other page bootstrapping calls that do not directly return stock or market information.
-- Following/subscription feeds, personalized interest/reasoning content, comments-only feeds, or account-personalized discovery surfaces.
+- Following/subscription feeds, personalized interest/reasoning content, account-personalized discovery surfaces, or unsanitized raw community/profile payloads.
 
 ## Known Observed Pages
 
@@ -800,6 +842,8 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | Page | Key endpoint groups |
 |---|---|
 | `https://www.tossinvest.com/?focusedProductCode=A000660` | Chart, stock summary, ranking, dashboard signals |
+| `https://www.tossinvest.com/?focusedProductCode=US20100311002` | US stock main-page metadata, price details, public AI detail, sanitized community comments |
+| `https://www.tossinvest.com/stocks/US20100311002/community` | Public stock comments, comment replies, related board, recommended profiles |
 | `https://www.tossinvest.com/stocks/A005930/analytics` | Analytics, financials, dividends, analyst data |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status` | Broker ranking, investor trend, program trading, credit, lending trading, short-selling trend, CFD |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status?contentType=net-buy...` | Same transaction-status APIs; URL query appears to focus a section |
