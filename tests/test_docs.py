@@ -1,5 +1,4 @@
 import hashlib
-import json
 import re
 import unittest
 from pathlib import Path
@@ -32,7 +31,6 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_docs_distinguish_official_openapi_boundary(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        gemini = (ROOT / "GEMINI.md").read_text(encoding="utf-8")
         safety = (ROOT / "references" / "safety-rules.md").read_text(encoding="utf-8")
         boundary = (ROOT / "references" / "official-openapi-boundary.md").read_text(
             encoding="utf-8"
@@ -40,7 +38,6 @@ class DocumentationPromptTests(unittest.TestCase):
 
         for name, text in [
             ("SKILL.md", skill),
-            ("GEMINI.md", gemini),
             ("safety-rules.md", safety),
             ("official-openapi-boundary.md", boundary),
         ]:
@@ -53,10 +50,6 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("공식 Open API", readme)
         self.assertIn("IP 등록", readme)
         self.assertIn("does not require official Open API app setup", skill)
-        self.assertIn(
-            "does not use `openapi.tossinvest.com`",
-            " ".join(gemini.split()),
-        )
         self.assertIn("OAuth credentials", safety)
         self.assertIn("X-Tossinvest-Account", boundary)
         self.assertIn("MARKET_DATA_CHART", boundary)
@@ -122,7 +115,6 @@ class DocumentationPromptTests(unittest.TestCase):
         checked_paths = [
             ROOT / "README.md",
             ROOT / "SKILL.md",
-            ROOT / "GEMINI.md",
             ROOT / "SECURITY.md",
             ROOT / "agents" / "openai.yaml",
             ROOT / "references" / "api-catalog.md",
@@ -217,15 +209,35 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("margin eligibility", text)
         self.assertIn("leverage decisions", text)
 
-    def test_gemini_context_mirrors_financial_and_signal_guards(self):
-        text = (ROOT / "GEMINI.md").read_text(encoding="utf-8")
-        self.assertIn("UI-provided home AI-summary label fields", text)
-        self.assertIn("not buy/sell signals", text)
-        self.assertIn("public transaction-status page datasets only", text)
-        self.assertIn("credit|lending-trading|short-selling-trend|cfd", text)
-        self.assertIn(
-            "not account limits, orderability, leverage decisions, or trading advice", text
-        )
+    def test_antigravity_distribution_uses_agent_skills_layout(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        checklist = (ROOT / ".github" / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
+        ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+
+        self.assertFalse((ROOT / ("GE" + "MINI.md")).exists())
+        self.assertFalse((ROOT / ("ge" + "mini-extension.json")).exists())
+        self.assertIn("Antigravity CLI", readme)
+        self.assertIn(".agents/skills/tossinvest-web-api/SKILL.md", readme)
+        self.assertIn("agy", readme)
+        self.assertIn("/skills", readme)
+
+        for text in [readme, checklist, ci]:
+            with self.subTest(surface=text[:20]):
+                self.assertIn(".agents/skills/tossinvest-web-api", text)
+
+        legacy_terms = [
+            "Ge" + "mini CLI",
+            "ge" + "mini extensions",
+            "GE" + "MINI.md",
+            "ge" + "mini-extension.json",
+        ]
+        for path, text in [
+            (ROOT / "README.md", readme),
+            (ROOT / ".github" / "RELEASE_CHECKLIST.md", checklist),
+        ]:
+            for term in legacy_terms:
+                with self.subTest(path=path.relative_to(ROOT), term=term):
+                    self.assertNotIn(term, text)
 
     def test_skill_body_has_positive_when_to_use_guidance(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -434,7 +446,6 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_cookbook_documents_us_product_source_code_caution(self):
         checked_paths = [
             ROOT / "SKILL.md",
-            ROOT / "GEMINI.md",
             ROOT / "references" / "script-cookbook.md",
             ROOT / "references" / "api-catalog.md",
         ]
@@ -451,21 +462,10 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("SPY", api_catalog)
         self.assertIn("HTTP 400", api_catalog)
 
-    def test_gemini_extension_metadata_is_distributable(self):
-        config = json.loads((ROOT / "gemini-extension.json").read_text(encoding="utf-8"))
-        self.assertEqual(config["name"], "tossinvest-web-api")
-        self.assertEqual(config["contextFileName"], "GEMINI.md")
-        self.assertRegex(config["version"], r"^\d+\.\d+\.\d+$")
-
-        text = (ROOT / "GEMINI.md").read_text(encoding="utf-8")
-        self.assertIn("TossInvest", text)
-        self.assertIn("scripts/stock_chart.py", text)
-        self.assertIn("SPX.CBI", text)
-
     def test_release_checklist_tracks_versioned_release_metadata(self):
         checklist = (ROOT / ".github" / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
-        self.assertIn("gemini-extension.json", checklist)
-        self.assertIn("matching Git tag", checklist)
+        self.assertIn(".agents/skills/tossinvest-web-api", checklist)
+        self.assertIn("release tag", checklist)
         self.assertIn("GitHub release", checklist)
 
     def test_gitignore_covers_python_build_and_local_artifacts(self):

@@ -42,7 +42,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          skill_dir="$(mktemp -d)/tossinvest-web-api"
+          workspace="$(mktemp -d)"
+          skill_dir="$workspace/.agents/skills/tossinvest-web-api"
           mkdir -p "$skill_dir"
           cp -R SKILL.md README.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
           test -f "$skill_dir/SKILL.md"

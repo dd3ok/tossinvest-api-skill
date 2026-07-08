@@ -10,6 +10,8 @@ skill from GitHub.
   not implementation steps.
 - `agents/openai.yaml` has localized display metadata consistent with `SKILL.md`
   and the core lookup workflow.
+- Antigravity CLI installation examples place the skill at
+  `.agents/skills/tossinvest-web-api/SKILL.md`.
 - Public prompt examples use natural TossInvest/토스증권 language and do not
   depend on `$...` skill selectors or aliases.
 
@@ -41,7 +43,8 @@ for f in examples/filters/*.json; do python3 -m json.tool "$f" >/dev/null || exi
 Run the skill layout smoke test:
 
 ```bash
-skill_dir="$(mktemp -d)/tossinvest-web-api"
+workspace="$(mktemp -d)"
+skill_dir="$workspace/.agents/skills/tossinvest-web-api"
 mkdir -p "$skill_dir"
 cp -R SKILL.md README.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
 test -f "$skill_dir/SKILL.md"
@@ -64,7 +67,7 @@ python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
 - CI is green on the target branch.
 - No generated caches, virtualenvs, build outputs, credentials, HAR files, or
   local result files are staged.
-- If `gemini-extension.json` version changes, create a matching Git tag and
-  GitHub release or document why the version is intentionally unreleased.
+- The release tag and GitHub release describe the installable skill contents and
+  mention the `.agents/skills/tossinvest-web-api` Antigravity layout.
 - Release notes mention that TossInvest web APIs are unofficial, undocumented,
   and subject to change.

@@ -83,21 +83,25 @@ git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git .claude/sk
 
 지원 범위에 맞는 TossInvest/토스증권 공개 주식·시장 데이터 요청이라면 Claude가 이 스킬을 사용할 수 있습니다.
 
-### Gemini CLI
+### Antigravity CLI
 
-Gemini CLI 확장으로 설치할 수 있도록 `gemini-extension.json`과 `GEMINI.md`를 포함했습니다. Gemini CLI는 설치한 확장을 복사하므로, GitHub나 로컬 경로에서 설치한 뒤 변경사항을 반영하려면 `gemini extensions update`가 필요합니다.
+Antigravity CLI는 프로젝트의 `.agents/skills/<skill-name>/SKILL.md` 레이아웃에서 로컬 Agent Skill을 탐색합니다. 이 저장소는 `SKILL.md`, `scripts/`, `references/`를 포함한 스킬 루트이므로 프로젝트별 스킬 디렉터리에 클론하거나 복사해 사용하세요.
 
-현재 Gemini 배포는 확장 컨텍스트(extension-level context, `gemini-extension.json`의 `contextFileName: GEMINI.md`)를 제공합니다. Gemini CLI의 온디맨드 에이전트 스킬(`skills/<name>/SKILL.md`)은 현재 포함하지 않습니다.
-
-```bash
-gemini extensions install https://github.com/dd3ok/tossinvest-api-skill.git
-```
-
-개발 중인 로컬 체크아웃을 바로 반영하려면 링크 모드를 사용합니다.
+프로젝트 설치:
 
 ```bash
-gemini extensions link /path/to/tossinvest-api-skill
+mkdir -p .agents/skills
+git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git .agents/skills/tossinvest-web-api
 ```
+
+개발 중인 로컬 체크아웃을 바로 반영하려면 심볼릭 링크로 노출합니다.
+
+```bash
+mkdir -p .agents/skills
+ln -sfn /path/to/tossinvest-api-skill .agents/skills/tossinvest-web-api
+```
+
+최종 파일 위치는 `.agents/skills/tossinvest-web-api/SKILL.md`가 되어야 합니다. Antigravity CLI를 `agy`로 실행한 뒤 `/skills`에서 `tossinvest-web-api`가 보이는지 확인하세요.
 
 ### 로컬 스크립트만 실행
 
@@ -224,8 +228,6 @@ tossinvest-api-skill/
 ├── examples/
 │   └── filters/
 ├── agents/
-├── gemini-extension.json
-├── GEMINI.md
 ├── tests/
 ├── SECURITY.md
 ├── LICENSE
@@ -239,7 +241,6 @@ tossinvest-api-skill/
 | `references/` | API 카탈로그, 네트워크 캡처 절차, 응답 노트, 안전 규칙, 스모크 테스트 프롬프트 |
 | `examples/filters/` | 재사용 가능한 스크리너 필터 JSON 예시 |
 | `agents/openai.yaml` | Codex/OpenAI 계열 도구에서 노출할 표시 메타데이터 |
-| `gemini-extension.json`, `GEMINI.md` | Gemini CLI 확장 컨텍스트 설치를 위한 메타데이터와 컨텍스트 파일 |
 | `tests/` | 스크립트 헬퍼와 엔드포인트 경로 생성 로직을 검증하는 유지보수자·CI용 테스트 |
 | `SECURITY.md` | 민감한 엔드포인트, 개인정보, 자격 증명 처리 관련 제보 절차 |
 | `LICENSE`, `LICENSE.txt` | MIT 라이선스 본문 |
