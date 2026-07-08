@@ -299,18 +299,12 @@ class TossInvestApiTests(unittest.TestCase):
 
     def test_cert_allowlist_allows_verified_public_social_and_status_reads(self):
         allowed_paths = [
-            (
-                "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
-                "&commentSortType=POPULAR"
-            ),
+            ("/api/v4/comments?subjectType=STOCK&subjectId=US20100311002&commentSortType=POPULAR"),
             (
                 "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
                 "&commentSortType=RECENT&lastCommentId=287893608"
             ),
-            (
-                "/api/v4/comments?subjectType=LOUNGE&subjectId=LOUNGE_123"
-                "&commentSortType=RECENT"
-            ),
+            ("/api/v4/comments?subjectType=LOUNGE&subjectId=LOUNGE_123&commentSortType=RECENT"),
             "/api/v2/comments/287893106/replies",
             "/api/v1/comments/287893106/replies",
             "/api/v4/feed/recommend/ranking-posts",
@@ -327,22 +321,13 @@ class TossInvestApiTests(unittest.TestCase):
 
     def test_cert_public_social_allowlist_rejects_unverified_writes_and_queries(self):
         rejected_paths = [
-            (
-                "/api/v4/comments?subjectType=ACCOUNT&subjectId=123"
-                "&commentSortType=POPULAR"
-            ),
+            ("/api/v4/comments?subjectType=ACCOUNT&subjectId=123&commentSortType=POPULAR"),
             (
                 "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
                 "&commentSortType=FOLLOWING"
             ),
-            (
-                "/api/v4/comments?subjectType=STOCK&subjectId=LOUNGE_123"
-                "&commentSortType=POPULAR"
-            ),
-            (
-                "/api/v4/comments?subjectType=LOUNGE&subjectId=US20100311002"
-                "&commentSortType=POPULAR"
-            ),
+            ("/api/v4/comments?subjectType=STOCK&subjectId=LOUNGE_123&commentSortType=POPULAR"),
+            ("/api/v4/comments?subjectType=LOUNGE&subjectId=US20100311002&commentSortType=POPULAR"),
             (
                 "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
                 "&commentSortType=POPULAR&accountNo=123"

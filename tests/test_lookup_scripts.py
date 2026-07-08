@@ -968,10 +968,7 @@ class CommunityCommentsScriptTests(unittest.TestCase):
     def test_build_stock_comments_path_uses_public_stock_query(self):
         self.assertEqual(
             community_comments.build_stock_comments_path("US20100311002", "popular", None),
-            (
-                "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
-                "&commentSortType=POPULAR"
-            ),
+            ("/api/v4/comments?subjectType=STOCK&subjectId=US20100311002&commentSortType=POPULAR"),
         )
         self.assertEqual(
             community_comments.build_stock_comments_path("US20100311002", "recent", 287893608),
@@ -1092,8 +1089,7 @@ class CommunityCommentsScriptTests(unittest.TestCase):
             if path == "/api/v2/stock-infos/code-or-symbol/NVDA":
                 return {"code": "US19990122001", "symbol": "NVDA"}
             if path == (
-                "/api/v4/comments?subjectType=STOCK&subjectId=US19990122001"
-                "&commentSortType=POPULAR"
+                "/api/v4/comments?subjectType=STOCK&subjectId=US19990122001&commentSortType=POPULAR"
             ):
                 return {
                     "results": [{"commentId": 1, "author": {"nickname": "nvidia holder"}}],

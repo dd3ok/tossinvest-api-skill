@@ -46,7 +46,9 @@ def build_comment_replies_path(comment_id: str | int) -> str:
 def validate_product_code(code: str) -> str:
     value = code.strip().upper()
     if not _PRODUCT_CODE_RE.fullmatch(value):
-        raise ValueError("product code must be 2-48 uppercase letters, numbers, dots, underscores, or hyphens")
+        raise ValueError(
+            "product code must be 2-48 uppercase letters, numbers, dots, underscores, or hyphens"
+        )
     return value
 
 
@@ -137,7 +139,9 @@ def fetch_stock_comments(
             base_url=CERT_BASE_URL,
         )
         if not isinstance(result, dict):
-            raise RuntimeError("Unexpected TossInvest response: comments result is not a dictionary")
+            raise RuntimeError(
+                "Unexpected TossInvest response: comments result is not a dictionary"
+            )
         rows = result.get("results")
         if not isinstance(rows, list):
             raise RuntimeError("Unexpected TossInvest response: comments results is not a list")
@@ -145,7 +149,9 @@ def fetch_stock_comments(
         truncated_mid_page = False
         for row_index, row in enumerate(rows):
             if not isinstance(row, dict):
-                raise RuntimeError("Unexpected TossInvest response: comment row is not a dictionary")
+                raise RuntimeError(
+                    "Unexpected TossInvest response: comment row is not a dictionary"
+                )
             sanitized = sanitize_comment(row)
             if include_replies and sanitized.get("commentId") is not None:
                 sanitized["replies"] = fetch_comment_replies(sanitized["commentId"])
@@ -199,7 +205,12 @@ def _redact_text(value: Any) -> Any:
 def _summarize_media(value: Any) -> dict[str, Any]:
     if not isinstance(value, list):
         return {"count": 1}
-    return {"count": len(value), "types": sorted({str(item.get("type")) for item in value if isinstance(item, dict) and item.get("type")})}
+    return {
+        "count": len(value),
+        "types": sorted(
+            {str(item.get("type")) for item in value if isinstance(item, dict) and item.get("type")}
+        ),
+    }
 
 
 def _drop_none(value: Any) -> Any:
@@ -218,7 +229,9 @@ def main() -> int:
     parser.add_argument("--sort", choices=sorted(COMMENT_SORTS), default="popular")
     parser.add_argument("--pages", type=int, default=1, help="Maximum comment pages to fetch")
     parser.add_argument("--limit", type=int, default=10, help="Maximum sanitized comments to emit")
-    parser.add_argument("--include-replies", action="store_true", help="Fetch replies for returned comments")
+    parser.add_argument(
+        "--include-replies", action="store_true", help="Fetch replies for returned comments"
+    )
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()

@@ -318,7 +318,9 @@ def _validate_public_cert_query(request_path: str, pairs: list[tuple[str, str]])
                 "Blocked TossInvest endpoint: public comments require subjectType, subjectId, and commentSortType"
             )
         if params["subjectType"] not in {"STOCK", "LOUNGE"}:
-            raise RuntimeError("Blocked TossInvest endpoint: unsupported public comment subjectType")
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: unsupported public comment subjectType"
+            )
         subject_type = params["subjectType"]
         subject_id = params["subjectId"]
         if subject_type == "STOCK" and (
@@ -330,7 +332,9 @@ def _validate_public_cert_query(request_path: str, pairs: list[tuple[str, str]])
             raise RuntimeError("Blocked TossInvest endpoint: unsupported public comment subjectId")
         if params["commentSortType"] not in {"POPULAR", "RECENT"}:
             raise RuntimeError("Blocked TossInvest endpoint: unsupported public commentSortType")
-        if "lastCommentId" in params and not re.fullmatch(_DIGIT_ID_PATTERN, params["lastCommentId"]):
+        if "lastCommentId" in params and not re.fullmatch(
+            _DIGIT_ID_PATTERN, params["lastCommentId"]
+        ):
             raise RuntimeError("Blocked TossInvest endpoint: lastCommentId must contain digits")
         return
 

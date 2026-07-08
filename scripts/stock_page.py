@@ -87,7 +87,9 @@ def main() -> int:
         action="store_true",
         help="Skip sanitized public community comments",
     )
-    parser.add_argument("--comment-sort", choices=sorted(community_comments.COMMENT_SORTS), default="popular")
+    parser.add_argument(
+        "--comment-sort", choices=sorted(community_comments.COMMENT_SORTS), default="popular"
+    )
     parser.add_argument("--comment-limit", type=int, default=5)
     parser.add_argument("--comment-pages", type=int, default=1)
     parser.add_argument("--include-replies", action="store_true")
