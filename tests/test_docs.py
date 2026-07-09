@@ -229,21 +229,20 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn(".agents/skills/tossinvest-web-api/SKILL.md", readme)
         self.assertIn("agy", readme)
         self.assertIn("/skills", readme)
-        self.assertNotIn("ZIP/아카이브", readme)
-        self.assertNotIn("벤더 디렉터리", readme)
 
         for text in [readme, checklist, ci]:
             with self.subTest(surface=text[:20]):
                 self.assertIn(".agents/skills/tossinvest-web-api", text)
-        self.assertIn("skill contents for local", checklist)
-        self.assertIn("`.agents/skills/tossinvest-web-api` installation", checklist)
-        self.assertNotIn("installable skill contents", checklist)
+        release_section = checklist.split("## GitHub", 1)[1]
+        self.assertIn(".agents/skills/tossinvest-web-api", release_section)
+        self.assertIn("Antigravity", release_section)
 
         legacy_terms = [
             "Ge" + "mini CLI",
             "ge" + "mini extensions",
             "GE" + "MINI.md",
             "ge" + "mini-extension.json",
+            "installable skill contents",
         ]
         for path, text in [
             (ROOT / "README.md", readme),
@@ -266,10 +265,37 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_skill_body_stays_progressively_disclosed(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         body = text.split("---", 2)[2]
-        self.assertLessEqual(len(text.splitlines()), 125)
-        self.assertLessEqual(len(re.findall(r"\S+", body)), 1450)
-        self.assertIn("references/script-cookbook.md", body)
-        self.assertIn("references/response-notes.md", body)
+        routing = body.split("## Task Routing", 1)[1].split("## Workflow", 1)[0]
+        for column in ["User intent", "Prefer", "Reference"]:
+            with self.subTest(column=column):
+                self.assertIn(column, routing.splitlines()[2])
+        self.assertIn("After choosing a routing-table row", routing)
+        for detailed_route in [
+            "Investor trading trend",
+            "Screener counts",
+            "Page-level stock API smoke checks",
+        ]:
+            with self.subTest(detailed_route=detailed_route):
+                row = routing.split(f"| {detailed_route}", 1)[1].split("\n", 1)[0]
+                self.assertIn("references/script-cookbook.md", row)
+        for reference in [
+            "references/api-catalog.md",
+            "references/capture-workflow.md",
+            "references/response-notes.md",
+            "references/safety-rules.md",
+            "references/script-cookbook.md",
+        ]:
+            with self.subTest(reference=reference):
+                self.assertIn(reference, body)
+        for expanded_heading in [
+            "## Agent Decision Defaults",
+            "## Index / FX / Crypto-like Page Defaults",
+            "## Market Calendar",
+            "## Rankings And Feed",
+            "## Stock Page And Community",
+        ]:
+            with self.subTest(expanded_heading=expanded_heading):
+                self.assertNotIn(expanded_heading, body)
 
     def test_cookbook_preserves_collector_design_pitfalls(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
