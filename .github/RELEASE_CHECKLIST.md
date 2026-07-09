@@ -57,8 +57,9 @@ python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
 
 - README first screen explains what the skill does, what it does not do, and the
   canonical trigger.
-- `references/api-catalog.md` status labels remain conservative:
-  `script-backed`, `observed`, `needs-recheck`, or `excluded`.
+- `references/api-catalog.md` status labels remain conservative; keep its
+  Verification Status table authoritative (`script-backed`, `observed`,
+  `observed-drift`, `needs-recheck`, `excluded`, `public-social-sensitive`).
 - `references/eval-prompts.md` covers lookup, discovery, and refusal scenarios.
 - `SECURITY.md` points sensitive reports to private vulnerability reporting.
 
@@ -67,7 +68,8 @@ python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
 - CI is green on the target branch.
 - No generated caches, virtualenvs, build outputs, credentials, HAR files, or
   local result files are staged.
-- The release tag and GitHub release describe the installable skill contents and
-  mention the `.agents/skills/tossinvest-web-api` Antigravity layout.
+- The release tag and GitHub release describe the skill contents for local
+  `.agents/skills/tossinvest-web-api` installation and mention the Antigravity
+  layout.
 - Release notes mention that TossInvest web APIs are unofficial, undocumented,
   and subject to change.

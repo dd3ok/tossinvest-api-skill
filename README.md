@@ -23,7 +23,7 @@
 - KOSPI 같은 지수, 환율 차트, 환율 위젯, 채권·원자재 지표
 - 증시 캘린더, 경제지표 일정, 실적 발표 일정, 국내·해외 캘린더 탭
 - 국내·미국 실시간 차트 top100, 투자자 매매 동향, 브로커 순위, 스크리너 조건 검색
-- 공개 주식 메인 페이지 AI 상세 내용과 sanitize된 공개 커뮤니티 댓글·답글
+- 공개 주식 메인 페이지 AI 상세 내용과 정제된 공개 커뮤니티 댓글·답글
 
 설치 후에는 TossInvest 또는 토스증권을 언급한 자연어 요청으로 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회할 수 있습니다.
 
@@ -55,13 +55,13 @@ mkdir -p "$CODEX_SKILLS_DIR"
 ln -sfn /path/to/tossinvest-api-skill "$CODEX_SKILLS_DIR/tossinvest-web-api"
 ```
 
-특정 저장소에서만 쓰고 싶다면 이 저장소를 아래 위치에 복사하거나 벤더 디렉터리처럼 포함하세요.
+특정 저장소에서만 쓰고 싶다면 이 저장소를 아래 위치에 클론하거나 복사하세요.
 
 ```text
 .agents/skills/tossinvest-web-api/
 ```
 
-설치 디렉터리명은 `SKILL.md`의 `name: tossinvest-web-api`와 맞추는 것이 가장 호환성이 좋습니다. AgentSkills의 strict validator는 스킬 `name`과 부모 디렉터리명 일치를 검사하므로, 저장소 루트를 그대로 쓰더라도 최종 스킬 루트는 `tossinvest-web-api`로 두세요. ZIP/아카이브로 배포하거나 벤더 디렉터리로 포함할 때도 같은 이름을 유지하세요.
+스킬 루트 디렉터리명은 `SKILL.md`의 `name: tossinvest-web-api`와 맞추세요. 일부 validator는 스킬 이름과 부모 디렉터리명 일치를 검사하므로, 저장소 루트를 그대로 쓰더라도 최종 로컬 스킬 경로는 `.agents/skills/tossinvest-web-api`로 유지하세요.
 
 ### Claude Code
 
