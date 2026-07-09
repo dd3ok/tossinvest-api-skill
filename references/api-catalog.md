@@ -11,7 +11,7 @@ Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
 
-This catalog is for read-only public TossInvest workflows. Include endpoints only when they help answer stock, market, index, theme, financial, filing, news, ranking, investor-trend, screener, or public community questions visible without login. Do not collect page bootstrapping, telemetry, login/certificate, guest/session, account, order, following/subscription, or personalization endpoints as cataloged APIs.
+This catalog is for read-only public TossInvest workflows. Include endpoints only when they help answer stock, market, index, calendar, theme, financial, filing, news, ranking, investor-trend, screener, or public community questions visible without login. Do not collect page bootstrapping, telemetry, login/certificate, guest/session, account, order, following/subscription, or personalization endpoints as cataloged APIs.
 
 Re-verify endpoints before depending on them because TossInvest web APIs are undocumented and may change without notice. Keep checks small, sequential, and user-initiated. If TossInvest returns access-denied, throttling, challenge, login, or otherwise unexpected responses, stop and re-check the endpoint in current public browser traffic instead of retrying or working around service-protection behavior.
 
@@ -813,7 +813,7 @@ Sanitization requirements:
 - Redact obvious phone, email, and long-number strings from free-form text.
 - Keep pagination bounded; do not bulk harvest public social content.
 
-Observed 2026-06-01 drift and excluded endpoints:
+Observed drift, excluded, and sensitive public-social endpoints:
 
 | Endpoint | Status | Reason |
 |---|---|---|
@@ -851,7 +851,7 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/?ranking-type=trending_category` | TICS rankings and TICS detail modal APIs |
 | `https://www.tossinvest.com/?ranking-type=domestic_investor_trend` | Investor buy/sell rankings from dashboard ranking APIs |
 | `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_amount` | Live-chart top100 ranking via overview ranking API |
-| `https://www.tossinvest.com/?market=us&live-chart=biggest_total_amount` | Same live-chart API with `tag=us`; user-supplied typo `ttps://` should be corrected to `https://` |
+| `https://www.tossinvest.com/?market=us&live-chart=biggest_total_amount` | Same live-chart API with `tag=us` |
 | `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_volume&duration=realtime` | Live-chart top100 ranking via overview ranking API |
 | `https://www.tossinvest.com/?market=us&live-chart=biggest_total_volume&duration=realtime` | Same live-chart API with `tag=us` |
 | `https://www.tossinvest.com/?market=kr&live-chart=heavy_soar&duration=1d` | Live-chart top100 ranking via overview ranking API |

@@ -200,14 +200,23 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("Requires Python 3.10+ and network access.", body)
 
     def test_skill_routes_disambiguate_financial_and_signal_labels(self):
-        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("UI-provided home AI-summary label fields", text)
-        self.assertIn("Do not interpret these labels as buy/sell signals", text)
-        self.assertIn("public transaction-status page datasets only", text)
-        self.assertIn("`scripts/trading_trend.py --type credit`", text)
-        self.assertIn("account credit limits", text)
-        self.assertIn("margin eligibility", text)
-        self.assertIn("leverage decisions", text)
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        self.assertIn("Home rankings, top100", skill)
+        self.assertIn("Investor trading trend", skill)
+        self.assertIn("references/script-cookbook.md", skill)
+        self.assertIn("public transaction-status credit/lending/short-selling/CFD tabs", skill)
+        self.assertIn("not account credit/margin", skill)
+        for detailed in [
+            "UI-provided home AI-summary label fields",
+            "not interpret these labels as buy/sell signals",
+            "public transaction-status page datasets only",
+            "account credit limits",
+            "margin eligibility",
+            "leverage decisions",
+        ]:
+            with self.subTest(detailed=detailed):
+                self.assertIn(detailed, cookbook)
 
     def test_antigravity_distribution_uses_agent_skills_layout(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -224,6 +233,9 @@ class DocumentationPromptTests(unittest.TestCase):
         for text in [readme, checklist, ci]:
             with self.subTest(surface=text[:20]):
                 self.assertIn(".agents/skills/tossinvest-web-api", text)
+        release_section = checklist.split("## GitHub", 1)[1]
+        self.assertIn(".agents/skills/tossinvest-web-api", release_section)
+        self.assertIn("Antigravity", release_section)
 
         legacy_terms = [
             "Ge" + "mini CLI",
@@ -249,15 +261,74 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("market calendars", section)
         self.assertIn("read-only browser endpoint", section)
 
-    def test_skill_routes_calendar_without_personalized_filters(self):
+    def test_skill_body_stays_progressively_disclosed(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("Market calendar, economic indicators, earnings dates", text)
-        self.assertIn("`scripts/calendar.py`", text)
-        self.assertIn("public `/calendar` page datasets", text)
-        self.assertIn("--kind economic-detail", text)
-        self.assertIn("--kind index-events", text)
-        self.assertIn("do not treat these calendar labels as investment advice", text)
-        self.assertIn("Do not use holding or watchlist earnings filters", text)
+        body = text.split("---", 2)[2]
+        routing = body.split("## Task Routing", 1)[1].split("## Workflow", 1)[0]
+        header = next(line for line in routing.splitlines() if line.startswith("| User intent |"))
+        for column in ["User intent", "Prefer", "Reference"]:
+            with self.subTest(column=column):
+                self.assertIn(column, header)
+        self.assertIn("After choosing a routing-table row", routing)
+        for detailed_route in [
+            "Investor trading trend",
+            "Screener counts",
+            "Page-level stock API smoke checks",
+        ]:
+            with self.subTest(detailed_route=detailed_route):
+                row = routing.split(f"| {detailed_route}", 1)[1].split("\n", 1)[0]
+                self.assertIn("references/script-cookbook.md", row)
+        for reference in [
+            "references/api-catalog.md",
+            "references/capture-workflow.md",
+            "references/response-notes.md",
+            "references/safety-rules.md",
+            "references/script-cookbook.md",
+        ]:
+            with self.subTest(reference=reference):
+                self.assertIn(reference, body)
+        for expanded_heading in [
+            "## Agent Decision Defaults",
+            "## Index / FX / Crypto-like Page Defaults",
+            "## Market Calendar",
+            "## Rankings And Feed",
+            "## Stock Page And Community",
+        ]:
+            with self.subTest(expanded_heading=expanded_heading):
+                self.assertNotIn(expanded_heading, body)
+
+    def test_cookbook_preserves_collector_design_pitfalls(self):
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        self.assertIn("collector design pitfalls", skill)
+        for detailed in [
+            "Keep product-code validation endpoint-specific",
+            "KR domestic/investor flow",
+            "separate KR `A...` target list",
+            "broad price-details targets",
+        ]:
+            with self.subTest(detailed=detailed):
+                self.assertIn(detailed, cookbook)
+
+    def test_skill_routes_calendar_without_personalized_filters(self):
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        self.assertIn("Market calendar, economic indicators, earnings dates", skill)
+        self.assertIn("`scripts/calendar.py`", skill)
+        for detailed in [
+            "public `/calendar` page datasets",
+            "--kind economic-detail",
+            "--kind index-events",
+            "Do not use holding or watchlist earnings filters",
+        ]:
+            with self.subTest(detailed=detailed):
+                self.assertIn(detailed, cookbook)
+
+    def test_skill_routes_screener_to_cookbook_and_filter_examples(self):
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        section = text.split("| Screener counts", 1)[1].split("\n", 1)[0]
+        self.assertIn("references/script-cookbook.md", section)
+        self.assertIn("examples/filters", section)
 
     def test_calendar_catalog_and_cookbook_cover_detail_and_index_subset(self):
         catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
@@ -303,7 +374,6 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("scripts/stock_page.py", skill)
         self.assertIn("scripts/community_comments.py", skill)
         self.assertIn("sanitized public community comments", skill)
-        self.assertIn("profile ids, avatar URLs, follow/bookmark flags", skill)
         self.assertIn("/api/v4/comments", catalog)
         self.assertIn("lastCommentId", catalog)
         self.assertIn("/api/v2/comments/{commentId}/replies", catalog)
@@ -314,6 +384,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("authorNickname", notes)
         self.assertIn("redacted-phone", notes)
         self.assertIn("scripts/stock_page.py --code SOXL", cookbook)
+        self.assertIn("profile ids, avatar URLs, follow/bookmark flags", cookbook)
         self.assertIn("scripts/community_comments.py --code US20100311002", cookbook)
         self.assertIn("왜 떨어졌을까", evals)
 
@@ -354,12 +425,25 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("changeType", notes)
         self.assertIn("--net-buying-range month", cookbook)
         self.assertIn("--fx-range 1y --fx-step week:1", cookbook)
-        self.assertIn("## Index / FX / Crypto-like Page Defaults", skill)
-        self.assertIn("Do not use `1y/day:1`", skill)
+        self.assertNotIn("## Index / FX / Crypto-like Page Defaults", skill)
         self.assertIn("## Agent Decision Defaults", cookbook)
         self.assertIn("range=day, quarter", cookbook)
+        self.assertIn("1y/day:1", cookbook)
+        self.assertIn("2026-06-08 direct check returned HTTP 400", cookbook)
+        self.assertNotIn("user-supplied typo", catalog)
+        self.assertIn("Same live-chart API with `tag=us`", catalog)
         self.assertIn("FX 1y/day:1", evals)
         self.assertIn("--range 1w --step min:10 --include-crypto-prices", evals)
+
+    def test_capture_and_catalog_scope_include_current_public_surfaces(self):
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        capture = (ROOT / "references" / "capture-workflow.md").read_text(encoding="utf-8")
+        for text in [catalog, capture]:
+            with self.subTest(surface=text[:20]):
+                self.assertIn("calendar", text)
+                self.assertIn("public community", text)
+        self.assertIn("Observed drift, excluded, and sensitive public-social endpoints", catalog)
+        self.assertNotIn("Observed 2026-06-01 drift and excluded endpoints", catalog)
 
     def test_endpoint_drift_guidance_is_explicit_and_routed(self):
         skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -401,6 +485,8 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("description starts with `Use`", checklist)
         self.assertIn("sensitive query/body keys", checklist)
         self.assertIn("exact allowlist", checklist)
+        self.assertIn("observed-drift", checklist)
+        self.assertIn("public-social-sensitive", checklist)
         self.assertIn("natural TossInvest/토스증권 language", checklist)
         self.assertIn("do not", checklist)
         self.assertIn("depend on `$...` skill selectors or aliases", checklist)
@@ -422,6 +508,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("scripts/page_api_check.py --code A005930", text)
         self.assertIn("order,analytics,news,transaction-status", text)
         self.assertIn("does not call order placement", text)
+        self.assertEqual(" ".join(text.split()).count("does not call order placement"), 1)
         self.assertIn("order page read-only smoke", text)
         self.assertIn("order page read-only smoke", skill_text)
 
