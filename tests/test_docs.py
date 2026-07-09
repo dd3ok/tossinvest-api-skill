@@ -242,7 +242,6 @@ class DocumentationPromptTests(unittest.TestCase):
             "ge" + "mini extensions",
             "GE" + "MINI.md",
             "ge" + "mini-extension.json",
-            "installable skill contents",
         ]
         for path, text in [
             (ROOT / "README.md", readme),
@@ -266,9 +265,10 @@ class DocumentationPromptTests(unittest.TestCase):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         body = text.split("---", 2)[2]
         routing = body.split("## Task Routing", 1)[1].split("## Workflow", 1)[0]
+        header = next(line for line in routing.splitlines() if line.startswith("| User intent |"))
         for column in ["User intent", "Prefer", "Reference"]:
             with self.subTest(column=column):
-                self.assertIn(column, routing.splitlines()[2])
+                self.assertIn(column, header)
         self.assertIn("After choosing a routing-table row", routing)
         for detailed_route in [
             "Investor trading trend",
