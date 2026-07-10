@@ -124,6 +124,7 @@ class DocumentationPromptTests(unittest.TestCase):
             ROOT / "references" / "response-notes.md",
             ROOT / "references" / "script-cookbook.md",
             ROOT / "references" / "safety-rules.md",
+            ROOT / "references" / "websocket-observations.md",
             ROOT / ".github" / "RELEASE_CHECKLIST.md",
         ]
         for path in checked_paths:
@@ -198,6 +199,66 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertNotIn("\ncompatibility:", frontmatter)
         body = text.split("---", 2)[2]
         self.assertIn("Requires Python 3.10+ and network access.", body)
+
+    def test_websocket_reference_documents_guest_boundary_and_exclusions(self):
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        websocket = (ROOT / "references" / "websocket-observations.md").read_text(encoding="utf-8")
+        safety = (ROOT / "references" / "safety-rules.md").read_text(encoding="utf-8")
+        capture = (ROOT / "references" / "capture-workflow.md").read_text(encoding="utf-8")
+        eval_prompts = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")
+
+        self.assertIn("references/websocket-observations.md", skill)
+        self.assertIn("observed anonymous-page real-time WebSocket price behavior", skill)
+        for expected in [
+            "공개 HTTP 현재가·호가 스냅샷·장중 체결 틱 조회",
+            "로그인하지 않은 공개 페이지에 표시되는 실시간 체결가 갱신",
+            "임시 게스트 연결 메타데이터",
+            "독립 WebSocket 클라이언트 제공·구현은 지원하지 않습니다",
+            "WebSocket 매수·매도 호가 구독과 모든 주문·계좌 작업도 제외됩니다",
+            "[WebSocket 관찰 노트](references/websocket-observations.md)",
+        ]:
+            with self.subTest(readme_expected=expected):
+                self.assertIn(expected, readme)
+
+        for expected in [
+            "Status: observed, unofficial, unstable, and not script-backed.",
+            "anonymous page access is not credential-free access",
+            "ephemeral guest connection metadata",
+            "wss://realtime-socket.tossinvest.com/ws",
+            "v12.stomp",
+            "UTK",
+            "device-id",
+            "connection-id",
+            "Web/wts",
+            "/topic/v1/kr/stock/trade/{productCode}",
+            "/topic/v1/{kr|us}/stock/index/{productCode}",
+            "/topic/v1/crypto/vwap/{productCode}",
+            "/bidoffer/{productCode}",
+            "WebSocket bid/offer order-book subscriptions",
+            "Exchange-rate widgets use HTTP",
+            "SharedWorker",
+        ]:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, websocket)
+
+        for name, text in [
+            ("websocket-observations.md", websocket),
+            ("safety-rules.md", safety),
+            ("capture-workflow.md", capture),
+        ]:
+            with self.subTest(document=name):
+                self.assertIn("STOMP", text)
+                self.assertRegex(text.lower(), r"store|저장")
+
+        self.assertIn("store", skill)
+
+        self.assertIn("raw WebSocket frames", capture)
+        self.assertIn("non-actionable `excluded` or `defined-unverified`", capture)
+        self.assertIn("never inspect, capture, or reproduce the WebSocket guest bootstrap", skill)
+        self.assertIn("automatic WebSocket reconnection loops", safety)
+        self.assertIn("로그인하지 않고 토스증권 A005930", eval_prompts)
+        self.assertIn("내 UTK를 줄 테니", eval_prompts)
 
     def test_skill_routes_disambiguate_financial_and_signal_labels(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
