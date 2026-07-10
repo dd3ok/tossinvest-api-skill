@@ -33,15 +33,19 @@
 
 ### WebSocket API
 
-- 로그인하지 않은 공개 페이지에서 확인되는 실시간 체결가의 동작 방식 설명
+- 로그인하지 않은 공개 페이지에서 확인되는 실시간 체결가·지수·가상자산형 지수의 동작 방식 설명
 - 서버 정보, STOMP 연결·구독 과정, destination, 반복 수신되는 `MESSAGE` 이벤트, payload 필드
-- 연결에 필요한 임시 게스트 연결 메타데이터와 원본 프레임은 요청·출력·저장·기록·재생하지 않음
-- 독립 WebSocket 클라이언트는 제공하거나 구현하지 않음
-- WebSocket 매수·매도 호가 구독과 모든 주문·계좌 작업은 지원하지 않음
+- `scripts/websocket_prices.py`로 공개 국내·미국 주식 체결, 지수, 가상자산형 지수 이벤트를 제한된 시간·건수만큼 JSONL로 수신
+- 연결에는 공개 브라우저 세션이 발급한 임시 게스트 연결 메타데이터가 필요함. 이 값은 실행 중 메모리에서만 자동으로 사용하고 CLI 인자·환경 파일·로그·출력·저장 파일로 받거나 남기지 않음
+- 경량 클라이언트는 로컬에서 한 번만 실행되며 구독을 20개씩 400ms 간격으로 전송하고, STOMP 프레임은 256KiB·WebSocket 수신 묶음은 1MiB로 제한하며, 첫 JSONL 이벤트만 즉시 flush한 뒤 묶어서 출력함
+- 국내·미국 top100은 단일 WebSocket 랭킹 채널이 아니라 10초 주기 HTTP 랭킹 snapshot과 최대 100개 종목별 체결 구독을 결합함
+- 검색·산업·투자자 동향·조건검색·뉴스 목록은 HTTP로 구성되고, 화면에 렌더된 종목의 현재가·등락만 공통 WebSocket 가격 저장소가 덮어쓸 수 있음
+- 지수 스트림은 확인된 공개 코드(`KGG01P`, `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI`)만 허용하며, 로그인 화면으로 전환되는 `DJI.DJI`, `RFU.NQc1`, `RFU.GCv1`에서는 즉시 중단함
+- 호가·예상체결·종목상태 채널은 공개 시장 데이터만 실험적으로 허용하며, 로그인·주문·계좌 작업과 연결하지 않음
 - 현재가·호가 스냅샷·장중 체결 틱은 `scripts/quote.py`에서 제한된 공개 HTTP 읽기 전용 방식으로 조회
 - 상세 내용은 [비공식 WebSocket API 레퍼런스](references/websocket-api-reference.md) 참고
 
-설치 후 TossInvest 또는 토스증권을 언급해 자연어로 요청하면 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회하고 WebSocket 실시간 체결 구조를 설명할 수 있습니다.
+설치 후 TossInvest 또는 토스증권을 언급해 자연어로 요청하면 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회하고 공개 WebSocket 실시간 체결을 제한적으로 수신할 수 있습니다.
 
 ## 설치
 
@@ -121,12 +125,18 @@ ln -sfn /path/to/tossinvest-api-skill .agents/skills/tossinvest-web-api
 
 ### 로컬 스크립트만 실행
 
-에이전트 스킬로 설치하지 않고 Python 스크립트만 실행할 수도 있습니다. 번들 스크립트는 Python 표준 라이브러리만 사용하며, 네트워크 접근이 필요합니다.
+에이전트 스킬로 설치하지 않고 Python 스크립트만 실행할 수도 있습니다. HTTP 스크립트는 Python 표준 라이브러리만 사용합니다. WebSocket 스크립트만 선택 의존성 하나가 필요합니다.
 
 ```bash
 git clone https://github.com/dd3ok/tossinvest-api-skill.git
 cd tossinvest-api-skill
 python3 scripts/stock_summary.py --code A005930 --no-overview
+```
+
+WebSocket 수신을 사용할 때만 다음 의존성을 설치합니다.
+
+```bash
+python3 -m pip install -r requirements-websocket.txt
 ```
 
 스크립트별 옵션은 `--help`로 확인합니다.
@@ -144,6 +154,9 @@ python3 scripts/stock_summary.py --code A005930 --no-overview
 python3 scripts/stock_page.py --code SOXL --comment-limit 5
 python3 scripts/community_comments.py --code NVDA --sort popular --limit 5
 python3 scripts/quote.py --code A005930 --ticks 5
+python3 scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
+python3 scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
+python3 scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 10 --max-events 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
 python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
 python3 scripts/financials.py --code A005930 --kind comprehensive
@@ -158,6 +171,39 @@ python3 scripts/screener_count.py --nation kr --rsi oversold --include-results -
 미국 주식 차트는 TossInvest 상품/소스 코드가 필요합니다. `SPY`, `NVDA` 같은 표시 티커를 `c-chart` 상품 코드로 바로 넣으면 HTTP 400이 날 수 있습니다.
 
 실시간 값은 계속 바뀝니다. 아래 예시는 고정된 시장 데이터가 아니라 출력 형태를 보여주기 위한 예시입니다.
+
+### WebSocket 클라이언트 운영 제한
+
+HTTP 조회 스크립트는 요청할 때 실행되고 응답을 받으면 종료하므로 별도의 상주 클라이언트나 추가 패키지가 필요하지 않습니다. 지속적으로 이벤트를 받는 `websocket_prices.py`만 `requirements-websocket.txt`의 선택 의존성을 사용합니다.
+
+| 항목 | 현재 동작 |
+| --- | --- |
+| 지원 스트림 | 국내·미국 주식 체결, 공개 지수, `VWAP.*` 가상자산형 지수 |
+| 공개 지수 allowlist | KR `KGG01P`; US `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI` |
+| 즉시 차단 | 로그인 전환이 확인된 `DJI.DJI`, `RFU.NQc1`, `RFU.GCv1`, 임의 destination·서버 URL·인증값 입력 |
+| 실행 상한 | 로컬 클라이언트 1개, 중복 제거된 구독 최대 100개, 실행 300초, 출력 1,000건 |
+| 부하 제한 | 구독 20개 / 400ms, STOMP 프레임 256KiB, WebSocket 수신 메시지 1MiB |
+| 메모리·출력 | 게스트 연결값은 메모리에서만 사용하고 제거하며, allowlist 필드만 JSONL로 출력; 첫 이벤트 즉시 flush 후 20건 또는 500ms 단위 flush |
+| 장애·종료 | 자동 재연결 없이 오류에서 중단; 정상 종료 시 `UNSUBSCRIBE` 후 `DISCONNECT` 영수증을 최대 1초 대기 |
+
+top100 전용 WebSocket 채널은 확인되지 않았습니다. top100은 10초 주기 HTTP 랭킹 snapshot으로 종목 목록을 얻고, 한 화면의 종목 코드만 최대 100개 체결 destination으로 구독하는 혼합 구조입니다. 현재 최소 클라이언트는 랭킹 자동 갱신을 하지 않으므로 `dashboard_ranking.py`로 snapshot을 조회한 뒤 필요한 종목만 명시적으로 구독해야 합니다.
+
+유지보수자는 다음 명령으로 WebSocket 방어 로직과 전체 회귀 테스트를 재현할 수 있습니다.
+
+```bash
+python3 -m unittest tests.test_websocket_prices -v
+python3 -m unittest discover -s tests -v
+python3 -m ruff check .
+python3 -m ruff format --check .
+python3 -m pip install --dry-run -r requirements-websocket.txt
+python3 -m pip check
+```
+
+네트워크가 허용된 환경에서는 다음 명령으로 비로그인 공개 스트림을 짧게 확인할 수 있습니다. 이벤트 발생 여부와 값은 시장 상태에 따라 달라집니다.
+
+```bash
+python3 scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 15 --max-events 1
+```
 
 주식 요약:
 

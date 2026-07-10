@@ -7,6 +7,7 @@ Additional direct recheck: 2026-04-29 for US `c-chart` product candles and US ov
 Additional page/API recheck: 2026-05-29 for home tabs, stock detail tabs, `/screener`, `/feed/news`, `/indices/KGG01P`, `/indices/exchange-rate`, and `/indices/VWAP.KRW-BTC`.
 Additional page/API recheck: 2026-06-01 for `/calendar`, `/calendar/economic-indicator`, index-page calendar subsets, stock-news paging, and observed drift/excluded page calls.
 Additional page/API recheck: 2026-06-08 for `/indices/KGG01P`, `/indices/exchange-rate`, and `/indices/VWAP.KRW-BTC` chart controls, related widgets, paging, and response shapes.
+Additional logged-out WebSocket/page recheck: 2026-07-10 for home tabs and search, sector, screener, feeds, stock-detail tabs, all home index links, real-time consumers, and HTTP paging boundaries.
 Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
@@ -468,7 +469,7 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Exchange rates | `script-backed` | GET | `/api/v1/dashboard/wts/overview/exchange-rates` | FX/overview data |
 | Trading info | `observed` | GET | `/api/v1/dashboard/wts/overview/trading-info` | Market overview data |
 | WTS news feed | `observed` | GET | `/api/v1/dashboard/wts/news` | Feed/news panel data; `scripts/feed.py` uses the POST form documented under Feed And News APIs |
-| Home live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Body maps URL params to `id={live-chart}`, `tag={market}`, `duration`; returns `products[]`, usually 100 rows |
+| Home live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Body maps URL params to `id={live-chart}`, `tag={market}`, `duration`; returns `products[]`, usually 100 rows; page refresh interval observed as 10 seconds and current-price cells receive per-product WebSocket overlays |
 | Realtime investor rankings | `script-backed` | GET | `/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Observed under `wts-cert-api`; public page ranking widget, but keep sensitive-host caution |
 | Economic calendar | `script-backed` | GET | `/api/v2/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
 | Calendar AI key events | `script-backed` | GET | `/api/v1/calendar/ai-summary/key-events` | Direct 2026-05-30 check returned `eci` and `earnings[]`; public market-calendar context |
@@ -554,6 +555,51 @@ Content-Type: application/json
 ```
 
 For the user-provided top100 URLs checked on 2026-04-20, `market=kr`/`us` maps to `tag=kr`/`us`. The `biggest_total_amount`, `biggest_total_volume`, `heavy_soar`, and `heavy_descent` combinations returned `products[]` with 100 rows for both markets in direct response checks.
+
+The 2026-07-10 logged-out bundle and page check confirmed that top100 is a
+hybrid rather than a dedicated ranking WebSocket channel:
+
+- the overview ranking POST is configured with a 10-second refresh interval;
+- both KR and US pages rendered 100 unique stock links plus the grid header;
+- each rendered product registers its code with the shared real-time price
+  store, which reference-counts and deduplicates the product trade destination;
+- US rows visibly changed current price and change rate within five seconds,
+  while rank, amount, market capitalization, TossInvest buy/sell ratio,
+  industry, and AI summary remained snapshot fields;
+- a mirror client should maintain one ranking view, one shared connection, and
+  at most 100 product destinations, applying only the added/removed code diff
+  after each HTTP refresh.
+
+Additional WebSocket consumers found in the same deployment include public
+quote-volume and KR pre-open estimate fields on the bid/offer destination, and
+a KR stock-status destination used only to invalidate and refetch the public
+trading-status HTTP helper. See
+[websocket-api-reference.md](websocket-api-reference.md) for evidence labels and
+the memory-only guest-session boundary.
+
+The expanded 2026-07-10 logged-out navigation audit also opened the home search
+dialog, industry and investor-trend tabs, a public US sector, the screener,
+news/recommended feeds, all public stock-detail tabs, and each index link shown
+on the home page. The recurring architecture was:
+
+- search, industry membership, investor ranking, news/feed items, sector
+  membership, screener results, and detail widgets are HTTP datasets;
+- rendered stock cards register product codes with the shared real-time price
+  store, so price/change chips can receive per-product trade overlays;
+- screener results request `pagingParam.number` with `size: 50` and are exposed
+  through a virtualized infinite list;
+- candle history uses the HTTP `nextDateTime`/`from` cursor while a trade event
+  updates only the current candle;
+- feed and community history use HTTP cursors rather than WebSocket paging;
+- the SOXL page title visibly changed across the order, analytics, news,
+  transaction-status, and community routes, but the full bid/offer panel asked
+  the logged-out user to sign in.
+
+Public index navigation succeeded for `COMP.NAI`, `SPX.CBI`, `RGI..VIX`,
+`KGG01P`, `SOX.NAI`, `VWAP.KRW-BTC`, and the HTTP-only `exchange-rate` page.
+`DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1` redirected to sign-in during the same
+check; do not treat a destination builder as authorization to bypass that
+route-level access boundary.
 
 Observed 2026-05-29 home tabs are live chart, trending categories, and domestic
 investor trend. The live chart table still uses the overview ranking endpoint,
@@ -720,7 +766,7 @@ Most screener endpoints currently live under `wts-cert-api`. They can return pub
 | Screener base filters | `observed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | Body depends on selected filters; returns `basedAt` in observed bundle |
 | Screener range filters | `observed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | Body depends on selected filters |
 | Screener result count | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body shape `{ "filters": [], "nation": "kr" }` or `"us"` returned counts in verification; RSI, selected price, and selected technical filters accepted `conditions[]` |
-| Screener results | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body includes `pagingParam`, `filters`, `sort`, and `nation`; `pagingParam.number/size` and selected sortable columns worked in verification |
+| Screener results | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body includes `pagingParam`, `filters`, `sort`, and `nation`; current UI requests numbered 50-row pages (`size: 50`) and renders them through a virtualized infinite list |
 
 Examples:
 
@@ -859,10 +905,18 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/?market=kr&live-chart=heavy_descent&duration=1d` | Live-chart top100 ranking via overview ranking API |
 | `https://www.tossinvest.com/?market=us&live-chart=heavy_descent&duration=1d` | Same live-chart API with `tag=us` |
 | `https://www.tossinvest.com/indices/KGG01P` | Index info, price, chart, indicator/news widgets |
+| `https://www.tossinvest.com/indices/COMP.NAI` | Public Nasdaq index value plus HTTP history/news/related-stock widgets |
+| `https://www.tossinvest.com/indices/SPX.CBI` | Public S&P 500 index value plus HTTP history/news/related-stock widgets |
+| `https://www.tossinvest.com/indices/RGI..VIX` | Public VIX index value plus HTTP history/news/related-stock widgets |
+| `https://www.tossinvest.com/indices/SOX.NAI` | Public Philadelphia Semiconductor index value plus HTTP widgets |
 | `https://www.tossinvest.com/indices/exchange-rate` | FX chart and exchange-rate widgets |
 | `https://www.tossinvest.com/indices/VWAP.KRW-BTC` | Crypto-like index info/price, `r-chart/crypto`, crypto prices, related news |
+| `https://www.tossinvest.com/indices/DJI.DJI` | Redirected to sign-in in the 2026-07-10 logged-out check; stop rather than probing a destination |
+| `https://www.tossinvest.com/indices/RFU.NQc1` | Redirected to sign-in in the 2026-07-10 logged-out check |
+| `https://www.tossinvest.com/indices/RFU.GCv1` | Redirected to sign-in in the 2026-07-10 logged-out check |
 | `https://www.tossinvest.com/calendar` | Monthly market calendar, economic/earnings and domestic/overseas local filters, weekly/key-event summary text |
 | `https://www.tossinvest.com/calendar/economic-indicator?date=2026-06-01&ric=USPMI%3DECI` | Economic indicator detail, historical data, related articles, upcoming indicators, AI analysis text |
 | `https://www.tossinvest.com/screener` | Screener presets, filter metadata, result count, result screen |
+| `https://www.tossinvest.com/sector/605?nation=US` | Public sector metrics and stock/ETF lists; rendered stock prices use the shared real-time store |
 | `https://www.tossinvest.com/feed/recommended` | Recommended community/feed posts |
 | `https://www.tossinvest.com/feed/news` | Dashboard news categories and news detail |

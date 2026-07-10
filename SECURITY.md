@@ -30,7 +30,8 @@ If private vulnerability reporting is unavailable, open only a minimal public is
 
 - Do not add login, authentication, certificate mutation, account, holding, balance, transfer, order placement, order amendment, order cancellation, or orderable-amount endpoints.
 - Do not add rate limit bypass, anti-bot bypass, bulk scraping, or access-control workaround behavior.
-- Do not add high-frequency polling, concurrent fan-out, large batch scraping, or automatic retries after HTTP 403/429, challenge pages, login redirects, or other abnormal responses.
-- Do not add a standalone WebSocket client, reproduce guest bootstrap, or subscribe to WebSocket bid/offer, order, account, holding, or balance destinations.
+- Do not add high-frequency polling, unbounded concurrent fan-out, large batch scraping, or automatic retries after HTTP 403/429, challenge pages, login redirects, or other access-control failures.
+- A standalone public read-only WebSocket client may use the anonymous browser guest bootstrap in memory only. It must not accept guest values from users, persist or log them, dump raw frames, or connect any market-data subscription to order, account, holding, or balance workflows.
+- A top100 client is limited to one shared connection and at most 100 deduplicated product destinations for one ranking view at a time. Reconnects require bounded backoff, jitter, and a maximum retry count.
 - Treat `wts-cert-api.tossinvest.com` as sensitive unless an endpoint is clearly public page metadata and works without cookies or authorization.
 - Re-verify undocumented endpoints against current public browser traffic before changing scripts or catalog status.
