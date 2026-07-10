@@ -1,4 +1,4 @@
 interface:
   display_name: "비공식 토스증권 API"
-  short_description: "로그인·계좌 인증 없이 토스증권 공개 주식·시장 데이터를 안전하게 재조회"
-  default_prompt: "토스증권 기준으로 A005930의 간단한 종목 요약과 현재 시세를 조회해줘."
+  short_description: "토스증권 공개 시장 데이터 조회와 WebSocket 동작 설명"
+  default_prompt: "$tossinvest-web-api로 토스증권 공개 시세를 조회하고 WebSocket 체결 스트림의 범위를 안전하게 설명해줘."

@@ -49,6 +49,7 @@ jobs:
           test -f "$skill_dir/SKILL.md"
           test -f "$skill_dir/agents/openai.yaml"
           test -f "$skill_dir/references/api-catalog.md"
+          test -f "$skill_dir/references/websocket-api-reference.md"
           python "$skill_dir/scripts/stock_summary.py" --help >/dev/null
 
       - name: Compile scripts
