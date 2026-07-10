@@ -13,7 +13,7 @@ Use this workflow when adding or verifying TossInvest web API endpoints.
    - Exclude guest/session, following/subscription, personalization, login, account, and order calls unless documenting that they are out of scope without endpoint details.
    - Keep only APIs that help answer stock, market, index, calendar, theme, financial, filing, news, ranking, investor-trend, screener, or public community questions.
    - For WebSocket observations, keep only the public page URL, checked date, endpoint host, subprotocol, normalized destination, and message field names needed to explain visibly rendered public data.
-   - Exclude guest-bootstrap calls, STOMP `CONNECT` headers, guest connection values, raw frame dumps, and interaction with destinations that only support login, personalization, account, bid/offer order-book, or order workflows. A normalized path found in static deployed code may be retained only as a non-actionable `excluded` or `defined-unverified` note; never subscribe to it for verification.
+   - A read-only client may inspect the anonymous public-page guest bootstrap and STOMP frames in memory only. Exclude those values from output, logs, screenshots, fixtures, files, and documentation. Exclude destinations that require login, personalization, account, or order workflows.
 5. Normalize endpoint paths:
    - Replace stock/product codes with `{productCode}`.
    - Replace company codes with `{companyCode}`.
@@ -23,7 +23,7 @@ Use this workflow when adding or verifying TossInvest web API endpoints.
 6. Record method, path, query params, source page, observed purpose, and response top-level shape.
 7. Store only sanitized notes. Do not store raw HAR files, cookies, tokens, storage state, account numbers, guest connection metadata, STOMP `CONNECT` frames, raw WebSocket frames, or personally identifying financial data.
 
-For a WebSocket channel to be classified as usable, document a normalized destination only when a logged-out public page visibly renders the corresponding read-only information. Static destination builders may be documented only as non-actionable `excluded` or `defined-unverified` records. Read [websocket-api-reference.md](websocket-api-reference.md) before classifying a destination. A field name alone does not establish its type, requiredness, nullability, units, enum values, or compatibility. Do not reproduce the guest bootstrap, subscribe to excluded or unverified destinations, or add an independent client to this skill.
+For a WebSocket channel to be classified as usable, document a normalized destination only when a logged-out public page visibly renders the corresponding read-only information. Static destination builders may be documented as `observed-code`, `defined-unverified`, or `excluded` until a bounded live check confirms them. Read [websocket-api-reference.md](websocket-api-reference.md) before classifying a destination. A field name alone does not establish its type, requiredness, nullability, units, enum values, or compatibility. A client may reproduce only the anonymous public-page connection flow needed for a read-only session and must keep every guest value memory-only.
 
 For POST endpoints, replay the exact sanitized browser body when it is documented or captured. Use `Content-Type: application/json` with `{}` only for endpoints already verified to accept an empty body, such as the financial POST endpoint families.
 

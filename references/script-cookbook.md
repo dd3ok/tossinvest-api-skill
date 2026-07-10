@@ -6,6 +6,7 @@ Use this cookbook when `SKILL.md` has selected the right script family but the t
 
 - [Agent Decision Defaults](#agent-decision-defaults)
 - [Stock Detail](#stock-detail)
+- [Real-Time WebSocket Streams](#real-time-websocket-streams)
 - [Stock Main Page And Community](#stock-main-page-and-community)
 - [Charts And Local Indicators](#charts-and-local-indicators)
 - [Financials And Investor Trend](#financials-and-investor-trend)
@@ -47,6 +48,45 @@ a code/range, record or cool down that target/range and continue; do not roll
 back the successful price snapshot or halt the entire price fanout.
 Keep product-code validation endpoint-specific: a code accepted by `/api/v3/stock-prices/details` may still fail `c-chart` or KR trading-trend endpoints with HTTP 400.
 For KR domestic/investor flow collectors, keep a separate KR `A...` target list instead of broad price-details targets.
+
+## Real-Time WebSocket Streams
+
+Install the single optional dependency only when real-time streaming is needed:
+
+```bash
+python3 -m pip install -r requirements-websocket.txt
+```
+
+Use explicit public product codes and a short duration/event bound:
+
+```bash
+python3 scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
+python3 scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
+python3 scripts/websocket_prices.py --kr-index KGG01P --duration 10 --max-events 5
+python3 scripts/websocket_prices.py --us-index COMP.NAI --duration 10 --max-events 5
+python3 scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 10 --max-events 5
+```
+
+The script emits normalized JSONL only. It obtains the anonymous guest key at
+runtime, creates device/connection identifiers in memory, never accepts those
+values as arguments, and does not automatically reconnect. It supports at most
+100 deduplicated explicit destinations, runs for at most 300 seconds, and emits
+at most 1,000 events. A cross-platform process lock permits one local client,
+subscription frames are paced in batches of 20 every 400 ms, and each parsed
+STOMP frame is capped at 256 KiB while each inbound WebSocket message is capped
+at 1 MiB. JSONL flushes immediately for the first event and then in small
+batches. US stocks require a TossInvest product/source code
+such as `US20100311002`, not a display ticker such as `SOXL` or `NVDA`.
+
+Index flags use an exact logged-out public allowlist: KR `KGG01P`; US
+`COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI`. The client rejects
+login-gated `DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1` instead of attempting a
+subscription.
+
+This minimal client intentionally excludes bid/offer, expected-match data,
+stock-status invalidation, orders, accounts, and automatic top100 ranking
+refresh. Use `dashboard_ranking.py` for the top100 HTTP snapshot and add
+per-product subscriptions only in a separately reviewed bounded workflow.
 
 ## Stock Main Page And Community
 

@@ -29,8 +29,17 @@ skill from GitHub.
 - Ephemeral WebSocket guest metadata, complete STOMP `CONNECT` or `MESSAGE`
   frames, raw frame dumps, and guest-bootstrap responses are absent from the
   release contents and verification logs.
-- No standalone WebSocket client, guest-bootstrap reproduction, bid/offer
-  subscription, or order/account destination is included.
+- Any standalone public read-only WebSocket client acquires anonymous guest
+  metadata at runtime, keeps it memory-only, redacts logs, bounds reconnects,
+  and never reaches an order/account destination.
+- The standalone WebSocket client keeps its one-process lock, canonical
+  destination allowlist, 20-subscription/400-ms pacing, 256-KiB frame cap,
+  1-MiB inbound message cap, bounded JSONL flushes, and graceful disconnect
+  receipt timeout.
+- `requirements-websocket.txt` pins the optional binary package exactly and
+  verifies its published SHA-256 hash; dependency audit results are reviewed.
+- Any top100 stream uses one shared connection, at most 100 deduplicated product
+  destinations for one view, and the observed 10-second HTTP ranking refresh.
 
 ## Verification
 
@@ -52,10 +61,13 @@ workspace="$(mktemp -d)"
 skill_dir="$workspace/.agents/skills/tossinvest-web-api"
 mkdir -p "$skill_dir"
 cp -R SKILL.md README.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
+cp requirements-websocket.txt "$skill_dir"/
 test -f "$skill_dir/SKILL.md"
 test -f "$skill_dir/agents/openai.yaml"
 test -f "$skill_dir/references/api-catalog.md"
 test -f "$skill_dir/references/websocket-api-reference.md"
+test -f "$skill_dir/requirements-websocket.txt"
+test -f "$skill_dir/scripts/websocket_prices.py"
 python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
 ```
 
@@ -67,8 +79,8 @@ python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
   Verification Status table authoritative (`script-backed`, `observed`,
   `observed-drift`, `needs-recheck`, `excluded`, `public-social-sensitive`).
 - `references/websocket-api-reference.md` remains browser-observed,
-  unofficial, unstable, and not script-backed; its evidence labels distinguish
-  protocol standards from TossInvest-specific observations.
+  unofficial, and unstable; its evidence labels distinguish protocol standards
+  from TossInvest-specific observations and state whether a client is bundled.
 - `references/eval-prompts.md` covers lookup, discovery, and refusal scenarios.
 - `SECURITY.md` points sensitive reports to private vulnerability reporting.
 
@@ -82,6 +94,6 @@ python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
   layout.
 - Release notes mention that TossInvest web APIs are unofficial, undocumented,
   and subject to change.
-- Release notes describe the WebSocket API reference as browser-observed and
-  non-runnable, and repeat the guest-metadata, bid/offer, order, and account
-  exclusions.
+- Release notes describe the WebSocket interface as browser-observed and
+  unofficial, and repeat the memory-only guest-metadata, bounded subscription,
+  no-order, and no-account requirements.

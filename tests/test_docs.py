@@ -216,11 +216,12 @@ class DocumentationPromptTests(unittest.TestCase):
             "종목 요약과 현재가·호가 스냅샷·장중 체결 틱 조회",
             "### 차트 및 로컬 계산",
             "### WebSocket API",
-            "- 로그인하지 않은 공개 페이지에서 확인되는 실시간 체결가의 동작 방식 설명",
+            "- 로그인하지 않은 공개 페이지에서 확인되는 실시간 체결가·지수·가상자산형 지수의 동작 방식 설명",
             "- 서버 정보, STOMP 연결·구독 과정, destination",
-            "- 연결에 필요한 임시 게스트 연결 메타데이터와 원본 프레임은 요청·출력·저장·기록·재생하지 않음",
-            "- 독립 WebSocket 클라이언트는 제공하거나 구현하지 않음",
-            "- WebSocket 매수·매도 호가 구독과 모든 주문·계좌 작업은 지원하지 않음",
+            "- `scripts/websocket_prices.py`로 공개 국내·미국 주식 체결, 지수, 가상자산형 지수 이벤트",
+            "- 연결에는 공개 브라우저 세션이 발급한 임시 게스트 연결 메타데이터가 필요함.",
+            "- 국내·미국 top100은 단일 WebSocket 랭킹 채널이 아니라 10초 주기 HTTP 랭킹 snapshot",
+            "- 호가·예상체결·종목상태 채널은 공개 시장 데이터만 실험적으로 허용하며",
             "- 현재가·호가 스냅샷·장중 체결 틱은 `scripts/quote.py`에서 제한된 공개 HTTP 읽기 전용 방식으로 조회",
             "- 상세 내용은 [비공식 WebSocket API 레퍼런스](references/websocket-api-reference.md) 참고",
             "A005930 실시간 체결 WebSocket 채널과 수신 필드를 설명해줘",
@@ -231,13 +232,14 @@ class DocumentationPromptTests(unittest.TestCase):
 
         for expected in [
             "# Unofficial WebSocket API Reference",
-            "Status: browser-observed, unofficial, unstable, and not script-backed.",
+            "Status: browser-observed, unofficial, unstable, and script-backed by a minimal bounded client.",
             "## Server And WebSocket Handshake",
             "## STOMP Session Lifecycle",
             "## Channels And Destinations",
             "## Receive Operations",
             "## Message Envelope",
             "## Payload Schemas And Synthetic Examples",
+            "## Top100 Hybrid Ranking Stream",
             "## Errors, Heartbeats, And Close Behavior",
             "observed-transport",
             "observed-protocol",
@@ -248,6 +250,7 @@ class DocumentationPromptTests(unittest.TestCase):
             "action: receive",
             "message-id",
             "subscription",
+            "matches the connection-local `subscription` id",
             "1005",
             "1006",
             "Synthetic field-name illustration",
@@ -266,8 +269,23 @@ class DocumentationPromptTests(unittest.TestCase):
             "/topic/v1/us/stock/index/{productCode}",
             "/topic/v1/crypto/vwap/{productCode}",
             "/bidoffer/{productCode}",
+            "offerPricesKrw",
+            "estimatedVolume",
+            "cumulativeAmount",
+            "at most 100 deduplicated product destinations",
+            "observed 10-second interval",
             "Exchange-rate widgets are HTTP-only",
+            "50 rows per numbered page",
+            "Logged-out navigation check",
+            "/indices/DJI.DJI",
+            "quote panel itself displayed that login was required",
             "SharedWorker",
+            "batches of 20 with a 400-ms interval",
+            "caps each parsed STOMP frame at 256 KiB",
+            "caps each inbound WebSocket message at 1 MiB",
+            "permits only one local process",
+            "exactly pinned and hash-checked",
+            "performs no automatic reconnect",
             "receiveKrStockIndexUpdate",
             "receiveUsStockIndexUpdate",
             "host:<virtual-host>",
@@ -292,9 +310,13 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("store", skill)
 
         self.assertIn("raw WebSocket frames", capture)
-        self.assertIn("non-actionable `excluded` or `defined-unverified`", capture)
-        self.assertIn("never inspect, capture, or reproduce the WebSocket guest bootstrap", skill)
-        self.assertIn("automatic WebSocket reconnection loops", safety)
+        self.assertIn("memory-only", capture)
+        self.assertIn("keep it memory-only", skill)
+        self.assertIn("bounded exponential backoff", safety)
+        self.assertIn("at most 100 deduplicated product subscriptions", safety)
+        self.assertIn("20-subscription/400-ms pacing", safety)
+        self.assertIn("256-KiB STOMP frame limit", safety)
+        self.assertIn("1-MiB inbound message limit", safety)
         self.assertIn("complete STOMP `CONNECT` or `MESSAGE` frames", security)
         self.assertNotRegex(
             websocket,
@@ -306,6 +328,23 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertNotIn('"base": 0', websocket)
         self.assertIn("로그인하지 않고 토스증권 A005930", eval_prompts)
         self.assertIn("내 UTK를 줄 테니", eval_prompts)
+        self.assertTrue((ROOT / "requirements-websocket.txt").exists())
+        self.assertTrue((ROOT / "scripts" / "websocket_prices.py").exists())
+        self.assertIn("scripts/websocket_prices.py", skill)
+        self.assertIn("scripts/websocket_prices.py", readme)
+        for expected in [
+            "### WebSocket 클라이언트 운영 제한",
+            "별도의 상주 클라이언트나 추가 패키지가 필요하지 않습니다",
+            "구독 20개 / 400ms",
+            "WebSocket 수신 메시지 1MiB",
+            "자동 재연결 없이 오류에서 중단",
+            "DISCONNECT` 영수증을 최대 1초 대기",
+            "python3 -m unittest tests.test_websocket_prices -v",
+            "python3 -m pip install --dry-run -r requirements-websocket.txt",
+            "--crypto VWAP.KRW-BTC --duration 15 --max-events 1",
+        ]:
+            with self.subTest(readme_operating_limit=expected):
+                self.assertIn(expected, readme)
 
     def test_skill_routes_disambiguate_financial_and_signal_labels(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -599,9 +638,9 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("references/websocket-api-reference.md", ci_text)
         self.assertIn("references/websocket-api-reference.md", checklist)
         self.assertIn("Ephemeral WebSocket guest metadata", checklist)
-        self.assertIn("No standalone WebSocket client", checklist)
+        self.assertIn("standalone public read-only WebSocket client", checklist)
         self.assertIn("browser-observed", checklist)
-        self.assertIn("non-runnable", checklist)
+        self.assertIn("memory-only guest-metadata", checklist)
         self.assertNotIn("matches the public skill name", checklist)
         self.assertNotIn("description starts with `Use when`", checklist)
         self.assertNotIn(
