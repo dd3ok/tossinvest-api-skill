@@ -33,11 +33,13 @@
 
 ### WebSocket API
 
-로그인하지 않은 공개 페이지에서 확인되는 실시간 체결가의 동작 방식도 설명합니다. 서버 정보부터 STOMP 연결·구독 과정, destination, 반복 수신되는 `MESSAGE` 이벤트, payload 필드까지 다룹니다.
-
-다만 WebSocket 연결에는 임시 게스트 연결 메타데이터가 필요합니다. 이 정보와 원본 프레임은 요청하거나 출력·저장·기록·재생하지 않으며, 독립 WebSocket 클라이언트도 제공하거나 구현하지 않습니다. WebSocket 매수·매도 호가 구독과 모든 주문·계좌 작업 역시 지원하지 않습니다.
-
-현재가·호가 스냅샷·장중 체결 틱은 기존처럼 `scripts/quote.py`에서 제한된 공개 HTTP 읽기 전용 방식으로 조회할 수 있습니다. 자세한 내용은 [비공식 WebSocket API 레퍼런스](references/websocket-api-reference.md)를 참고하세요.
+- 로그인하지 않은 공개 페이지에서 확인되는 실시간 체결가의 동작 방식 설명
+- 서버 정보, STOMP 연결·구독 과정, destination, 반복 수신되는 `MESSAGE` 이벤트, payload 필드
+- 연결에 필요한 임시 게스트 연결 메타데이터와 원본 프레임은 요청·출력·저장·기록·재생하지 않음
+- 독립 WebSocket 클라이언트는 제공하거나 구현하지 않음
+- WebSocket 매수·매도 호가 구독과 모든 주문·계좌 작업은 지원하지 않음
+- 현재가·호가 스냅샷·장중 체결 틱은 `scripts/quote.py`에서 제한된 공개 HTTP 읽기 전용 방식으로 조회
+- 상세 내용은 [비공식 WebSocket API 레퍼런스](references/websocket-api-reference.md) 참고
 
 설치 후 TossInvest 또는 토스증권을 언급해 자연어로 요청하면 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회하고 WebSocket 실시간 체결 구조를 설명할 수 있습니다.
 
