@@ -212,11 +212,15 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertFalse((ROOT / "references" / "websocket-observations.md").exists())
         self.assertIn("unofficial WebSocket API reference", skill)
         for expected in [
-            "공개 HTTP 현재가·호가 스냅샷·장중 체결 틱 조회",
-            "서버·STOMP 수명주기·구독 destination",
+            "### 공개 HTTP 기반 조회",
+            "종목 요약과 현재가·호가 스냅샷·장중 체결 틱 조회",
+            "### 차트 및 로컬 계산",
+            "### WebSocket API",
+            "서버 정보부터 STOMP 연결·구독 과정",
             "임시 게스트 연결 메타데이터",
-            "독립 WebSocket 클라이언트 제공·구현은 지원하지 않습니다",
-            "WebSocket 매수·매도 호가 구독과 모든 주문·계좌 작업도 제외됩니다",
+            "독립 WebSocket 클라이언트도 제공하거나 구현하지 않습니다",
+            "WebSocket 매수·매도 호가 구독과 모든 주문·계좌 작업 역시 지원하지 않습니다",
+            "`scripts/quote.py`에서 제한된 공개 HTTP 읽기 전용 방식으로 조회",
             "[비공식 WebSocket API 레퍼런스](references/websocket-api-reference.md)",
             "A005930 실시간 체결 WebSocket 채널과 수신 필드를 설명해줘",
             "API 카탈로그, WebSocket API 레퍼런스",
