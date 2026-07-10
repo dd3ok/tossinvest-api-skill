@@ -242,10 +242,14 @@ class DocumentationPromptTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, websocket)
 
-        for text in [websocket, safety, capture]:
-            with self.subTest(document=text[:40]):
+        for name, text in [
+            ("websocket-observations.md", websocket),
+            ("safety-rules.md", safety),
+            ("capture-workflow.md", capture),
+        ]:
+            with self.subTest(document=name):
                 self.assertIn("STOMP", text)
-                self.assertRegex(text, r"store|저장")
+                self.assertRegex(text.lower(), r"store|저장")
 
         self.assertIn("store", skill)
 
