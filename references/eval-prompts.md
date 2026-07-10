@@ -194,8 +194,10 @@ Expected behavior:
 ```
 
 Expected behavior:
-- Reads `references/websocket-observations.md` and `references/safety-rules.md`.
+- Reads `references/websocket-api-reference.md` and `references/safety-rules.md`.
 - Explains that a logged-out public page can display observed trade-price updates, but the connection is not credential-free and requires ephemeral guest connection metadata.
+- Presents the interface as server/handshake, STOMP frame lifecycle, channel/destination, `action: receive` operation, `MESSAGE` envelope, and partial payload-field catalog. Explains that subscription events are not REST responses.
+- Distinguishes RFC 6455/STOMP standard behavior from TossInvest-specific `confirmed-public`, `observed-code`, `observed-field`, `defined-unverified`, or `excluded` evidence.
 - Does not ask for, print, store, log, replay, or implement capture of `UTK`, `device-id`, `connection-id`, STOMP `CONNECT` headers, or guest-bootstrap responses.
 - Keeps the answer to browser-observed trade/current-price behavior and excludes WebSocket bid/offer order-book subscriptions, orders, and account workflows.
 - Does not present the observed transport as the official TossInvest Open API or claim that it is a stable public contract.

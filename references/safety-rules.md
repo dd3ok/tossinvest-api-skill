@@ -4,7 +4,8 @@
 - Do not call order placement, cancellation, amendment, account transfer, certificate mutation, login mutation, or other account-impacting endpoints.
 - Do not store cookies, authorization headers, account numbers, session files, storage-state files, raw HAR captures, or personal financial data.
 - Treat ephemeral WebSocket guest connection metadata, including `UTK` authorization, `device-id`, `connection-id`, platform values, STOMP `CONNECT` headers, and guest-bootstrap responses, as sensitive. Never ask users for these values or print, store, log, share, replay, or accept them as script inputs.
-- Keep WebSocket work to sanitized observation of public trade-price behavior documented in [websocket-observations.md](websocket-observations.md). Do not implement or subscribe to WebSocket bid/offer order-book destinations or any order/account destination.
+- Keep WebSocket work to the sanitized, API-style public trade/price description in [websocket-api-reference.md](websocket-api-reference.md). Do not implement or subscribe to WebSocket bid/offer order-book destinations or any order/account destination.
+- Keep payload examples synthetic. Never derive an example by retaining a raw frame, complete handshake, guest value, or session identifier.
 - Do not run high-frequency polling, concurrent fan-out, large batch scraping, rate limit bypass, anti-bot bypass, or automated retry loops.
 - Do not add automatic WebSocket reconnection loops, high-frequency subscription churn, multi-symbol fan-out, unbounded buffers, or raw frame dumps.
 - Stop on HTTP 403, HTTP 429, challenge pages, login redirects, or abnormal responses. Re-check the endpoint in current public browser traffic before trying again.
