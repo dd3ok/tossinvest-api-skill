@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use this skill when the user asks for public, read-only TossInvest/토스증권 data visible on tossinvest.com, including Korean/US stock quotes, order books, candles, financials, filings, news, rankings, screeners, calendars, indices, FX, exchange-rate widgets, crypto-like index pages, public community comments/replies, observed anonymous-page real-time WebSocket price behavior, or public endpoint re-verification. Do not use for login, accounts, holdings, orders, authenticated broker workflows, bulk scraping, or investment advice.
+description: Use this skill when the user asks for public, read-only TossInvest/토스증권 data visible on tossinvest.com, including Korean/US stock quotes, order books, candles, financials, filings, news, rankings, screeners, calendars, indices, FX, exchange-rate widgets, crypto-like index pages, public community comments/replies, an unofficial WebSocket API reference for browser-observed real-time trade/price streams, or public endpoint re-verification. Do not use for login, accounts, holdings, orders, authenticated broker workflows, bulk scraping, or investment advice.
 license: MIT
 ---
 
@@ -20,7 +20,7 @@ TossInvest has a separate official Open API documented at `developers.tossinvest
 
 - Use for public TossInvest stock or market data visible on `tossinvest.com`.
 - Use for quotes, order books, candles, financials, filings, news, themes, rankings, indices, market calendars, investor trends, screeners, and sanitized public community comments.
-- Use for browser-observed, anonymous-page real-time trade-price behavior after reading [references/websocket-observations.md](references/websocket-observations.md).
+- Use for API-style server, channel, receive-operation, and message-field descriptions of browser-observed real-time trade/price streams after reading [references/websocket-api-reference.md](references/websocket-api-reference.md).
 - Use when re-verifying an observed read-only browser endpoint before updating scripts or references.
 
 ## When Not To Use
@@ -52,7 +52,7 @@ TossInvest has a separate official Open API documented at `developers.tossinvest
 | Sanitized public community comments and replies | `scripts/community_comments.py` | [references/response-notes.md](references/response-notes.md) |
 | Screener counts, filter metadata, RSI filters, price/technical presets | `scripts/screener_count.py` | [references/script-cookbook.md](references/script-cookbook.md); [examples/filters](examples/filters) |
 | Page-level stock API smoke checks | `scripts/page_api_check.py` | [references/script-cookbook.md](references/script-cookbook.md) |
-| Anonymous-page real-time trade-price WebSocket observations | Browser observation only; no bundled client | [references/websocket-observations.md](references/websocket-observations.md); [references/safety-rules.md](references/safety-rules.md) |
+| Unofficial WebSocket API reference for real-time trade/price streams | Browser observation only; no bundled client | [references/websocket-api-reference.md](references/websocket-api-reference.md); [references/safety-rules.md](references/safety-rules.md) |
 | Official Open API distinction or official rate-limit question | Official docs only; no bundled script | [references/official-openapi-boundary.md](references/official-openapi-boundary.md) |
 | New endpoint capture or undocumented page analysis | Browser network capture, bundled JavaScript inspection | [references/capture-workflow.md](references/capture-workflow.md), [references/safety-rules.md](references/safety-rules.md) |
 
@@ -63,7 +63,7 @@ After choosing a routing-table row, use [references/script-cookbook.md](referenc
 ## Workflow
 
 1. For normal lookups, choose a bundled script from the routing table.
-2. For WebSocket questions, read [references/websocket-observations.md](references/websocket-observations.md) and keep the work to sanitized browser observation; do not capture or reproduce the guest bootstrap.
+2. For WebSocket questions, read [references/websocket-api-reference.md](references/websocket-api-reference.md). Describe the server, STOMP lifecycle, channel/destination, receive operation, message envelope, payload fields, and evidence status; do not capture or reproduce the guest bootstrap.
 3. For missing or drifted endpoints, start from [Known Observed Pages](references/api-catalog.md#known-observed-pages), then follow [references/capture-workflow.md](references/capture-workflow.md).
 4. Exclude telemetry, personalization, login, account, and order calls. Include only non-guest public metadata bootstrapping when needed to identify an HTTP read-only endpoint; never inspect, capture, or reproduce the WebSocket guest bootstrap.
 5. Prefer `wts-info-api.tossinvest.com` read-only endpoints.
@@ -122,6 +122,7 @@ Use [references/eval-prompts.md](references/eval-prompts.md) to smoke-test skill
 - For public community endpoints, keep pagination bounded and emit sanitized output without raw profile or social metadata.
 - Never store raw cookies, tokens, account numbers, session files, storage state, or raw HAR captures.
 - Anonymous TossInvest pages can display live trade prices over the observed WebSocket transport, but the connection is not credential-free and requires ephemeral guest connection metadata. Treat that metadata as sensitive and never request it from users or print, store, log, or replay it.
+- Treat subscription ticks as repeated STOMP `MESSAGE` events, not REST responses. Use API-style server/channel/operation/message terminology and distinguish protocol-standard behavior from TossInvest-specific observed evidence.
 - Document browser-observed trade-price behavior only. Keep WebSocket bid/offer order-book subscriptions and all order or account workflows excluded; the existing bounded HTTP quote lookup is a separate read-only path.
 - Stop when a `wts-cert-api` endpoint requires authentication, cookies, account identifiers, or personal data; do not try to work around access controls.
 - Stop on 403/429 or challenge responses instead of retrying, polling, rotating headers, or bypassing rate limit and anti-bot controls.

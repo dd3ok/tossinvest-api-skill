@@ -9,6 +9,7 @@ This repository catalogs and scripts unofficial, read-only TossInvest web API ca
 Do not include any of the following in GitHub issues, pull requests, discussions, logs, screenshots, or attachments:
 
 - Cookies, authorization headers, tokens, session IDs, or storage-state files
+- Ephemeral WebSocket guest values, complete STOMP `CONNECT` or `MESSAGE` frames, and raw WebSocket frame dumps
 - Account numbers, balances, holdings, transfers, order data, or personal financial data
 - Raw HAR files or full browser network exports
 - Any data copied from authenticated TossInvest pages
@@ -30,5 +31,6 @@ If private vulnerability reporting is unavailable, open only a minimal public is
 - Do not add login, authentication, certificate mutation, account, holding, balance, transfer, order placement, order amendment, order cancellation, or orderable-amount endpoints.
 - Do not add rate limit bypass, anti-bot bypass, bulk scraping, or access-control workaround behavior.
 - Do not add high-frequency polling, concurrent fan-out, large batch scraping, or automatic retries after HTTP 403/429, challenge pages, login redirects, or other abnormal responses.
+- Do not add a standalone WebSocket client, reproduce guest bootstrap, or subscribe to WebSocket bid/offer, order, account, holding, or balance destinations.
 - Treat `wts-cert-api.tossinvest.com` as sensitive unless an endpoint is clearly public page metadata and works without cookies or authorization.
 - Re-verify undocumented endpoints against current public browser traffic before changing scripts or catalog status.
