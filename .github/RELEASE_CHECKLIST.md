@@ -26,6 +26,11 @@ skill from GitHub.
   and are documented with sensitive-host caution.
 - Order, account, login, certificate mutation, and orderable-amount endpoints are
   excluded from scripts and cataloged only as out-of-scope notes when needed.
+- Ephemeral WebSocket guest metadata, complete STOMP `CONNECT` or `MESSAGE`
+  frames, raw frame dumps, and guest-bootstrap responses are absent from the
+  release contents and verification logs.
+- No standalone WebSocket client, guest-bootstrap reproduction, bid/offer
+  subscription, or order/account destination is included.
 
 ## Verification
 
@@ -50,6 +55,7 @@ cp -R SKILL.md README.md LICENSE SECURITY.md agents examples references scripts 
 test -f "$skill_dir/SKILL.md"
 test -f "$skill_dir/agents/openai.yaml"
 test -f "$skill_dir/references/api-catalog.md"
+test -f "$skill_dir/references/websocket-api-reference.md"
 python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
 ```
 
@@ -60,6 +66,9 @@ python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
 - `references/api-catalog.md` status labels remain conservative; keep its
   Verification Status table authoritative (`script-backed`, `observed`,
   `observed-drift`, `needs-recheck`, `excluded`, `public-social-sensitive`).
+- `references/websocket-api-reference.md` remains browser-observed,
+  unofficial, unstable, and not script-backed; its evidence labels distinguish
+  protocol standards from TossInvest-specific observations.
 - `references/eval-prompts.md` covers lookup, discovery, and refusal scenarios.
 - `SECURITY.md` points sensitive reports to private vulnerability reporting.
 
@@ -73,3 +82,6 @@ python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
   layout.
 - Release notes mention that TossInvest web APIs are unofficial, undocumented,
   and subject to change.
+- Release notes describe the WebSocket API reference as browser-observed and
+  non-runnable, and repeat the guest-metadata, bid/offer, order, and account
+  exclusions.

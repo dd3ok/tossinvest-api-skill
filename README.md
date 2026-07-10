@@ -215,6 +215,7 @@ python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-per
 TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식을 찾아줘.
 토스증권에서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
 토스증권에서 국내와 미국 거래대금 기준 실시간 차트 top100 랭킹을 조회해줘.
+토스증권 비로그인 공개 페이지의 A005930 실시간 체결 WebSocket 채널과 수신 필드를 설명해줘.
 문서화되지 않은 주식 페이지 엔드포인트를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
 ```
 
@@ -240,7 +241,7 @@ tossinvest-api-skill/
 | --- | --- |
 | `SKILL.md` | 에이전트가 읽는 라우팅 규칙, 안전 규칙, 작업 흐름 |
 | `scripts/` | 시세, 차트, 재무, 랭킹, 스크리너, 뉴스, 공시, 테마, 지수, 투자자 동향 조회 스크립트 |
-| `references/` | API 카탈로그, 네트워크 캡처 절차, 응답 노트, 안전 규칙, 스모크 테스트 프롬프트 |
+| `references/` | API 카탈로그, WebSocket API 레퍼런스, 네트워크 캡처 절차, 응답 노트, 안전 규칙, 스모크 테스트 프롬프트 |
 | `examples/filters/` | 재사용 가능한 스크리너 필터 JSON 예시 |
 | `agents/openai.yaml` | Codex/OpenAI 계열 도구에서 노출할 표시 메타데이터 |
 | `tests/` | 스크립트 헬퍼와 엔드포인트 경로 생성 로직을 검증하는 유지보수자·CI용 테스트 |

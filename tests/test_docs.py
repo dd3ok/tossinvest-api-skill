@@ -7,12 +7,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class DocumentationPromptTests(unittest.TestCase):
-    def test_prompts_do_not_depend_on_dollar_skill_selectors(self):
+    def test_public_prompts_do_not_depend_on_dollar_skill_selectors(self):
         checked_paths = [
             ROOT / ".github" / "RELEASE_CHECKLIST.md",
             ROOT / "README.md",
             ROOT / "SKILL.md",
-            ROOT / "agents" / "openai.yaml",
             ROOT / "references" / "eval-prompts.md",
         ]
         for path in checked_paths:
@@ -219,6 +218,8 @@ class DocumentationPromptTests(unittest.TestCase):
             "독립 WebSocket 클라이언트 제공·구현은 지원하지 않습니다",
             "WebSocket 매수·매도 호가 구독과 모든 주문·계좌 작업도 제외됩니다",
             "[비공식 WebSocket API 레퍼런스](references/websocket-api-reference.md)",
+            "A005930 실시간 체결 WebSocket 채널과 수신 필드를 설명해줘",
+            "API 카탈로그, WebSocket API 레퍼런스",
         ]:
             with self.subTest(readme_expected=expected):
                 self.assertIn(expected, readme)
@@ -567,11 +568,9 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "비공식 토스증권 API"', text)
-        self.assertIn(
-            "로그인·계좌 인증 없이 토스증권 공개 주식·시장 데이터를 안전하게 재조회", text
-        )
-        self.assertIn("A005930", text)
-        self.assertIn("조회해줘", text)
+        self.assertIn("토스증권 공개 시장 데이터 조회와 WebSocket 동작 설명", text)
+        self.assertIn("$tossinvest-web-api", text)
+        self.assertIn("WebSocket 체결 스트림의 범위를 안전하게 설명해줘", text)
 
         license_text = (ROOT / "LICENSE.txt").read_text(encoding="utf-8")
         self.assertEqual(license_text, (ROOT / "LICENSE").read_text(encoding="utf-8"))
@@ -592,6 +591,12 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("natural TossInvest/토스증권 language", checklist)
         self.assertIn("do not", checklist)
         self.assertIn("depend on `$...` skill selectors or aliases", checklist)
+        self.assertIn("references/websocket-api-reference.md", ci_text)
+        self.assertIn("references/websocket-api-reference.md", checklist)
+        self.assertIn("Ephemeral WebSocket guest metadata", checklist)
+        self.assertIn("No standalone WebSocket client", checklist)
+        self.assertIn("browser-observed", checklist)
+        self.assertIn("non-runnable", checklist)
         self.assertNotIn("matches the public skill name", checklist)
         self.assertNotIn("description starts with `Use when`", checklist)
         self.assertNotIn(
