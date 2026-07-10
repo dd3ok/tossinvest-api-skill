@@ -33,17 +33,14 @@
 
 ### WebSocket API
 
-- 로그인하지 않은 공개 페이지에서 확인되는 실시간 체결가·지수·가상자산형 지수의 동작 방식 설명
-- 서버 정보, STOMP 연결·구독 과정, destination, 반복 수신되는 `MESSAGE` 이벤트, payload 필드
 - `scripts/websocket_prices.py`로 공개 국내·미국 주식 체결, 지수, 가상자산형 지수 이벤트를 제한된 시간·건수만큼 JSONL로 수신
-- 연결에는 공개 브라우저 세션이 발급한 임시 게스트 연결 메타데이터가 필요함. 이 값은 실행 중 메모리에서만 자동으로 사용하고 CLI 인자·환경 파일·로그·출력·저장 파일로 받거나 남기지 않음
-- 경량 클라이언트는 로컬에서 한 번만 실행되며 구독을 20개씩 400ms 간격으로 전송하고, STOMP 프레임은 256KiB·WebSocket 수신 묶음은 1MiB로 제한하며, 첫 JSONL 이벤트만 즉시 flush한 뒤 묶어서 출력함
+- 서버·STOMP 연결·destination·`MESSAGE`·payload 필드는 [비공식 WebSocket API 레퍼런스](references/websocket-api-reference.md)에 정리
+- 임시 게스트 연결값은 실행 중 메모리에서만 사용하며 CLI 인자·환경 파일·로그·출력·저장 파일에 남기지 않음
+- 공개 지수(`KGG01P`, `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI`)만 허용하고 로그인 전환 지수에서는 즉시 중단함
+- 호가·예상체결·종목상태 채널은 공개 시장 데이터만 실험적으로 다루며 로그인·주문·계좌 작업과 연결하지 않음
 - 국내·미국 top100은 단일 WebSocket 랭킹 채널이 아니라 10초 주기 HTTP 랭킹 snapshot과 최대 100개 종목별 체결 구독을 결합함
-- 검색·산업·투자자 동향·조건검색·뉴스 목록은 HTTP로 구성되고, 화면에 렌더된 종목의 현재가·등락만 공통 WebSocket 가격 저장소가 덮어쓸 수 있음
-- 지수 스트림은 확인된 공개 코드(`KGG01P`, `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI`)만 허용하며, 로그인 화면으로 전환되는 `DJI.DJI`, `RFU.NQc1`, `RFU.GCv1`에서는 즉시 중단함
-- 호가·예상체결·종목상태 채널은 공개 시장 데이터만 실험적으로 허용하며, 로그인·주문·계좌 작업과 연결하지 않음
-- 현재가·호가 스냅샷·장중 체결 틱은 `scripts/quote.py`에서 제한된 공개 HTTP 읽기 전용 방식으로 조회
-- 상세 내용은 [비공식 WebSocket API 레퍼런스](references/websocket-api-reference.md) 참고
+- 검색·산업·투자자 동향·조건검색·뉴스 목록과 `scripts/quote.py`의 현재가·호가·체결 틱은 HTTP로 조회
+- 구독·메모리·출력 제한은 [WebSocket 클라이언트 운영 제한](#websocket-클라이언트-운영-제한) 참고
 
 설치 후 TossInvest 또는 토스증권을 언급해 자연어로 요청하면 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회하고 공개 WebSocket 실시간 체결을 제한적으로 수신할 수 있습니다.
 
