@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use this skill when the user asks for public, read-only TossInvest/토스증권 data visible on tossinvest.com, including Korean/US stock quotes, order books, candles, financials, filings, news, rankings, screeners, calendars, indices, FX, exchange-rate widgets, crypto-like index pages, public community comments/replies, or public endpoint re-verification. Do not use for login, accounts, holdings, orders, authenticated broker workflows, bulk scraping, or investment advice.
+description: Use this skill when the user asks for public, read-only TossInvest/토스증권 data visible on tossinvest.com, including Korean/US stock quotes, order books, candles, financials, filings, news, rankings, screeners, calendars, indices, FX, exchange-rate widgets, crypto-like index pages, public community comments/replies, observed anonymous-page real-time WebSocket price behavior, or public endpoint re-verification. Do not use for login, accounts, holdings, orders, authenticated broker workflows, bulk scraping, or investment advice.
 license: MIT
 ---
 
@@ -20,6 +20,7 @@ TossInvest has a separate official Open API documented at `developers.tossinvest
 
 - Use for public TossInvest stock or market data visible on `tossinvest.com`.
 - Use for quotes, order books, candles, financials, filings, news, themes, rankings, indices, market calendars, investor trends, screeners, and sanitized public community comments.
+- Use for browser-observed, anonymous-page real-time trade-price behavior after reading [references/websocket-observations.md](references/websocket-observations.md).
 - Use when re-verifying an observed read-only browser endpoint before updating scripts or references.
 
 ## When Not To Use
@@ -28,6 +29,7 @@ TossInvest has a separate official Open API documented at `developers.tossinvest
 - Do not use it for order placement, order amendment, order cancellation, login, authentication, account balance, holdings, transfer, certificate, or any account-impacting workflow.
 - Do not use it to provide personalized investment advice, buy/sell recommendations, or portfolio decisions.
 - Stop if the requested data requires login cookies, authorization headers, account identifiers, personal financial data, raw HAR storage, or session storage.
+- Do not request, print, store, log, replay, or accept raw WebSocket guest connection metadata from users. Do not build an independent WebSocket client in this skill.
 - Do not perform bulk scraping, rate-limit bypass, anti-bot bypass, aggressive polling, concurrent fan-out, or attempts to access data that is not visible in public TossInvest web pages.
 - Stop on HTTP 403, HTTP 429, challenge pages, login redirects, or abnormal responses; do not automatically retry or work around rate limit or anti-bot controls.
 
@@ -50,6 +52,7 @@ TossInvest has a separate official Open API documented at `developers.tossinvest
 | Sanitized public community comments and replies | `scripts/community_comments.py` | [references/response-notes.md](references/response-notes.md) |
 | Screener counts, filter metadata, RSI filters, price/technical presets | `scripts/screener_count.py` | [references/script-cookbook.md](references/script-cookbook.md); [examples/filters](examples/filters) |
 | Page-level stock API smoke checks | `scripts/page_api_check.py` | [references/script-cookbook.md](references/script-cookbook.md) |
+| Anonymous-page real-time trade-price WebSocket observations | Browser observation only; no bundled client | [references/websocket-observations.md](references/websocket-observations.md); [references/safety-rules.md](references/safety-rules.md) |
 | Official Open API distinction or official rate-limit question | Official docs only; no bundled script | [references/official-openapi-boundary.md](references/official-openapi-boundary.md) |
 | New endpoint capture or undocumented page analysis | Browser network capture, bundled JavaScript inspection | [references/capture-workflow.md](references/capture-workflow.md), [references/safety-rules.md](references/safety-rules.md) |
 
@@ -60,11 +63,12 @@ After choosing a routing-table row, use [references/script-cookbook.md](referenc
 ## Workflow
 
 1. For normal lookups, choose a bundled script from the routing table.
-2. For missing or drifted endpoints, start from [Known Observed Pages](references/api-catalog.md#known-observed-pages), then follow [references/capture-workflow.md](references/capture-workflow.md).
-3. Exclude telemetry, personalization, login, account, and order calls. Include bootstrapping only when needed to identify a public read-only endpoint.
-4. Prefer `wts-info-api.tossinvest.com` read-only endpoints.
-5. Use `wts-cert-api.tossinvest.com` only for public visible page data or metadata, limited to cataloged or script-backed endpoint families and never requiring cookies, authorization headers, account identifiers, or personal data.
-6. Read [references/safety-rules.md](references/safety-rules.md) before handling HAR files, cookies, account data, authenticated APIs, order-related endpoints, or `wts-cert-api`.
+2. For WebSocket questions, read [references/websocket-observations.md](references/websocket-observations.md) and keep the work to sanitized browser observation; do not capture or reproduce the guest bootstrap.
+3. For missing or drifted endpoints, start from [Known Observed Pages](references/api-catalog.md#known-observed-pages), then follow [references/capture-workflow.md](references/capture-workflow.md).
+4. Exclude telemetry, personalization, login, account, and order calls. Include only non-guest public metadata bootstrapping when needed to identify an HTTP read-only endpoint; never inspect, capture, or reproduce the WebSocket guest bootstrap.
+5. Prefer `wts-info-api.tossinvest.com` read-only endpoints.
+6. Use `wts-cert-api.tossinvest.com` only for public visible page data or metadata, limited to cataloged or script-backed endpoint families and never requiring cookies, authorization headers, account identifiers, or personal data.
+7. Read [references/safety-rules.md](references/safety-rules.md) before handling HAR files, cookies, account data, authenticated APIs, order-related endpoints, WebSocket observations, or `wts-cert-api`.
 
 ## Script Use
 
@@ -117,6 +121,8 @@ Use [references/eval-prompts.md](references/eval-prompts.md) to smoke-test skill
 - Do not catalog or script endpoints that do not help answer stock, market, public page, public news/feed, or public community information questions, even when they appear in browser traffic.
 - For public community endpoints, keep pagination bounded and emit sanitized output without raw profile or social metadata.
 - Never store raw cookies, tokens, account numbers, session files, storage state, or raw HAR captures.
+- Anonymous TossInvest pages can display live trade prices over the observed WebSocket transport, but the connection is not credential-free and requires ephemeral guest connection metadata. Treat that metadata as sensitive and never request it from users or print, store, log, or replay it.
+- Document browser-observed trade-price behavior only. Keep WebSocket bid/offer order-book subscriptions and all order or account workflows excluded; the existing bounded HTTP quote lookup is a separate read-only path.
 - Stop when a `wts-cert-api` endpoint requires authentication, cookies, account identifiers, or personal data; do not try to work around access controls.
 - Stop on 403/429 or challenge responses instead of retrying, polling, rotating headers, or bypassing rate limit and anti-bot controls.
 - Treat undocumented APIs as unstable and re-verify them with current browser traffic.
