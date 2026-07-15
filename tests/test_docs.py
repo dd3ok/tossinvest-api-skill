@@ -609,6 +609,17 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("capture-workflow.md", observed_pages)
         self.assertIn("Do not guess a replacement endpoint", observed_pages)
 
+    def test_skill_documents_collector_target_hygiene(self):
+        text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("/api/v3/stock-prices/details", text)
+        self.assertIn("no matching row", text)
+        self.assertIn("target-level stale or endpoint-incompatible product code", text)
+        self.assertIn("cool it down before the next collector pass", text)
+        self.assertIn("Collector target hygiene", text)
+        self.assertIn("US and KR target pools", text)
+        self.assertIn("KR ETN-like `Q...` codes", text)
+        self.assertIn("recent-failure cooldown", text)
+
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "비공식 토스증권 API"', text)

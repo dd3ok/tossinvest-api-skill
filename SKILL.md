@@ -95,6 +95,8 @@ For US stock candles, use an observed TossInvest product/source code such as `US
 
 On HTTP 400/404, non-JSON content, missing `result`, changed response shape, or another endpoint-drift signal: stop using the stale path. Open the matching public TossInvest page, re-capture browser requests with [references/capture-workflow.md](references/capture-workflow.md), and start from [Known Observed Pages](references/api-catalog.md#known-observed-pages).
 
+If `/api/v3/stock-prices/details` returns a successful JSON response but omits the requested code or has no matching row, treat that as a target-level stale or endpoint-incompatible product code, not a transport outage. Record the failing target separately, cool it down before the next collector pass, and keep processing the remaining price targets.
+
 Do not infer replacement paths from old endpoint names. Update [references/api-catalog.md](references/api-catalog.md) with the checked date, source page, method, path, params/body, and response shape before updating scripts.
 
 ## Prompt Examples
@@ -107,6 +109,8 @@ Users normally should not need to include the skill name. Natural prompts like t
 - `문서화되지 않은 read-only 주식 페이지 endpoint를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.`
 
 Prefer bundled scripts for direct lookups. For capture or sensitive-host work, follow the Workflow safety step above.
+
+Collector target hygiene: keep US and KR target pools clean before fanout. US price target lists can be polluted by non-US product codes from theme, alias, or related-instrument sources; KR ETN-like `Q...` codes and opaque `NAS...` codes should be re-verified against a public stock page before treating them as US stock price targets. For KR `A...` targets that return no matching price row, prefer recent-failure cooldown and later recheck before hard blacklist, because some valid instruments may temporarily disappear or move between endpoint families.
 
 Use [examples/filters](examples/filters) as starting JSON bodies for `--filters-file` when combining multiple screener filters.
 
