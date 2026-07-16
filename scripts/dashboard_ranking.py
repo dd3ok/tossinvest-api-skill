@@ -19,7 +19,7 @@ LIVE_CHART_IDS = {
     "realtime_stock",
 }
 MARKETS = {"all", "kr", "us"}
-DURATIONS = {"1d", "realtime"}
+DURATIONS = {"1d", "5d", "20d", "60d", "120d", "240d", "realtime"}
 HIDE_INVESTMENT_RISK_FILTERS = (
     "KRX_MANAGEMENT_STOCK",
     "MARKET_CAP_GREATER_THAN_50M",
@@ -178,13 +178,23 @@ def fetch_overview_signals(product_codes: list[str]) -> dict[str, Any]:
     }
 
 
+def fetch_overview_indicator() -> dict[str, Any]:
+    return {
+        "kind": "indicator",
+        "result": api.get_result(
+            "/api/v4/dashboard/wts/overview/indicator",
+            base_url=CERT_BASE_URL,
+        ),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Fetch TossInvest overview, live-chart, investor rankings, or stock signals."
     )
     parser.add_argument(
         "--kind",
-        choices=["overview", "live-chart", "investors", "signals"],
+        choices=["indicator", "overview", "live-chart", "investors", "signals"],
         default="overview",
     )
     parser.add_argument(
@@ -225,7 +235,9 @@ def main() -> int:
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
-    if args.kind == "investors":
+    if args.kind == "indicator":
+        payload = fetch_overview_indicator()
+    elif args.kind == "investors":
         payload = fetch_investor_rankings(args.investor_size, args.side)
     elif args.kind == "signals":
         if not args.signal_code:

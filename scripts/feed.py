@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 from typing import Any
 
+import community_comments
 import tossinvest_api as api
 
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
@@ -23,6 +24,10 @@ NEWS_TYPES = {
     "HOT",
     "SOARING_STOCK",
     "INDEX",
+}
+COMMUNITY_RANKINGS = {
+    "followers": "TOP_10_FOLLOWING_INCREASE",
+    "profit": "TOP_10_PROFIT_ROSS_AMOUNT",
 }
 
 
@@ -72,23 +77,79 @@ def fetch_dashboard_news(news_type: str, index_code: str | None) -> dict[str, An
     }
 
 
+def fetch_community_ranking(ranking: str, limit: int) -> dict[str, Any]:
+    if ranking not in COMMUNITY_RANKINGS:
+        raise ValueError(
+            f"community ranking must be one of: {', '.join(sorted(COMMUNITY_RANKINGS))}"
+        )
+    limit = api.require_int_range("community-limit", limit, minimum=1, maximum=10)
+    ranking_id = COMMUNITY_RANKINGS[ranking]
+    result = api.get_result(
+        f"/api/v1/community/top-rankings/{ranking_id}",
+        base_url=CERT_BASE_URL,
+    )
+    if not isinstance(result, dict) or not isinstance(result.get("items"), list):
+        raise RuntimeError("Unexpected TossInvest response: community ranking items are missing")
+    items = [
+        sanitize_community_ranking_item(row, rank)
+        for rank, row in enumerate(result["items"][:limit], start=1)
+        if isinstance(row, dict)
+    ]
+    return {
+        "kind": "community-ranking",
+        "ranking": ranking,
+        "rankingId": ranking_id,
+        "items": items,
+    }
+
+
+def sanitize_community_ranking_item(item: dict[str, Any], rank: int) -> dict[str, Any]:
+    target = item.get("target") if isinstance(item.get("target"), dict) else {}
+    nickname = target.get("nickname")
+    sanitized: dict[str, Any] = {
+        "rank": rank,
+        "nickname": community_comments.redact_public_text(nickname)
+        if isinstance(nickname, str)
+        else None,
+        "type": item.get("type") if isinstance(item.get("type"), str) else None,
+    }
+    for key in (
+        "profitLossAmountKrw",
+        "profitLossRateKrw",
+        "followingCount",
+        "followingIncrease",
+    ):
+        value = item.get(key)
+        if isinstance(value, (str, int, float)) and not isinstance(value, bool):
+            sanitized[key] = value
+    return {key: value for key, value in sanitized.items() if value is not None}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Fetch TossInvest feed recommendations or dashboard news."
     )
     parser.add_argument(
         "--kind",
-        choices=[*sorted(FEED_PATHS), "news"],
+        choices=[*sorted(FEED_PATHS), "community-ranking", "news"],
         default="recommended",
     )
     parser.add_argument("--last-recommend-id")
     parser.add_argument("--news-type", default="HOT", choices=sorted(NEWS_TYPES))
     parser.add_argument("--index-code", help="Required for --news-type INDEX")
+    parser.add_argument(
+        "--community-ranking",
+        choices=sorted(COMMUNITY_RANKINGS),
+        default="profit",
+    )
+    parser.add_argument("--community-limit", type=int, default=10)
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
-    if args.kind == "news":
+    if args.kind == "community-ranking":
+        payload = fetch_community_ranking(args.community_ranking, args.community_limit)
+    elif args.kind == "news":
         payload = fetch_dashboard_news(args.news_type, args.index_code)
     else:
         payload = fetch_feed(args.kind, args.last_recommend_id)

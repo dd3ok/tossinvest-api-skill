@@ -22,6 +22,7 @@ import feed
 import filings
 import financials
 import indices
+import market_search
 import news
 import page_api_check
 import quote
@@ -192,6 +193,38 @@ class ThemeScriptTests(unittest.TestCase):
             "/api/v1/companies/tics/rankings?ticsId=289&ticsRanking=1",
         )
 
+    def test_build_current_dashboard_theme_ranking_body(self):
+        self.assertEqual(
+            theme.build_dashboard_theme_ranking_body("us", "1d"),
+            {"nation": "US", "duration": "1d"},
+        )
+        with self.assertRaisesRegex(ValueError, "duration must be one of: 1d"):
+            theme.build_dashboard_theme_ranking_body("us", "20d")
+
+    def test_build_sector_stock_and_etf_requests(self):
+        self.assertEqual(
+            theme.build_sector_stocks_path("925"),
+            "/api/v2/dashboard/wts/overview/tics/925/stocks",
+        )
+        self.assertEqual(
+            theme.build_sector_stocks_body("us", "volume", "asc", 2),
+            {"nation": "US", "sortBy": "VOLUME", "sortOrder": "ASC", "page": 2},
+        )
+        self.assertEqual(
+            theme.build_sector_etfs_path("925"),
+            "/api/v2/dashboard/wts/overview/tics/925/etfs",
+        )
+        self.assertEqual(
+            theme.build_sector_etfs_body("all", "expense-ratio", "desc", True, 1),
+            {
+                "nation": "ALL",
+                "sortBy": "EXPENSE_RATIO",
+                "sortOrder": "DESC",
+                "includeLeverageInverse": True,
+                "page": 1,
+            },
+        )
+
 
 class IndicesScriptTests(unittest.TestCase):
     def test_build_index_chart_path_keeps_step_and_encodes_query(self):
@@ -199,6 +232,24 @@ class IndicesScriptTests(unittest.TestCase):
             indices.build_index_chart_path("KGG01P", "kr-s", "1d", "min:5", "krx"),
             "/api/v1/r-chart/kr-s/KGG01P/1d/min:5?session=main&investMode=krx&last=false",
         )
+
+    def test_build_index_daily_quotes_path_supports_cursor_paging(self):
+        self.assertEqual(
+            indices.build_index_daily_quotes_path(
+                "KGG01P",
+                "auto",
+                20,
+                "2026-07-13T00:00:00+09:00",
+            ),
+            (
+                "/api/v1/c-chart/kr-s/KGG01P/day:1?count=20"
+                "&from=2026-07-13T00%3A00%3A00%2B09%3A00&useAdjustedRate=true"
+            ),
+        )
+
+    def test_build_index_daily_quotes_path_requires_timezone_cursor(self):
+        with self.assertRaisesRegex(ValueError, "must include a timezone"):
+            indices.build_index_daily_quotes_path("KGG01P", "kr-s", 20, "2026-07-13T00:00:00")
 
     def test_index_builders_reject_unverified_selectors(self):
         with self.assertRaisesRegex(ValueError, "securities_type must be one of"):
@@ -856,6 +907,7 @@ class JsonOnlyScriptCliTests(unittest.TestCase):
             "feed.py",
             "financials.py",
             "indices.py",
+            "market_search.py",
             "page_api_check.py",
             "quote.py",
             "screener_count.py",
@@ -948,10 +1000,32 @@ class DashboardRankingScriptTests(unittest.TestCase):
             },
         )
 
+    def test_build_live_chart_body_accepts_all_visible_periods(self):
+        for duration in ["1d", "5d", "20d", "60d", "120d", "240d", "realtime"]:
+            with self.subTest(duration=duration):
+                body = dashboard_ranking.build_live_chart_body(
+                    "biggest_market_amount", "US", duration, None
+                )
+                self.assertEqual(body["duration"], duration)
+
     def test_build_overview_signals_path_joins_product_codes(self):
         self.assertEqual(
             dashboard_ranking.build_overview_signals_path(["005930", "A000660"]),
             "/api/v1/dashboard/wts/overview/signals?codes=A005930%2CA000660",
+        )
+
+    def test_fetch_current_overview_indicator_uses_public_get_route(self):
+        with patch.object(
+            dashboard_ranking.api,
+            "get_result",
+            return_value={"leftSection": [], "rightSection": []},
+        ) as get_result:
+            payload = dashboard_ranking.fetch_overview_indicator()
+
+        self.assertEqual(payload["kind"], "indicator")
+        get_result.assert_called_once_with(
+            "/api/v4/dashboard/wts/overview/indicator",
+            base_url=dashboard_ranking.CERT_BASE_URL,
         )
 
     def test_help_mentions_signals_mode(self):
@@ -962,6 +1036,7 @@ class DashboardRankingScriptTests(unittest.TestCase):
             text=True,
         )
         self.assertIn("signals", result.stdout)
+        self.assertIn("indicator", result.stdout)
         self.assertIn("--signal-code", result.stdout)
         self.assertIn("--hide-investment-risk", result.stdout)
         self.assertIn("MARKET_CAP_GREATER_THAN_50M", result.stdout)
@@ -994,6 +1069,42 @@ class FeedScriptTests(unittest.TestCase):
         self.assertEqual(calls[0][0], "/api/v4/feed/recommend/ranking-posts")
         self.assertEqual(calls[0][1]["base_url"], feed.CERT_BASE_URL)
 
+    def test_sanitize_community_ranking_strips_profile_identifiers(self):
+        item = {
+            "type": "USER_PROFILE",
+            "target": {
+                "nickname": "public name",
+                "profilePictureUrl": "https://example.com/profile.png",
+                "userProfileId": "private-profile-id",
+            },
+            "profitLossAmountKrw": 1000,
+            "profitLossRateKrw": 0.1,
+            "isFollowing": True,
+            "isMyProfile": False,
+        }
+        sanitized = feed.sanitize_community_ranking_item(item, 1)
+        self.assertEqual(
+            sanitized,
+            {
+                "rank": 1,
+                "nickname": "public name",
+                "type": "USER_PROFILE",
+                "profitLossAmountKrw": 1000,
+                "profitLossRateKrw": 0.1,
+            },
+        )
+        self.assertNotIn("private-profile-id", repr(sanitized))
+
+        nested = feed.sanitize_community_ranking_item(
+            {
+                "type": {"profileUrl": "https://example.com/private"},
+                "target": {"nickname": {"userProfileId": "private-profile-id"}},
+                "profitLossAmountKrw": {"accountId": "private-account"},
+            },
+            2,
+        )
+        self.assertEqual(nested, {"rank": 2})
+
 
 class CommunityCommentsScriptTests(unittest.TestCase):
     def test_build_stock_comments_path_uses_public_stock_query(self):
@@ -1014,6 +1125,14 @@ class CommunityCommentsScriptTests(unittest.TestCase):
             community_comments.build_stock_comments_path("US20100311002", "following", None)
         with self.assertRaisesRegex(ValueError, "last_comment_id must contain digits"):
             community_comments.build_stock_comments_path("US20100311002", "popular", "abc")
+
+    def test_build_lounge_comments_path_uses_bounded_public_query(self):
+        self.assertEqual(
+            community_comments.build_lounge_comments_path("lounge_193394", "recent", None),
+            ("/api/v4/comments?subjectType=LOUNGE&subjectId=LOUNGE_193394&commentSortType=RECENT"),
+        )
+        with self.assertRaisesRegex(ValueError, "LOUNGE_<digits>"):
+            community_comments.build_lounge_comments_path("LOUNGE_account", "recent", None)
 
     def test_sanitize_comment_removes_profile_and_personal_flags(self):
         raw = {
@@ -1252,6 +1371,20 @@ class StockPageScriptTests(unittest.TestCase):
             ),
         )
 
+    def test_build_public_stock_status_helper_paths(self):
+        self.assertEqual(
+            stock_page.build_red_flags_path("005930"),
+            "/api/v1/stock-infos/A005930/red-flags",
+        )
+        self.assertEqual(
+            stock_page.build_trading_status_path("005930"),
+            "/api/v3/trading/order/A005930/trading-status",
+        )
+        self.assertEqual(
+            stock_page.build_trading_analysis_path("005930"),
+            "/api/v1/trading/analysis/productCode/A005930",
+        )
+
     def test_fetch_stock_page_composes_public_main_card_data(self):
         calls = []
 
@@ -1309,6 +1442,41 @@ class ScreenerCountScriptTests(unittest.TestCase):
             screener_count.build_search_modal_path(),
             "/api/v2/screener/screen/search/modal",
         )
+
+    def test_build_screener_filter_metadata_bodies(self):
+        filter_body = screener_count.build_rsi_filter("oversold")
+        self.assertEqual(
+            screener_count.build_filter_base_body("KR", filter_body["id"]),
+            {"filterId": filter_body["id"], "nation": "kr"},
+        )
+        self.assertEqual(
+            screener_count.build_filter_range_body("US", filter_body),
+            {"filter": filter_body, "nation": "us"},
+        )
+
+    def test_filter_metadata_rejects_unselected_or_undocumented_filter(self):
+        with self.assertRaisesRegex(ValueError, "filter metadata count"):
+            screener_count.validate_filter_metadata_selection([])
+        with self.assertRaisesRegex(ValueError, "undocumented screener filter id"):
+            screener_count.build_filter_base_body("kr", "ACCOUNT_FILTER")
+        with self.assertRaisesRegex(ValueError, "undocumented screener filter id"):
+            screener_count.build_filter_range_body("kr", {"id": "ACCOUNT_FILTER", "conditions": []})
+
+    def test_filter_metadata_selection_is_bounded_and_unique(self):
+        selected = [screener_count.build_rsi_filter("oversold")]
+        self.assertEqual(
+            screener_count.validate_filter_metadata_selection(selected),
+            selected,
+        )
+        with self.assertRaisesRegex(ValueError, "unique filter ids"):
+            screener_count.validate_filter_metadata_selection(selected * 2)
+        with self.assertRaisesRegex(ValueError, "at most 10"):
+            screener_count.validate_filter_metadata_selection(
+                [
+                    {"id": filter_id, "conditions": []}
+                    for filter_id in sorted(screener_count.ALLOWED_FILTER_IDS)[:11]
+                ]
+            )
 
     def test_build_screener_count_body_normalizes_nation(self):
         self.assertEqual(
@@ -1468,6 +1636,61 @@ class ScreenerCountScriptTests(unittest.TestCase):
             screener_count.build_technical_filter("price-ma-cross-up"),
         ]
         self.assertEqual(screener_count.validate_filters(filters), filters)
+
+
+class MarketSearchScriptTests(unittest.TestCase):
+    def test_build_search_body_uses_visible_home_sections(self):
+        self.assertEqual(
+            market_search.build_search_body(" Samsung ", ["product", "news"]),
+            {
+                "query": "Samsung",
+                "sections": [
+                    {"type": "PRODUCT", "option": {"addIntegratedSearchResult": True}},
+                    {"type": "NEWS"},
+                ],
+            },
+        )
+
+    def test_build_search_body_rejects_blank_and_unknown_sections(self):
+        with self.assertRaisesRegex(ValueError, "must not be blank"):
+            market_search.build_search_body(" ", None)
+        with self.assertRaisesRegex(ValueError, "section must be one of"):
+            market_search.build_search_body("Samsung", ["account"])
+
+    def test_sanitize_search_results_keeps_public_market_fields_only(self):
+        result = [
+            {
+                "type": "PRODUCT",
+                "data": {
+                    "type": "PRODUCT",
+                    "items": [
+                        {
+                            "productCode": "A005930",
+                            "productName": "Samsung Electronics",
+                            "symbol": "005930",
+                            "market": "KOSPI",
+                            "stockStatus": {"accountOnly": True},
+                        }
+                    ],
+                },
+            }
+        ]
+        self.assertEqual(
+            market_search.sanitize_search_results(result, 10),
+            [
+                {
+                    "type": "PRODUCT",
+                    "items": [
+                        {
+                            "productCode": "A005930",
+                            "productName": "Samsung Electronics",
+                            "symbol": "005930",
+                            "market": "KOSPI",
+                        }
+                    ],
+                }
+            ],
+        )
 
 
 class NewsScriptTests(unittest.TestCase):

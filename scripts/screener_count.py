@@ -217,6 +217,28 @@ def build_search_modal_path() -> str:
     return "/api/v2/screener/screen/search/modal"
 
 
+def build_filter_base_body(nation: str, filter_id: str) -> dict[str, Any]:
+    if filter_id not in ALLOWED_FILTER_IDS:
+        raise ValueError(f"undocumented screener filter id: {filter_id}")
+    return {"filterId": filter_id, "nation": normalize_nation(nation)}
+
+
+def build_filter_range_body(nation: str, filter_body: dict[str, Any]) -> dict[str, Any]:
+    validated = validate_filters([filter_body])[0]
+    return {"filter": validated, "nation": normalize_nation(nation)}
+
+
+def validate_filter_metadata_selection(
+    filters: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    validated = validate_filters(filters)
+    api.require_int_range("filter metadata count", len(validated), minimum=1, maximum=10)
+    filter_ids = [filter_body["id"] for filter_body in validated]
+    if len(filter_ids) != len(set(filter_ids)):
+        raise ValueError("filter metadata requires unique filter ids")
+    return validated
+
+
 def build_rsi_filter(mode: str) -> dict[str, Any]:
     normalized = mode.strip().lower()
     if normalized == "oversold":
@@ -336,6 +358,24 @@ def fetch_search_modal() -> Any:
     return api.get_result(build_search_modal_path(), base_url=CERT_URL)
 
 
+def fetch_filter_base(nation: str, filter_id: str) -> Any:
+    return api.get_result(
+        "/api/v1/screener/filters/base",
+        method="POST",
+        body=build_filter_base_body(nation, filter_id),
+        base_url=CERT_URL,
+    )
+
+
+def fetch_filter_range(nation: str, filter_body: dict[str, Any]) -> Any:
+    return api.get_result(
+        "/api/v1/screener/filters/range",
+        method="POST",
+        body=build_filter_range_body(nation, filter_body),
+        base_url=CERT_URL,
+    )
+
+
 def load_filters(path: str | None) -> list[dict[str, Any]]:
     if path is None:
         return []
@@ -402,6 +442,16 @@ def main() -> int:
         help="Also fetch public screener search modal metadata",
     )
     parser.add_argument(
+        "--include-filter-base",
+        action="store_true",
+        help="Fetch based-at metadata for each selected filter",
+    )
+    parser.add_argument(
+        "--include-filter-range",
+        action="store_true",
+        help="Fetch the current public min/max range for each selected filter",
+    )
+    parser.add_argument(
         "--technical-filter",
         action="append",
         choices=sorted(TECHNICAL_PRESETS),
@@ -451,6 +501,18 @@ def main() -> int:
         payload["commonPresets"] = fetch_common_presets(not args.no_custom_presets)
     if args.include_search_modal:
         payload["searchModal"] = fetch_search_modal()
+    if args.include_filter_base or args.include_filter_range:
+        metadata_filters = validate_filter_metadata_selection(filters)
+        if args.include_filter_base:
+            payload["filterBase"] = {
+                filter_body["id"]: fetch_filter_base(args.nation, filter_body["id"])
+                for filter_body in metadata_filters
+            }
+        if args.include_filter_range:
+            payload["filterRange"] = {
+                filter_body["id"]: fetch_filter_range(args.nation, filter_body)
+                for filter_body in metadata_filters
+            }
     api.emit_output(api.render_json(payload), args.output)
     return 0
 

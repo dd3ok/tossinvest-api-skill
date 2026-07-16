@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch sanitized public TossInvest stock community comments."""
+"""Fetch sanitized public TossInvest stock or lounge community comments."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 COMMENT_SORTS = {"popular": "POPULAR", "recent": "RECENT"}
 _PRODUCT_CODE_RE = re.compile(r"^[A-Z0-9._-]{2,48}$")
 _STOCK_PRODUCT_CODE_RE = re.compile(r"^(A\d{6}|US\d{11})$")
+_LOUNGE_ID_RE = re.compile(r"^LOUNGE_\d{1,30}$")
 _DIGIT_ID_RE = re.compile(r"^\d{1,30}$")
 _PHONE_RE = re.compile(
     r"(?<!\w)(?:\+82[\s.-]?)?(?:0?1[016789]|0\d{1,2})[\s.-]?\d{3,4}[\s.-]?\d{4}(?!\w)"
@@ -28,10 +29,39 @@ def build_stock_comments_path(
     last_comment_id: str | int | None,
 ) -> str:
     product_code = validate_product_code(api.normalize_product_code(code))
+    return build_subject_comments_path("STOCK", product_code, sort, last_comment_id)
+
+
+def build_lounge_comments_path(
+    lounge_id: str,
+    sort: str,
+    last_comment_id: str | int | None,
+) -> str:
+    return build_subject_comments_path(
+        "LOUNGE",
+        validate_lounge_id(lounge_id),
+        sort,
+        last_comment_id,
+    )
+
+
+def build_subject_comments_path(
+    subject_type: str,
+    subject_id: str,
+    sort: str,
+    last_comment_id: str | int | None,
+) -> str:
+    normalized_subject_type = subject_type.strip().upper()
+    if normalized_subject_type == "STOCK":
+        normalized_subject_id = validate_product_code(subject_id)
+    elif normalized_subject_type == "LOUNGE":
+        normalized_subject_id = validate_lounge_id(subject_id)
+    else:
+        raise ValueError("subject type must be STOCK or LOUNGE")
     sort_value = _require_sort(sort)
     params: dict[str, Any] = {
-        "subjectType": "STOCK",
-        "subjectId": product_code,
+        "subjectType": normalized_subject_type,
+        "subjectId": normalized_subject_id,
         "commentSortType": sort_value,
     }
     if last_comment_id is not None:
@@ -49,6 +79,13 @@ def validate_product_code(code: str) -> str:
         raise ValueError(
             "product code must be 2-48 uppercase letters, numbers, dots, underscores, or hyphens"
         )
+    return value
+
+
+def validate_lounge_id(lounge_id: str) -> str:
+    value = lounge_id.strip().upper()
+    if not _LOUNGE_ID_RE.fullmatch(value):
+        raise ValueError("lounge id must match LOUNGE_<digits>")
     return value
 
 
@@ -85,10 +122,10 @@ def sanitize_comment(comment: dict[str, Any]) -> dict[str, Any]:
     sanitized: dict[str, Any] = {
         "commentId": comment.get("commentId"),
         "type": comment.get("type"),
-        "authorNickname": _redact_text(author.get("nickname")),
+        "authorNickname": redact_public_text(author.get("nickname")),
         "message": {
-            "title": _redact_text(message.get("title")),
-            "message": _redact_text(message.get("message")),
+            "title": redact_public_text(message.get("title")),
+            "message": redact_public_text(message.get("message")),
         },
         "board": {
             "subjectType": board.get("subjectType"),
@@ -124,6 +161,43 @@ def fetch_stock_comments(
     include_replies: bool,
 ) -> dict[str, Any]:
     product_code = resolve_comment_subject_code(code)
+    return _fetch_subject_comments(
+        "STOCK",
+        product_code,
+        sort=sort,
+        pages=pages,
+        limit=limit,
+        include_replies=include_replies,
+    )
+
+
+def fetch_lounge_comments(
+    lounge_id: str,
+    *,
+    sort: str,
+    pages: int,
+    limit: int,
+    include_replies: bool,
+) -> dict[str, Any]:
+    return _fetch_subject_comments(
+        "LOUNGE",
+        validate_lounge_id(lounge_id),
+        sort=sort,
+        pages=pages,
+        limit=limit,
+        include_replies=include_replies,
+    )
+
+
+def _fetch_subject_comments(
+    subject_type: str,
+    subject_id: str,
+    *,
+    sort: str,
+    pages: int,
+    limit: int,
+    include_replies: bool,
+) -> dict[str, Any]:
     pages = api.require_int_range("pages", pages, minimum=1, maximum=5)
     limit = api.require_int_range("limit", limit, minimum=1, maximum=100)
     comments: list[dict[str, Any]] = []
@@ -135,7 +209,7 @@ def fetch_stock_comments(
 
     for _ in range(pages):
         result = api.get_result(
-            build_stock_comments_path(product_code, sort, last_comment_id),
+            build_subject_comments_path(subject_type, subject_id, sort, last_comment_id),
             base_url=CERT_BASE_URL,
         )
         if not isinstance(result, dict):
@@ -171,8 +245,8 @@ def fetch_stock_comments(
         last_comment_id = validate_digit_id("last_comment_id", next_key)
 
     return {
-        "subjectType": "STOCK",
-        "subjectId": product_code,
+        "subjectType": subject_type,
+        "subjectId": subject_id,
         "sort": _require_sort(sort),
         "pagesFetched": pages_fetched,
         "hasNext": has_next,
@@ -194,7 +268,7 @@ def _dict_or_empty(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _redact_text(value: Any) -> Any:
+def redact_public_text(value: Any) -> Any:
     if not isinstance(value, str):
         return value
     value = _EMAIL_RE.sub("[redacted-email]", value)
@@ -223,9 +297,11 @@ def _drop_none(value: Any) -> Any:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Fetch sanitized public TossInvest stock community comments."
+        description="Fetch sanitized public TossInvest stock or lounge community comments."
     )
-    parser.add_argument("--code", required=True, help="TossInvest stock product code")
+    subject_group = parser.add_mutually_exclusive_group(required=True)
+    subject_group.add_argument("--code", help="TossInvest stock product code")
+    subject_group.add_argument("--lounge-id", help="Public lounge id, e.g. LOUNGE_193394")
     parser.add_argument("--sort", choices=sorted(COMMENT_SORTS), default="popular")
     parser.add_argument("--pages", type=int, default=1, help="Maximum comment pages to fetch")
     parser.add_argument("--limit", type=int, default=10, help="Maximum sanitized comments to emit")
@@ -236,13 +312,22 @@ def main() -> int:
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
-    payload = fetch_stock_comments(
-        args.code,
-        sort=args.sort,
-        pages=args.pages,
-        limit=args.limit,
-        include_replies=args.include_replies,
-    )
+    if args.lounge_id:
+        payload = fetch_lounge_comments(
+            args.lounge_id,
+            sort=args.sort,
+            pages=args.pages,
+            limit=args.limit,
+            include_replies=args.include_replies,
+        )
+    else:
+        payload = fetch_stock_comments(
+            args.code,
+            sort=args.sort,
+            pages=args.pages,
+            limit=args.limit,
+            include_replies=args.include_replies,
+        )
     api.emit_output(api.render_json(payload), args.output)
     return 0
 

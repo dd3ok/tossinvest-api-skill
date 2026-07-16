@@ -56,10 +56,11 @@ calling application, not in this public skill.
 | `/api/v2/index-infos/{indexCode}` | Object: `code`, `name`, `logoImageUrl`, `priceFeedType`, optional trading-window fields such as `tradingStartAt`, `tradingEndAt`, and `isMarketOpen`; commodity responses can include `helperText` and `indexUnitDto` |
 | `/api/v1/index-prices/{indexCode}` | Object: `open`, `high`, `low`, `close`, `base`, `changeType`, `high52w`, `low52w`, and related price fields |
 | `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Object: `code`, trading window metadata, and `candles[]`; direct checks returned candles for `KGG01P`, `RFU.GCv1`, `KR1BENCH0010`, `ROB.US10YT-RR`, and `VWAP.KRW-BTC` with `securitiesType=crypto`; current page controls include crypto `1w/min:10`, `1y/week:1`, `5y/month:1` and FX `1y/week:1`, `5y/month:1` |
-| `/api/v1/c-chart/{securitiesType}/{indexCode}/day:1` | Object: `code`, `nextDateTime`, `exchangeRate`, optional `exchange`, and `candles[]`; observed daily quote-table paging uses cursor paging via `from`; reference-only, not script-backed yet |
+| `/api/v1/c-chart/{securitiesType}/{indexCode}/day:1` | Object: `code`, `nextDateTime`, `exchangeRate`, optional `exchange`, and `candles[]`; `scripts/indices.py --include-daily-quotes` uses cursor paging via `--daily-quote-from` |
 | `/api/v1/crypto-prices?productCodes={codes}` | List: `productCode`, OHLCV fields, `changeType`, `high52w`, `low52w`, `usdPerKrwExchangeRate`, `premium`, `premiumRate` |
 | `/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW` | Object: `code`, `base`, `close` |
 | `wts-cert-api /api/v3/dashboard/wts/overview/indicator/mini-chart` | Object: `indexMap`; public overview mini-chart metadata |
+| `wts-cert-api /api/v4/dashboard/wts/overview/indicator` | Current public home indicator aggregate; `scripts/dashboard_ranking.py --kind indicator` uses the exact GET path with no query or body |
 | `/api/v3/dashboard/wts/overview/indicator/{indexCode}/related-etfs` | Object: `indexCode`, `etfs[]`; empty POST body accepted in verification |
 | `/api/v1/stock-infos/index/net-buying/range` | Object: `code`, `step`, `nextDate`, `investorActivityAmounts[]`; current public page accepts `range=week|month|year` |
 | `/api/v1/stock-infos/index/net-buying/daily` | Object: `code`, `nextDate`, `investorActivityAmounts[]` |
@@ -105,6 +106,15 @@ case for dotted indicator codes.
 
 | Endpoint | Observed `result` shape |
 |---|---|
+| `/api/v3/search-all/wts-auto-complete` | List of typed sections. Each row has `type` and `data`; `data.items[]` contains public products, news, industries, screeners, or market indices. `scripts/market_search.py` keeps only bounded UI-useful fields. |
+| `/api/v2/dashboard/wts/overview/tics/ranking` | Object: `basedAt`, `duration`, `tics[]`; rows include `ticsId`, `name`, `rank`, `fluctuationRate`, market-cap/trading-amount totals, and leading stock. |
+| `/api/v2/dashboard/wts/overview/tics/{ticsId}/stocks` | Object: `nation`, `page`, `size`, `sortBy`, `sortOrder`, `totalCount`, `stocks[]`; rows include price, change, market cap, trading value, volume, analyst opinion, and signal. |
+| `/api/v2/dashboard/wts/overview/tics/{ticsId}/etfs` | Object: paging/sort metadata plus `etfs[]`; rows include price, change, trading value, expense ratio, leverage factor, and top holding. |
+| `wts-cert-api /api/v1/screener/filters/base` | Object with `basedAt`; `scripts/screener_count.py --include-filter-base` uses exact `{filterId, nation}` bodies for selected allowlisted filters. |
+| `wts-cert-api /api/v1/screener/filters/range` | Object with current `min` and `max`; `--include-filter-range` accepts only filters already validated by the script. |
+
+| Endpoint | Observed `result` shape |
+|---|---|
 | `/api/v1/tics/all` | Object: `baseDateTime`, `ticsItems[]` |
 | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Object: ranking metadata such as `rankingId`, `info`, `type`, and ranking rows |
 | `/api/v2/news/tics/{ticsId}` | Object: `pagingParam`, `body[]`, `lastPage` |
@@ -142,13 +152,15 @@ price change up/down, 20-day price change up, 5-day consecutive rise/fall,
 | `wts-cert-api /api/v2/comments/{commentId}/replies` | Object: `results[]`, `hasNext`, `key`, `totalCount`; v1 replies returned object keys `comment`, `replies`, `topic` |
 | `wts-cert-api /api/v1/boards/STOCK/{productCode}/related` | Object: `about`, `commentCount`, `followingCount`, `isMember`, `logoImageUrl`, `subjectId`, `title` |
 | `wts-cert-api /api/v1/community/board/{productCode}/recommend-profiles` | List of profile suggestions; sanitize before displaying |
+| `wts-cert-api /api/v1/community/top-rankings/{ranking}` | Object: `type`, `items[]`; `scripts/feed.py --kind community-ranking` emits at most 10 rows and removes profile ids, avatar URLs, and follow/personal flags |
 
 Raw comment rows include public profile and interaction fields such as
 `authorUserProfileId`, `author.userProfileId`, `profilePictureUrl`,
 `shortDescription`, `statistic.followerCount`, `isFollowing`, `isBookmarked`,
 and `isMyProfile`. Do not return raw rows from user-facing scripts.
 
-`scripts/community_comments.py` emits sanitized rows with fields such as
+`scripts/community_comments.py` supports `subjectType=STOCK` and bounded
+`subjectType=LOUNGE` reads. It emits sanitized rows with fields such as
 `commentId`, `type`, `authorNickname`, `message`, `board`, `statistic`,
 `holding`, `createdAt`, `updatedAt`, and optional media summary. The sanitizer
 removes profile ids, profile/avatar URLs, follow/bookmark flags, follower counts,

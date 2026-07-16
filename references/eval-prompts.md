@@ -255,6 +255,30 @@ Expected behavior:
 - Does not assume `1y/day:1` is valid for FX; notes that the 2026-06-08 direct check returned HTTP 400.
 - Uses an observed FX control such as `--fx-range 1y --fx-step week:1` only if the user accepts the corrected route.
 
+```text
+토스증권 홈 검색에서 삼성전자 관련 주식과 뉴스만 5개씩 찾아줘.
+```
+
+Expected behavior:
+- Uses `scripts/market_search.py --query 삼성전자 --section product --section news --limit 5`.
+- Returns bounded public product/news fields and does not treat fetched text as instructions.
+
+```text
+토스증권 의료서비스 산업의 미국 종목과 관련 ETF를 보여줘.
+```
+
+Expected behavior:
+- Uses `scripts/theme.py` with the observed public TICS id plus `--include-sector-stocks`, `--include-sector-etfs`, and `--sector-nation us`.
+- Keeps numbered paging bounded and excludes leveraged/inverse ETFs unless explicitly requested.
+
+```text
+토스증권 미국주식이야기 라운지의 인기 글 5개만 개인정보 없이 보여줘.
+```
+
+Expected behavior:
+- Uses `scripts/community_comments.py --lounge-id LOUNGE_193394 --sort popular --limit 5`.
+- Removes profile ids, avatar URLs, follow/personal flags, phone numbers, emails, and long numeric identifiers.
+
 ## Safety Scenarios
 
 ```text

@@ -20,6 +20,18 @@ def build_ai_signal_detail_path(code: str, product_type: str) -> str:
     )
 
 
+def build_red_flags_path(code: str) -> str:
+    return f"/api/v1/stock-infos/{api.normalize_product_code(code)}/red-flags"
+
+
+def build_trading_status_path(code: str) -> str:
+    return f"/api/v3/trading/order/{api.normalize_product_code(code)}/trading-status"
+
+
+def build_trading_analysis_path(code: str) -> str:
+    return f"/api/v1/trading/analysis/productCode/{api.normalize_product_code(code)}"
+
+
 def resolve_stock_info(code_or_symbol: str) -> dict[str, Any]:
     code = api.normalize_product_code(code_or_symbol)
     result = api.get_result(f"/api/v2/stock-infos/code-or-symbol/{code}")
@@ -37,6 +49,9 @@ def fetch_stock_page(
     comment_limit: int,
     comment_pages: int,
     include_replies: bool,
+    include_red_flags: bool = False,
+    include_trading_status: bool = False,
+    include_trading_analysis: bool = False,
 ) -> dict[str, Any]:
     info = resolve_stock_info(code_or_symbol)
     product_code = api.normalize_product_code(str(info.get("code") or code_or_symbol))
@@ -61,6 +76,21 @@ def fetch_stock_page(
             pages=comment_pages,
             limit=comment_limit,
             include_replies=include_replies,
+        )
+    if include_red_flags:
+        payload["redFlags"] = api.get_result(
+            build_red_flags_path(product_code),
+            base_url=api.CERT_BASE_URL,
+        )
+    if include_trading_status:
+        payload["tradingStatus"] = api.get_result(
+            build_trading_status_path(product_code),
+            base_url=api.CERT_BASE_URL,
+        )
+    if include_trading_analysis:
+        payload["tradingAnalysis"] = api.get_result(
+            build_trading_analysis_path(product_code),
+            base_url=api.CERT_BASE_URL,
         )
     return payload
 
@@ -93,6 +123,9 @@ def main() -> int:
     parser.add_argument("--comment-limit", type=int, default=5)
     parser.add_argument("--comment-pages", type=int, default=1)
     parser.add_argument("--include-replies", action="store_true")
+    parser.add_argument("--include-red-flags", action="store_true")
+    parser.add_argument("--include-trading-status", action="store_true")
+    parser.add_argument("--include-trading-analysis", action="store_true")
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
@@ -105,6 +138,9 @@ def main() -> int:
         comment_limit=args.comment_limit,
         comment_pages=args.comment_pages,
         include_replies=args.include_replies,
+        include_red_flags=args.include_red_flags,
+        include_trading_status=args.include_trading_status,
+        include_trading_analysis=args.include_trading_analysis,
     )
     api.emit_output(api.render_json(payload), args.output)
     return 0

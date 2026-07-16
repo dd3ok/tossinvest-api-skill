@@ -160,9 +160,16 @@ python3 scripts/stock_chart.py --help
 ```bash
 python3 scripts/stock_summary.py --code A005930 --no-overview
 python3 scripts/stock_page.py --code SOXL --comment-limit 5
+python3 scripts/market_search.py --query 삼성전자 --section product --section news --limit 5
 python3 scripts/community_comments.py --code NVDA --sort popular --limit 5
+python3 scripts/community_comments.py --lounge-id LOUNGE_193394 --sort popular --limit 5
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market us --duration realtime --hide-investment-risk
+python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_market_amount --market us --duration 20d
+python3 scripts/dashboard_ranking.py --kind indicator
+python3 scripts/indices.py --code KGG01P --include-daily-quotes --daily-quote-count 20
+python3 scripts/theme.py --tag us --tics-id 925 --include-sector-stocks --include-sector-etfs --sector-nation us
+python3 scripts/feed.py --kind community-ranking --community-ranking profit --community-limit 10
 python3 scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
 python3 scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
 python3 scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 10 --max-events 5
