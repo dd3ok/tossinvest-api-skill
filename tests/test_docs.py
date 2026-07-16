@@ -728,6 +728,29 @@ class DocumentationPromptTests(unittest.TestCase):
             with self.subTest(expected=expected):
                 self.assertIn(expected, readme)
 
+    def test_ranking_docs_cover_public_investment_risk_filter(self):
+        checked_paths = [
+            ROOT / "SKILL.md",
+            ROOT / "README.md",
+            ROOT / "references" / "api-catalog.md",
+            ROOT / "references" / "script-cookbook.md",
+            ROOT / "references" / "eval-prompts.md",
+        ]
+        for path in checked_paths:
+            with self.subTest(path=path.relative_to(ROOT)):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("투자위험 주식 숨기기", text)
+
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        for filter_id in [
+            "KRX_MANAGEMENT_STOCK",
+            "MARKET_CAP_GREATER_THAN_50M",
+            "STOCKS_PRICE_GREATER_THAN_ONE_DOLLAR",
+        ]:
+            with self.subTest(filter_id=filter_id):
+                self.assertIn(filter_id, catalog)
+        self.assertIn("not as a complete legal or", catalog)
+
     def test_ci_release_smoke_covers_websocket_artifacts(self):
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         for expected in [

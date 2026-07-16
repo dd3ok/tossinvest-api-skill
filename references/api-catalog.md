@@ -554,6 +554,31 @@ Content-Type: application/json
 {"id":"biggest_total_amount","tag":"kr","duration":"realtime","filters":[]}
 ```
 
+The logged-out home bundle and live page checked on 2026-07-16 implement
+`투자위험 주식 숨기기` as one composite ranking filter. The checked state sends
+all three observed filter ids:
+
+```json
+{
+  "id": "biggest_total_amount",
+  "tag": "us",
+  "duration": "realtime",
+  "filters": [
+    "KRX_MANAGEMENT_STOCK",
+    "MARKET_CAP_GREATER_THAN_50M",
+    "STOCKS_PRICE_GREATER_THAN_ONE_DOLLAR"
+  ]
+}
+```
+
+Use `scripts/dashboard_ranking.py --hide-investment-risk` to reproduce that
+composite. The frontend names indicate filters for KRX management stocks, US
+market capitalization above USD 50 million, and US prices above USD 1. Treat
+this as the public page's current discovery filter, not as a complete legal or
+investment-risk classification API. A direct logged-out US ranking comparison
+returned 100 rows in both cases while rotating 29 products out of that live
+snapshot; ranking membership and exact counts change with the market.
+
 For the user-provided top100 URLs checked on 2026-04-20, `market=kr`/`us` maps to `tag=kr`/`us`. The `biggest_total_amount`, `biggest_total_volume`, `heavy_soar`, and `heavy_descent` combinations returned `products[]` with 100 rows for both markets in direct response checks.
 
 The 2026-07-10 logged-out bundle and page check confirmed that top100 is a
