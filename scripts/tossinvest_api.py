@@ -30,6 +30,10 @@ _CALENDAR_CERT_EXACT_PATHS = (
     "/api/v1/nova-calendar/ai/summary/weekly",
     "/api/v2/dashboard/wts/overview/calendar/economic-events",
 )
+_SCREENER_METADATA_PATHS = (
+    "/api/v1/screener/filters/base",
+    "/api/v1/screener/filters/range",
+)
 _CALENDAR_MONTHLY_PATTERN = re.compile(r"^/api/v4/calendar/monthly/\d{4}-(0[1-9]|1[0-2])$")
 _CALENDAR_INDEX_MONTHLY_PATTERN = re.compile(
     r"^/api/v4/calendar/monthly/\d{4}-(0[1-9]|1[0-2])/index$"
@@ -59,6 +63,7 @@ _DATE_TIME_PATTERN = re.compile(
 _RIC_PATTERN = re.compile(r"^[A-Z0-9_.=-]{2,48}$")
 _ALLOWED_CERT_EXACT_PATHS = (
     *_CALENDAR_CERT_EXACT_PATHS,
+    *_SCREENER_METADATA_PATHS,
     "/api/v1/dashboard/wts/overview/rankings/by-investors",
     "/api/v1/dashboard/wts/overview/indicator/bond",
     "/api/v1/dashboard/wts/overview/indicator/commodity",
@@ -74,6 +79,7 @@ _PUBLIC_CERT_EXACT_READ_PATHS = (
     "/api/v1/boards/popular-follower",
     "/api/v1/community/top-rankings/TOP_10_FOLLOWING_INCREASE",
     "/api/v1/community/top-rankings/TOP_10_PROFIT_ROSS_AMOUNT",
+    "/api/v4/dashboard/wts/overview/indicator",
     "/api/v4/feed/recommend/ranking-posts",
 )
 _ALLOWED_CERT_PATH_PATTERNS = (
@@ -218,6 +224,11 @@ def validate_request_target(base_url: str, path: str) -> None:
         _validate_public_cert_query(request_path, query_pairs)
         return
 
+    if is_cert_host and request_path in _SCREENER_METADATA_PATHS and query_pairs:
+        raise RuntimeError(
+            "Blocked TossInvest endpoint: screener metadata routes do not accept query parameters"
+        )
+
     for marker in _DENIED_PATH_MARKERS:
         if marker in lowered_path:
             raise RuntimeError(f"Blocked TossInvest endpoint: denied path marker {marker}")
@@ -262,6 +273,9 @@ def validate_request_usage(
                 "Blocked TossInvest endpoint: public cert read routes do not accept request bodies"
             )
         return
+    if request_path in _SCREENER_METADATA_PATHS:
+        _validate_screener_metadata_usage(request_path, method, body)
+        return
     if not _is_calendar_cert_path(request_path):
         return
     method = method.upper()
@@ -284,6 +298,48 @@ def validate_request_usage(
         raise RuntimeError(
             "Blocked TossInvest endpoint: calendar routes do not accept request body fields"
         )
+
+
+def _validate_screener_metadata_usage(request_path: str, method: str, body: Any | None) -> None:
+    if method.upper() != "POST":
+        raise RuntimeError("Blocked TossInvest endpoint: screener metadata routes must use POST")
+    if not isinstance(body, dict):
+        raise RuntimeError("Blocked TossInvest endpoint: screener metadata requires a JSON body")
+    if body.get("nation") not in {"kr", "us"}:
+        raise RuntimeError("Blocked TossInvest endpoint: screener metadata nation must be kr or us")
+    if request_path.endswith("/base"):
+        if set(body) != {"filterId", "nation"} or not _is_safe_public_identifier(
+            body.get("filterId")
+        ):
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: screener base metadata requires filterId and nation"
+            )
+        return
+    if set(body) != {"filter", "nation"} or not isinstance(body.get("filter"), dict):
+        raise RuntimeError(
+            "Blocked TossInvest endpoint: screener range metadata requires filter and nation"
+        )
+    filter_body = body["filter"]
+    if set(filter_body) != {"id", "conditions"} or not _is_safe_public_identifier(
+        filter_body.get("id")
+    ):
+        raise RuntimeError("Blocked TossInvest endpoint: unsupported screener range filter shape")
+    conditions = filter_body.get("conditions")
+    if not isinstance(conditions, list) or len(conditions) > 20:
+        raise RuntimeError("Blocked TossInvest endpoint: unsupported screener range conditions")
+    for condition in conditions:
+        if not isinstance(condition, dict) or not set(condition).issubset({"id", "type", "value"}):
+            raise RuntimeError("Blocked TossInvest endpoint: unsupported screener range condition")
+        if not _is_safe_public_identifier(condition.get("id")) or not _is_safe_public_identifier(
+            condition.get("type")
+        ):
+            raise RuntimeError("Blocked TossInvest endpoint: unsupported screener range condition")
+
+
+def _is_safe_public_identifier(value: Any) -> bool:
+    if not isinstance(value, str) or not (1 <= len(value) <= 128):
+        return False
+    return all(char.isalnum() or char in "._-" for char in value)
 
 
 def _is_calendar_cert_path(request_path: str) -> bool:

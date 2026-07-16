@@ -561,8 +561,8 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("2026-06-08", catalog)
         self.assertIn("range=week|month|year", catalog)
         self.assertIn("/api/v1/c-chart/{securitiesType}/{indexCode}/day:1", catalog)
-        self.assertIn("reference-only, not script-backed yet", catalog)
-        self.assertIn("observed daily quote-table paging", notes)
+        self.assertIn("scripts/indices.py --include-daily-quotes", catalog)
+        self.assertIn("--daily-quote-from", notes)
         self.assertIn("productType=INDEX|CURRENCY", catalog)
         self.assertIn("availableLanguages", catalog)
         self.assertIn("1w/min:10", catalog)
@@ -581,6 +581,37 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("Same live-chart API with `tag=us`", catalog)
         self.assertIn("FX 1y/day:1", evals)
         self.assertIn("--range 1w --step min:10 --include-crypto-prices", evals)
+
+    def test_public_search_sector_lounge_and_ranking_gaps_are_script_backed(self):
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        for expected in [
+            "scripts/market_search.py",
+            "scripts/theme.py",
+            "scripts/indices.py",
+            "scripts/community_comments.py",
+            "scripts/feed.py",
+        ]:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, skill)
+        for expected in [
+            "/api/v3/search-all/wts-auto-complete",
+            "/api/v2/dashboard/wts/overview/tics/{ticsId}/stocks",
+            "/api/v2/dashboard/wts/overview/tics/{ticsId}/etfs",
+            "Public lounge comments",
+            "Community top rankings",
+        ]:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, catalog)
+        self.assertIn("scripts/market_search.py", notes)
+        self.assertIn("--include-sector-stocks", cookbook)
+        self.assertIn("--lounge-id LOUNGE_193394", cookbook)
+        self.assertIn("--kind community-ranking", cookbook)
+        self.assertIn("--duration 20d", readme)
 
     def test_capture_and_catalog_scope_include_current_public_surfaces(self):
         catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")

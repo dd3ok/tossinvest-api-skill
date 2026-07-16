@@ -121,6 +121,14 @@ class TossInvestApiTests(unittest.TestCase):
         )
         api.validate_request_target(
             api.CERT_BASE_URL,
+            "/api/v1/screener/filters/base",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
+            "/api/v1/screener/filters/range",
+        )
+        api.validate_request_target(
+            api.CERT_BASE_URL,
             "/api/v1/dashboard/wts/overview/indicator/bond?market=kr",
         )
         api.validate_request_target(
@@ -308,6 +316,7 @@ class TossInvestApiTests(unittest.TestCase):
             "/api/v2/comments/287893106/replies",
             "/api/v1/comments/287893106/replies",
             "/api/v4/feed/recommend/ranking-posts",
+            "/api/v4/dashboard/wts/overview/indicator",
             "/api/v1/boards/STOCK/US20100311002/related",
             "/api/v1/community/board/US20100311002/recommend-profiles",
             "/api/v1/community/top-rankings/TOP_10_PROFIT_ROSS_AMOUNT",
@@ -472,6 +481,47 @@ class TossInvestApiTests(unittest.TestCase):
                 method="POST",
                 body=({"accountNo": "123"},),
                 base_url=api.CERT_BASE_URL,
+            )
+
+    def test_screener_metadata_usage_requires_exact_public_post_shapes(self):
+        api.validate_request_usage(
+            api.CERT_BASE_URL,
+            "/api/v1/screener/filters/base",
+            "POST",
+            {"filterId": "RSI_범위", "nation": "kr"},
+        )
+        api.validate_request_usage(
+            api.CERT_BASE_URL,
+            "/api/v1/screener/filters/range",
+            "POST",
+            {
+                "filter": {
+                    "id": "RSI_범위",
+                    "conditions": [
+                        {"id": "NUMBER_RANGE_DEFAULT", "type": "NUMBER_RANGE", "value": {}}
+                    ],
+                },
+                "nation": "us",
+            },
+        )
+        with self.assertRaisesRegex(RuntimeError, "must use POST"):
+            api.validate_request_usage(
+                api.CERT_BASE_URL,
+                "/api/v1/screener/filters/base",
+                "GET",
+                None,
+            )
+        with self.assertRaisesRegex(RuntimeError, "requires filterId and nation"):
+            api.validate_request_usage(
+                api.CERT_BASE_URL,
+                "/api/v1/screener/filters/base",
+                "POST",
+                {"filterId": "ACCOUNT FILTER", "nation": "kr"},
+            )
+        with self.assertRaisesRegex(RuntimeError, "do not accept query parameters"):
+            api.validate_request_target(
+                api.CERT_BASE_URL,
+                "/api/v1/screener/filters/base?mode=all",
             )
 
     def test_require_int_range_rejects_non_positive_and_excessive_values(self):

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date
+from datetime import date, datetime
 from typing import Any
 
 import tossinvest_api as api
@@ -78,6 +78,25 @@ def build_index_chart_path(
             f"{normalize_index_code(code)}/{chart_range}/{step}"
         ),
         {"session": "main", "investMode": invest_mode, "last": False},
+    )
+
+
+def build_index_daily_quotes_path(
+    code: str,
+    securities_type: str,
+    count: int,
+    from_cursor: str | None,
+) -> str:
+    resolved_securities_type = infer_securities_type(code, securities_type)
+    count = api.require_int_range("daily-quote-count", count, minimum=1, maximum=100)
+    cursor = _validate_daily_quote_cursor(from_cursor)
+    return api.build_path(
+        f"/api/v1/c-chart/{resolved_securities_type}/{normalize_index_code(code)}/day:1",
+        {
+            "count": count,
+            "from": cursor,
+            "useAdjustedRate": True,
+        },
     )
 
 
@@ -158,6 +177,19 @@ def _require_optional_choice(name: str, value: str | None, choices: set[str]) ->
     return _require_choice(name, value, choices)
 
 
+def _validate_daily_quote_cursor(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    try:
+        parsed = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("daily quote cursor must be an ISO 8601 datetime with timezone") from exc
+    if parsed.tzinfo is None:
+        raise ValueError("daily quote cursor must include a timezone")
+    return normalized
+
+
 def build_net_buying_daily_path(code: str, from_date: str, count: int) -> str:
     return api.build_path(
         "/api/v1/stock-infos/index/net-buying/daily",
@@ -196,6 +228,9 @@ def fetch_index_payload(
     net_buying_from: str,
     net_buying_range: str,
     net_buying_count: int,
+    include_daily_quotes: bool = False,
+    daily_quote_count: int = 20,
+    daily_quote_from: str | None = None,
 ) -> dict[str, Any]:
     net_buying_count = api.require_int_range(
         "net-buying-count",
@@ -214,6 +249,15 @@ def fetch_index_payload(
         payload["chart"] = api.get_result(
             build_index_chart_path(
                 code, securities_type, resolved_range, resolved_step, invest_mode
+            )
+        )
+    if include_daily_quotes:
+        payload["dailyQuotes"] = api.get_result(
+            build_index_daily_quotes_path(
+                code,
+                securities_type,
+                daily_quote_count,
+                daily_quote_from,
             )
         )
     if include_fx_chart:
@@ -285,6 +329,21 @@ def main() -> int:
     parser.add_argument("--step")
     parser.add_argument("--invest-mode", default="krx", choices=sorted(ALLOWED_INVEST_MODES))
     parser.add_argument("--include-chart", action="store_true")
+    parser.add_argument(
+        "--include-daily-quotes",
+        action="store_true",
+        help="Also fetch the visible daily quote table with cursor paging metadata",
+    )
+    parser.add_argument(
+        "--daily-quote-count",
+        type=int,
+        default=20,
+        help="Rows for --include-daily-quotes (1-100)",
+    )
+    parser.add_argument(
+        "--daily-quote-from",
+        help="Optional nextDateTime cursor from a previous daily quote response",
+    )
     parser.add_argument(
         "--include-fx-chart",
         action="store_true",
@@ -393,6 +452,9 @@ def main() -> int:
         net_buying_from=args.net_buying_from,
         net_buying_range=args.net_buying_range,
         net_buying_count=args.net_buying_count,
+        include_daily_quotes=args.include_daily_quotes,
+        daily_quote_count=args.daily_quote_count,
+        daily_quote_from=args.daily_quote_from,
     )
     api.emit_output(api.render_json(payload), args.output)
     return 0

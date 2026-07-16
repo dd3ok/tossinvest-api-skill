@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use this skill when the user asks for public, read-only TossInvest/토스증권 data visible on tossinvest.com, including Korean/US stock quotes, order books, candles, financials, filings, news, rankings, screeners, calendars, indices, FX, exchange-rate widgets, crypto-like index pages, public community comments/replies, an unofficial WebSocket API reference for browser-observed real-time trade/price streams, or public endpoint re-verification. Do not use for login, accounts, holdings, orders, authenticated broker workflows, bulk scraping, or investment advice.
+description: Use this skill when the user asks for public, read-only TossInvest/토스증권 data visible on tossinvest.com, including Korean/US stock quotes, order books, candles, financials, filings, market search, news, rankings, screeners, calendars, industries/sectors, indices, FX, exchange-rate widgets, crypto-like index pages, sanitized public stock/lounge community data, an unofficial WebSocket API reference for browser-observed real-time trade/price streams, or public endpoint re-verification. Do not use for login, accounts, holdings, orders, authenticated broker workflows, bulk scraping, or investment advice.
 license: MIT
 ---
 
@@ -38,18 +38,19 @@ TossInvest has a separate official Open API documented at `developers.tossinvest
 | User intent | Prefer | Reference |
 | --- | --- | --- |
 | Stock summary, metadata, overview | `scripts/stock_summary.py` | [references/response-notes.md](references/response-notes.md) |
-| Stock main-page composite with price, AI detail, and sanitized public comments | `scripts/stock_page.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Stock main-page composite with price, AI detail, public status helpers, and sanitized public comments | `scripts/stock_page.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Current quote, order book, intraday ticks | `scripts/quote.py` | [references/api-catalog.md](references/api-catalog.md) |
 | KR/US candles, RSI, SMA, EMA, MACD, Bollinger Bands | `scripts/stock_chart.py` | [references/response-notes.md](references/response-notes.md) |
 | Filings or company news | `scripts/filings.py`, `scripts/news.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Financial statements, estimates, valuation, dividend | `scripts/financials.py` | [references/response-notes.md](references/response-notes.md) |
 | Investor trading trend, broker ranking, public transaction-status credit/lending/short-selling/CFD tabs (not account credit/margin), pension fund | `scripts/trading_trend.py`, `scripts/pension_fund_trend.py` | [references/script-cookbook.md](references/script-cookbook.md); [references/response-notes.md](references/response-notes.md) |
-| Theme, TICS, related-theme ranking | `scripts/theme.py` | [references/api-catalog.md](references/api-catalog.md) |
-| Market indices, FX charts, exchange-rate widgets, bond indicators, commodity indicators, crypto-like index pages | `scripts/indices.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Market-wide search across products, news, industries, screeners, and indices | `scripts/market_search.py` | [references/response-notes.md](references/response-notes.md) |
+| Theme, TICS, trending-industry ranking, sector stock/ETF tables | `scripts/theme.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Market indices, daily quote-table paging, FX charts, exchange-rate widgets, bond indicators, commodity indicators, crypto-like index pages | `scripts/indices.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Market calendar, economic indicators, earnings dates, domestic/overseas calendar tabs | `scripts/calendar.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Home rankings, top100 by amount/volume/surge/decline, the public `투자위험 주식 숨기기` filter, AI summary signals | `scripts/dashboard_ranking.py` | [references/api-catalog.md](references/api-catalog.md) |
-| Recommended feed and news discovery | `scripts/feed.py` | [references/api-catalog.md](references/api-catalog.md) |
-| Sanitized public community comments and replies | `scripts/community_comments.py` | [references/response-notes.md](references/response-notes.md) |
+| Recommended feed, news discovery, and sanitized public community rankings | `scripts/feed.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Sanitized public stock/lounge community comments and replies | `scripts/community_comments.py` | [references/response-notes.md](references/response-notes.md) |
 | Screener counts, filter metadata, RSI filters, price/technical presets | `scripts/screener_count.py` | [references/script-cookbook.md](references/script-cookbook.md); [examples/filters](examples/filters) |
 | Page-level stock API smoke checks | `scripts/page_api_check.py` | [references/script-cookbook.md](references/script-cookbook.md) |
 | Bounded public KR/US stock trade, public index, or crypto VWAP stream | `scripts/websocket_prices.py` after optional dependency install | [references/websocket-api-reference.md](references/websocket-api-reference.md); [references/script-cookbook.md](references/script-cookbook.md) |
@@ -80,6 +81,7 @@ Common first-pass checks:
 ```bash
 python3 scripts/stock_summary.py --code A005930 --no-overview
 python3 scripts/stock_page.py --code SOXL --comment-limit 5
+python3 scripts/market_search.py --query 삼성전자 --section product --section news
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20

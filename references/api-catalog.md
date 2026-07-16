@@ -8,6 +8,7 @@ Additional page/API recheck: 2026-05-29 for home tabs, stock detail tabs, `/scre
 Additional page/API recheck: 2026-06-01 for `/calendar`, `/calendar/economic-indicator`, index-page calendar subsets, stock-news paging, and observed drift/excluded page calls.
 Additional page/API recheck: 2026-06-08 for `/indices/KGG01P`, `/indices/exchange-rate`, and `/indices/VWAP.KRW-BTC` chart controls, related widgets, paging, and response shapes.
 Additional logged-out WebSocket/page recheck: 2026-07-10 for home tabs and search, sector, screener, feeds, stock-detail tabs, all home index links, real-time consumers, and HTTP paging boundaries.
+Additional public page/bundle/API recheck: 2026-07-16 for home search sections, all visible ranking durations, sector stock/ETF paging and sorts, index daily quotes, lounge comments, community rankings, and stock status helpers.
 Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
@@ -168,7 +169,7 @@ Observed from `/indices/KGG01P` and the index/FX dashboard widgets. These are ma
 | Index info | `script-backed` | GET | `/api/v2/index-infos/{indexCode}` | Returned `code`, `name`, `logoImageUrl`, `priceFeedType`, `tradingStartAt`, `tradingEndAt`, `isMarketOpen`; current crypto-like responses can also include `indexUnitDto` and `helperText` |
 | Index price | `script-backed` | GET | `/api/v1/index-prices/{indexCode}` | Returned `open`, `high`, `low`, `close`, `volume`, `value`, `base`, `changeType`, `high52w`, `low52w`; `tradeTime` may appear on some index responses |
 | Index/market chart | `script-backed` | GET | `/api/v1/r-chart/{securitiesType}/{indexCode}/{range}/{step}` | Query: `session=main`, `investMode=krx`, `last=false`; example `kr-s/KGG01P/1d/min:5` |
-| Index daily quote table | `observed` | GET | `/api/v1/c-chart/{securitiesType}/{indexCode}/day:1` | Current index pages use this for visible daily quote paging; query includes `count`, optional cursor `from`, and `useAdjustedRate=true`; result includes `nextDateTime` and `candles[]`; reference-only, not script-backed yet |
+| Index daily quote table | `script-backed` | GET | `/api/v1/c-chart/{securitiesType}/{indexCode}/day:1` | `scripts/indices.py --include-daily-quotes`; query includes `count`, optional ISO 8601 cursor `from`, and `useAdjustedRate=true`; result includes `nextDateTime` and `candles[]` |
 | Crypto prices | `script-backed` | GET | `/api/v1/crypto-prices?productCodes={codes}` | Direct 2026-06-08 check accepted `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, and `VWAP.KRW-SOL`; returned OHLCV, `changeType`, `high52w`, `low52w`, `usdPerKrwExchangeRate`, `premium`, and `premiumRate` |
 | USD/KRW product exchange rate | `script-backed` | GET | `/api/v1/product/exchange-rate?buyCurrency=USD&sellCurrency=KRW` | Direct 2026-05-29 check returned `code`, `base`, `close`; `scripts/indices.py --include-product-exchange-rate` fetches this helper |
 | FX chart | `script-backed` | GET | `/api/v1/r-chart/fx/EXCHANGE_RATE/{range}/{step}` | Query includes `last=false`, `useAdjustedRate=true`, `currency=USD` |
@@ -256,7 +257,8 @@ Additional 2026-06-08 browser checks against `/indices/KGG01P`,
 controls without stored cookies or HAR capture. KGG01P's chart interval menu
 exposed minute steps including `min:1`, `min:3`, and `min:10`; the page's daily
 quote table uses `c-chart/kr-s/KGG01P/day:1` with `nextDateTime` cursor paging;
-this observed daily quote table is reference-only, not script-backed yet.
+`scripts/indices.py --include-daily-quotes` exposes this table and accepts the
+returned cursor through `--daily-quote-from`.
 The public net-buying range widget exposed and accepted `range=week|month|year`.
 The FX chart used `1d/min:5`, `1y/week:1`, and `5y/month:1`; a direct
 `1y/day:1` FX check returned HTTP 400 and should not be assumed valid. The BTC
@@ -469,6 +471,7 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Exchange rates | `script-backed` | GET | `/api/v1/dashboard/wts/overview/exchange-rates` | FX/overview data |
 | Trading info | `observed` | GET | `/api/v1/dashboard/wts/overview/trading-info` | Market overview data |
 | WTS news feed | `observed` | GET | `/api/v1/dashboard/wts/news` | Feed/news panel data; `scripts/feed.py` uses the POST form documented under Feed And News APIs |
+| Public WTS search | `script-backed` | POST | `/api/v3/search-all/wts-auto-complete` | `scripts/market_search.py`; body contains a bounded query plus observed `PRODUCT`, `NEWS`, `TICS`, `SCREENER`, and `MARKET_INDEX` sections; output is limited and field-filtered |
 | Home live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Body maps URL params to `id={live-chart}`, `tag={market}`, `duration`; returns `products[]`, usually 100 rows; page refresh interval observed as 10 seconds and current-price cells receive per-product WebSocket overlays |
 | Realtime investor rankings | `script-backed` | GET | `/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Observed under `wts-cert-api`; public page ranking widget, but keep sensitive-host caution |
 | Economic calendar | `script-backed` | GET | `/api/v2/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
@@ -480,6 +483,9 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Related themes | `script-backed` | GET | `/api/v1/tics/{ticsId}/related` | Related categories for a theme page |
 | Theme news | `script-backed` | GET | `/api/v2/news/tics/{ticsId}` | Query can include `size`; related news for a theme |
 | Theme fluctuations | `script-backed` | GET | `/api/v2/tics/{ticsId}/fluctuations` | Theme fluctuation/history data |
+| Current trending-industry ranking | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/ranking` | Current verified body `{nation: KR|US, duration: 1d}`; longer product-ranking durations are not accepted here; result includes `basedAt`, `duration`, and `tics[]` |
+| Sector stock table | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/{ticsId}/stocks` | Body includes `nation`, `sortBy`, `sortOrder`, and numbered `page`; visible sorts are market cap, trading value, volume, and analyst opinion |
+| Sector ETF table | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/{ticsId}/etfs` | Body includes `nation`, trading-value/expense-ratio sort, `includeLeverageInverse`, and numbered `page` |
 
 Screener endpoints are documented only in [Screener APIs](#screener-apis) to keep
 their `wts-cert-api` handling and filter-body constraints in one place.
@@ -544,6 +550,11 @@ Observed home live-chart values from `https://www.tossinvest.com/?market={market
 | 급상승 | `heavy_soar` | `1d` | Market price-rise ranking |
 | 급하락 | `heavy_descent` | `1d` | Market price-decline ranking |
 | 인기 | `realtime_stock` | `realtime` | Realtime popular stock ranking |
+
+The 2026-07-16 duration menu mapped `1일`, `1주일`, `1개월`, `3개월`,
+`6개월`, `1년`, and `실시간` to `1d`, `5d`, `20d`, `60d`, `120d`,
+`240d`, and `realtime`. `scripts/dashboard_ranking.py` accepts all seven
+values.
 
 Observed request shape:
 
@@ -788,8 +799,8 @@ Most screener endpoints currently live under `wts-cert-api`. They can return pub
 |---|---|---:|---|---|
 | Common screener presets | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/screener/presets/common?useCustom=true` | Returned 11 preset definitions in 2026-05-29 verification; `scripts/screener_count.py --include-common-presets` fetches this metadata |
 | Screener search modal | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen/search/modal` | Returned 3 suggested preset entries in 2026-05-29 verification; `scripts/screener_count.py --include-search-modal` fetches this metadata |
-| Screener base filters | `observed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | Body depends on selected filters; returns `basedAt` in observed bundle |
-| Screener range filters | `observed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | Body depends on selected filters |
+| Screener base filters | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/base` | `--include-filter-base`; exact body `{filterId, nation}` for selected allowlisted filters; returns `basedAt` |
+| Screener range filters | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/filters/range` | `--include-filter-range`; exact body `{filter, nation}` using a filter already accepted by `validate_filters`; returns current `min`/`max` |
 | Screener result count | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v1/screener/screen/count` | Body shape `{ "filters": [], "nation": "kr" }` or `"us"` returned counts in verification; RSI, selected price, and selected technical filters accepted `conditions[]` |
 | Screener results | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/screener/screen` | Body includes `pagingParam`, `filters`, `sort`, and `nation`; current UI requests numbered 50-row pages (`size: 50`) and renders them through a virtualized infinite list |
 
@@ -832,7 +843,7 @@ These endpoints were observed during public page loads but live under `wts-cert-
 | Trading analysis metadata | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/trading/analysis/productCode/{productCode}` | Public page metadata; may return `null` |
 | Overview indicator | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/dashboard/wts/overview/indicator/index?market=kr` | Public dashboard metadata only |
 | Overview indicator v3 | `observed` | GET | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator?market=kr` | Public dashboard metadata; re-check before scripting |
-| Overview indicator v4 | `observed-drift` | GET | `https://wts-cert-api.tossinvest.com/api/v4/dashboard/wts/overview/indicator` | Public dashboard metadata observed on 2026-06-01 home traffic; not script-backed |
+| Overview indicator v4 | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/dashboard/wts/overview/indicator` | Current public home aggregate; `dashboard_ranking.py --kind indicator` uses this exact read-only path with no query or body |
 | Overview ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Public dashboard ranking body only |
 | Live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Public dashboard ranking body only |
 | Monthly calendar | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v4/calendar/monthly/{YYYY-MM}` | Public calendar metadata; exact month pattern only |
@@ -859,12 +870,13 @@ alone; it resolves display symbols through `code-or-symbol` before comment looku
 
 | Purpose | Status | Method | Path | Params and notes |
 |---|---|---:|---|---|
-| Stock page composite | `script-backed` | mixed | `scripts/stock_page.py` | Uses `code-or-symbol`, price details, AI detail, and sanitized comments |
+| Stock page composite | `script-backed` | mixed | `scripts/stock_page.py` | Uses `code-or-symbol`, price details, AI detail, optional red flags/trading status/trading analysis, and sanitized comments |
 | Public stock comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=STOCK`, `subjectId={productCode}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; script input may be a product code or display symbol |
+| Public lounge comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=LOUNGE`, `subjectId=LOUNGE_{digits}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; same sanitizer and page limits as stock comments |
 | Public comment replies | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/comments/{commentId}/replies` | Sanitized reply rows; v1 replies also observed but v2 is preferred |
 | Stock community related board | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/boards/STOCK/{productCode}/related` | Board metadata only |
 | Stock community recommended profiles | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/community/board/{productCode}/recommend-profiles` | Public profile suggestions; strip profile ids, URLs, avatars, and follow flags before display |
-| Community top rankings | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/community/top-rankings/TOP_10_PROFIT_ROSS_AMOUNT` | Public ranking surface; aggregate or sanitize profile payloads |
+| Community top rankings | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/community/top-rankings/{ranking}` | `scripts/feed.py --kind community-ranking`; only the two exact allowlisted ranking ids are used, output is capped at 10 rows, and profile ids/URLs/follow flags are removed |
 | Feed community ranking posts | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | Public `/feed` traffic; optional `lastRecommendId` |
 
 Observed `GET /api/v4/comments` response shape:
@@ -889,7 +901,7 @@ Observed drift, excluded, and sensitive public-social endpoints:
 | Endpoint | Status | Reason |
 |---|---|---|
 | `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator` | `observed-drift` | Home traffic exposes newer overview indicator aggregate; current scripts use narrower indicator routes |
-| `https://wts-cert-api.tossinvest.com/api/v4/dashboard/wts/overview/indicator` | `observed-drift` | Home traffic exposes newer overview indicator aggregate; not routed until separately scoped |
+| `https://wts-cert-api.tossinvest.com/api/v4/dashboard/wts/overview/indicator` | `script-backed` | Current home aggregate is exposed through `dashboard_ranking.py --kind indicator`; the client permits only the exact GET path with no query or body |
 | `https://wts-info-api.tossinvest.com/api/v2/dashboard/wts/overview/signals` | `observed-drift` | Home traffic also exposes a v2 signals route; `dashboard_ranking.py --kind signals` remains on the verified public v1 helper |
 | `https://wts-api.tossinvest.com/api/v1/exchange/current-quote/for-buy` | `excluded` | `wts-api` exchange quote route observed on exchange-rate page; keep out until exact host/path safety review |
 | `https://wts-api.tossinvest.com/api/v1/exchange/current-quote/for-sell` | `excluded` | Same as above |
