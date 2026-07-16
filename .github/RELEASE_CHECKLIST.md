@@ -52,6 +52,8 @@ ruff check .
 for f in scripts/*.py; do python3 -m py_compile "$f" || exit 1; done
 for f in scripts/*.py; do python3 "$f" --help >/dev/null || exit 1; done
 for f in examples/filters/*.json; do python3 -m json.tool "$f" >/dev/null || exit 1; done
+dependency_dir="$(mktemp -d)"
+python3 -m pip download --dest "$dependency_dir" -r requirements-websocket.txt
 ```
 
 Run the skill layout smoke test:
@@ -69,12 +71,16 @@ test -f "$skill_dir/references/websocket-api-reference.md"
 test -f "$skill_dir/requirements-websocket.txt"
 test -f "$skill_dir/scripts/websocket_prices.py"
 python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
+python3 "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
 ```
 
 ## Documentation
 
 - README first screen explains what the skill does, what it does not do, and the
   canonical trigger.
+- README defines the stable repository interface covered by semantic versioning
+  and excludes unofficial upstream endpoints and response fields from that
+  compatibility promise.
 - `references/api-catalog.md` status labels remain conservative; keep its
   Verification Status table authoritative (`script-backed`, `observed`,
   `observed-drift`, `needs-recheck`, `excluded`, `public-social-sensitive`).
@@ -94,6 +100,8 @@ python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
   layout.
 - Release notes mention that TossInvest web APIs are unofficial, undocumented,
   and subject to change.
+- For `v1.0.0` and later, release notes distinguish the stable repository
+  interface from the unstable upstream TossInvest web interfaces.
 - Release notes describe the WebSocket interface as browser-observed and
   unofficial, and repeat the memory-only guest-metadata, bounded subscription,
   no-order, and no-account requirements.
