@@ -202,6 +202,7 @@ index-page calendar subset for `--index-country kr|us`. Do not use holding or wa
 
 ```bash
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market kr --duration realtime
+python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market us --duration realtime --hide-investment-risk
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart heavy_soar --market us --duration 1d
 python3 scripts/dashboard_ranking.py --kind investors --side sell
 python3 scripts/dashboard_ranking.py --kind signals --signal-code A005930 --signal-code A000660
@@ -213,6 +214,13 @@ python3 scripts/feed.py --kind recommended
 python3 scripts/news.py --code A005930 --page 2 --order-by latest --size 20
 python3 scripts/news.py --code A005930 --page 2 --order-by relevant --size 5
 ```
+
+`--hide-investment-risk` mirrors the logged-out home `투자위험 주식 숨기기`
+button by applying the three observed filters `KRX_MANAGEMENT_STOCK`,
+`MARKET_CAP_GREATER_THAN_50M`, and
+`STOCKS_PRICE_GREATER_THAN_ONE_DOLLAR` together. Use the named option instead
+of inventing filter ids. This reproduces the current public discovery filter;
+it is not a complete risk classification or investment recommendation.
 
 Use `scripts/dashboard_ranking.py --kind signals --signal-code A005930` only to fetch TossInvest UI-provided home AI-summary label fields.
 Do not interpret these labels as buy/sell signals or personalized investment advice.

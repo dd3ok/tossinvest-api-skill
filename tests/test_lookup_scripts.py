@@ -901,6 +901,35 @@ class DashboardRankingScriptTests(unittest.TestCase):
             dashboard_ranking.build_overview_ranking_body(
                 "biggest_market_amount", "all", "30d", None
             )
+        with self.assertRaisesRegex(ValueError, "filter must be one of"):
+            dashboard_ranking.build_overview_ranking_body(
+                "biggest_market_amount", "all", "realtime", ["ACCOUNT_DERIVED_FILTER"]
+            )
+
+    def test_build_overview_ranking_body_hides_observed_investment_risk_stocks(self):
+        body = dashboard_ranking.build_overview_ranking_body(
+            "biggest_total_amount",
+            "us",
+            "realtime",
+            None,
+            hide_investment_risk=True,
+        )
+        self.assertEqual(
+            body["filters"],
+            [
+                "KRX_MANAGEMENT_STOCK",
+                "MARKET_CAP_GREATER_THAN_50M",
+                "STOCKS_PRICE_GREATER_THAN_ONE_DOLLAR",
+            ],
+        )
+
+    def test_normalize_ranking_filters_normalizes_and_deduplicates(self):
+        self.assertEqual(
+            dashboard_ranking.normalize_ranking_filters(
+                ["market_cap_greater_than_50m", "MARKET_CAP_GREATER_THAN_50M"]
+            ),
+            ["MARKET_CAP_GREATER_THAN_50M"],
+        )
 
     def test_build_investor_rankings_path_includes_size(self):
         self.assertEqual(
@@ -934,6 +963,8 @@ class DashboardRankingScriptTests(unittest.TestCase):
         )
         self.assertIn("signals", result.stdout)
         self.assertIn("--signal-code", result.stdout)
+        self.assertIn("--hide-investment-risk", result.stdout)
+        self.assertIn("MARKET_CAP_GREATER_THAN_50M", result.stdout)
 
 
 class FeedScriptTests(unittest.TestCase):

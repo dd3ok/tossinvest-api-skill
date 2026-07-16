@@ -47,7 +47,7 @@ TossInvest has a separate official Open API documented at `developers.tossinvest
 | Theme, TICS, related-theme ranking | `scripts/theme.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Market indices, FX charts, exchange-rate widgets, bond indicators, commodity indicators, crypto-like index pages | `scripts/indices.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Market calendar, economic indicators, earnings dates, domestic/overseas calendar tabs | `scripts/calendar.py` | [references/api-catalog.md](references/api-catalog.md) |
-| Home rankings, top100 by amount/volume/surge/decline, AI summary signals | `scripts/dashboard_ranking.py` | [references/api-catalog.md](references/api-catalog.md) |
+| Home rankings, top100 by amount/volume/surge/decline, the public `투자위험 주식 숨기기` filter, AI summary signals | `scripts/dashboard_ranking.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Recommended feed and news discovery | `scripts/feed.py` | [references/api-catalog.md](references/api-catalog.md) |
 | Sanitized public community comments and replies | `scripts/community_comments.py` | [references/response-notes.md](references/response-notes.md) |
 | Screener counts, filter metadata, RSI filters, price/technical presets | `scripts/screener_count.py` | [references/script-cookbook.md](references/script-cookbook.md); [examples/filters](examples/filters) |

@@ -23,7 +23,7 @@
 - 공시, 뉴스, 피드 탐색, 테마/TICS와 관련 테마
 - KOSPI 같은 지수, 환율 차트와 위젯, 채권·원자재 지표
 - 증시 캘린더, 경제지표·실적 발표 일정, 국내·해외 캘린더 탭
-- 국내·미국 실시간 차트 top100, 투자자 매매 동향, 브로커 순위, 스크리너 조건 검색
+- 국내·미국 실시간 차트 top100와 `투자위험 주식 숨기기`, 투자자 매매 동향, 브로커 순위, 스크리너 조건 검색
 - 공개 주식 메인 페이지의 AI 상세 내용과 정제된 공개 커뮤니티 댓글·답글
 
 ### 차트 및 로컬 계산
@@ -162,6 +162,7 @@ python3 scripts/stock_summary.py --code A005930 --no-overview
 python3 scripts/stock_page.py --code SOXL --comment-limit 5
 python3 scripts/community_comments.py --code NVDA --sort popular --limit 5
 python3 scripts/quote.py --code A005930 --ticks 5
+python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market us --duration realtime --hide-investment-risk
 python3 scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
 python3 scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
 python3 scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 10 --max-events 5

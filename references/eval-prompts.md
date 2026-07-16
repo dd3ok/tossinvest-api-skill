@@ -44,6 +44,15 @@ Expected behavior:
 - Covers both `kr` and `us` markets where requested.
 
 ```text
+토스증권 미국 실시간 거래대금 top100에서 메인의 투자위험 주식 숨기기와 같은 필터를 적용해줘.
+```
+
+Expected behavior:
+- Uses `scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market us --duration realtime --hide-investment-risk`.
+- Applies only the three observed public ranking filters documented in the API catalog.
+- Describes this as the current public discovery filter, not a complete risk classification or investment recommendation.
+
+```text
 토스증권에서 KGG01P의 KOSPI 지수 가격, 차트, USD/KRW 환율 차트, 환율 위젯, 채권/원자재 시장 지표를 조회해줘.
 ```
 

@@ -20,6 +20,31 @@ LIVE_CHART_IDS = {
 }
 MARKETS = {"all", "kr", "us"}
 DURATIONS = {"1d", "realtime"}
+HIDE_INVESTMENT_RISK_FILTERS = (
+    "KRX_MANAGEMENT_STOCK",
+    "MARKET_CAP_GREATER_THAN_50M",
+    "STOCKS_PRICE_GREATER_THAN_ONE_DOLLAR",
+)
+RANKING_FILTER_IDS = set(HIDE_INVESTMENT_RISK_FILTERS)
+
+
+def normalize_ranking_filters(
+    filters: list[str] | None,
+    hide_investment_risk: bool = False,
+) -> list[str]:
+    normalized: list[str] = []
+    for filter_id in filters or []:
+        candidate = filter_id.strip().upper()
+        if candidate not in RANKING_FILTER_IDS:
+            expected = ", ".join(sorted(RANKING_FILTER_IDS))
+            raise ValueError(f"filter must be one of: {expected}")
+        if candidate not in normalized:
+            normalized.append(candidate)
+    if hide_investment_risk:
+        for filter_id in HIDE_INVESTMENT_RISK_FILTERS:
+            if filter_id not in normalized:
+                normalized.append(filter_id)
+    return normalized
 
 
 def build_overview_ranking_body(
@@ -27,6 +52,7 @@ def build_overview_ranking_body(
     tag: str,
     duration: str,
     filters: list[str] | None,
+    hide_investment_risk: bool = False,
 ) -> dict[str, Any]:
     ranking_id = _require_choice("ranking_id", ranking_id, LIVE_CHART_IDS)
     tag = _require_choice("tag", tag, MARKETS)
@@ -35,7 +61,7 @@ def build_overview_ranking_body(
         "id": ranking_id,
         "tag": tag,
         "duration": duration,
-        "filters": filters or [],
+        "filters": normalize_ranking_filters(filters, hide_investment_risk),
     }
 
 
@@ -44,12 +70,14 @@ def build_live_chart_body(
     market: str,
     duration: str,
     filters: list[str] | None,
+    hide_investment_risk: bool = False,
 ) -> dict[str, Any]:
     return build_overview_ranking_body(
         live_chart,
         market,
         duration,
         filters,
+        hide_investment_risk,
     )
 
 
@@ -83,8 +111,15 @@ def fetch_overview_ranking(
     tag: str,
     duration: str,
     filters: list[str] | None,
+    hide_investment_risk: bool = False,
 ) -> dict[str, Any]:
-    body = build_overview_ranking_body(ranking_id, tag, duration, filters)
+    body = build_overview_ranking_body(
+        ranking_id,
+        tag,
+        duration,
+        filters,
+        hide_investment_risk,
+    )
     return {
         "kind": "overview",
         "body": body,
@@ -102,8 +137,15 @@ def fetch_live_chart(
     market: str,
     duration: str,
     filters: list[str] | None,
+    hide_investment_risk: bool = False,
 ) -> dict[str, Any]:
-    body = build_live_chart_body(live_chart, market, duration, filters)
+    body = build_live_chart_body(
+        live_chart,
+        market,
+        duration,
+        filters,
+        hide_investment_risk,
+    )
     return {
         "kind": "live-chart",
         "body": body,
@@ -160,7 +202,18 @@ def main() -> int:
     )
     parser.add_argument("--tag", default="all", choices=sorted(MARKETS))
     parser.add_argument("--duration", default="realtime", choices=sorted(DURATIONS))
-    parser.add_argument("--filter", dest="filters", action="append")
+    parser.add_argument(
+        "--filter",
+        dest="filters",
+        action="append",
+        choices=sorted(RANKING_FILTER_IDS),
+        help="Observed home ranking filter id; repeat to combine filters",
+    )
+    parser.add_argument(
+        "--hide-investment-risk",
+        action="store_true",
+        help="Mirror the home '투자위험 주식 숨기기' composite filter",
+    )
     parser.add_argument("--investor-size", type=int, default=100)
     parser.add_argument("--side", choices=["buy", "sell"], default="buy")
     parser.add_argument(
@@ -184,6 +237,7 @@ def main() -> int:
             args.market or args.tag,
             args.duration,
             args.filters,
+            args.hide_investment_risk,
         )
     else:
         payload = fetch_overview_ranking(
@@ -191,6 +245,7 @@ def main() -> int:
             args.tag,
             args.duration,
             args.filters,
+            args.hide_investment_risk,
         )
     api.emit_output(api.render_json(payload), args.output)
     return 0
