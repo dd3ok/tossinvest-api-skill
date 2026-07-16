@@ -717,6 +717,29 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("release tag", checklist)
         self.assertIn("GitHub release", checklist)
 
+    def test_v1_stability_policy_limits_the_compatibility_promise(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        for expected in [
+            "## 안정성 및 버전 정책",
+            "`v1.0.0`부터",
+            "안정된 공개 계약",
+            "외부 응답 필드와 데이터 가용성은 하위 호환성 계약에 포함하지 않으며",
+        ]:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, readme)
+
+    def test_ci_release_smoke_covers_websocket_artifacts(self):
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        for expected in [
+            "pip download",
+            'cp requirements-websocket.txt "$skill_dir"/',
+            'test -f "$skill_dir/requirements-websocket.txt"',
+            'test -f "$skill_dir/scripts/websocket_prices.py"',
+            'python "$skill_dir/scripts/websocket_prices.py" --help',
+        ]:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, workflow)
+
     def test_gitignore_covers_python_build_and_local_artifacts(self):
         text = (ROOT / ".gitignore").read_text(encoding="utf-8")
         for pattern in [".venv/", "build/", "dist/", "*.egg-info/", ".coverage", "htmlcov/"]:

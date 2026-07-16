@@ -38,6 +38,9 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
+      - name: Verify optional WebSocket dependency lock
+        run: python -m pip download --dest "${{ runner.temp }}/websocket-deps" -r requirements-websocket.txt
+
       - name: Skill layout smoke test
         shell: bash
         run: |
@@ -46,11 +49,15 @@ jobs:
           skill_dir="$workspace/.agents/skills/tossinvest-web-api"
           mkdir -p "$skill_dir"
           cp -R SKILL.md README.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
+          cp requirements-websocket.txt "$skill_dir"/
           test -f "$skill_dir/SKILL.md"
           test -f "$skill_dir/agents/openai.yaml"
           test -f "$skill_dir/references/api-catalog.md"
           test -f "$skill_dir/references/websocket-api-reference.md"
+          test -f "$skill_dir/requirements-websocket.txt"
+          test -f "$skill_dir/scripts/websocket_prices.py"
           python "$skill_dir/scripts/stock_summary.py" --help >/dev/null
+          python "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
 
       - name: Compile scripts
         shell: bash
