@@ -612,6 +612,10 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("--lounge-id LOUNGE_193394", cookbook)
         self.assertIn("--kind community-ranking", cookbook)
         self.assertIn("--duration 20d", readme)
+        self.assertIn("시장 통합 검색", readme)
+        self.assertIn("관련 테마·섹터 종목/ETF", readme)
+        self.assertIn("지수와 일별 시세표", readme)
+        self.assertIn("주식·라운지 댓글·답글·커뮤니티 랭킹", readme)
 
     def test_capture_and_catalog_scope_include_current_public_surfaces(self):
         catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
@@ -654,9 +658,10 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
         self.assertIn('display_name: "비공식 토스증권 API"', text)
-        self.assertIn("토스증권 공개 시장 데이터 조회와 WebSocket 동작 설명", text)
+        self.assertIn("토스증권 공개 시세·검색·섹터·커뮤니티와 WebSocket 조회", text)
         self.assertIn("$tossinvest-web-api", text)
-        self.assertIn("WebSocket 체결 스트림의 범위를 안전하게 설명해줘", text)
+        self.assertIn("공개 시세·검색·지수·섹터·커뮤니티 데이터를 안전하게 조회", text)
+        self.assertIn("WebSocket 체결 스트림을 설명해줘", text)
 
         license_text = (ROOT / "LICENSE.txt").read_text(encoding="utf-8")
         self.assertEqual(license_text, (ROOT / "LICENSE").read_text(encoding="utf-8"))
