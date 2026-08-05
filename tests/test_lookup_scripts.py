@@ -25,8 +25,10 @@ import indices
 import market_search
 import news
 import page_api_check
+import pension_fund_trend
 import quote
 import screener_count
+import sector
 import stock_chart
 import stock_page
 import stock_summary
@@ -224,6 +226,159 @@ class ThemeScriptTests(unittest.TestCase):
                 "page": 1,
             },
         )
+
+
+class SectorScriptTests(unittest.TestCase):
+    def test_build_sector_ranking_body_maps_home_filters(self):
+        self.assertEqual(
+            sector.build_sector_ranking_body("us", "1m", "trading-amount"),
+            {"nation": "US", "duration": "1m", "sortBy": "TRADING_AMOUNT"},
+        )
+
+    def test_build_sector_stocks_body_uses_one_based_page_and_sort(self):
+        self.assertEqual(
+            sector.build_sector_stocks_body("all", "trading-value", "asc", 2),
+            {
+                "nation": "ALL",
+                "sortBy": "TRADING_VALUE",
+                "sortOrder": "ASC",
+                "page": 2,
+            },
+        )
+
+    def test_build_sector_etfs_body_preserves_leverage_filter(self):
+        self.assertEqual(
+            sector.build_sector_etfs_body("us", "expense-ratio", "desc", False, 1),
+            {
+                "nation": "US",
+                "sortBy": "EXPENSE_RATIO",
+                "sortOrder": "DESC",
+                "includeLeverageInverse": False,
+                "page": 1,
+            },
+        )
+
+    def test_build_sector_news_path_uses_number_query(self):
+        self.assertEqual(
+            sector.build_sector_news_path("79", 2),
+            "/api/v2/dashboard/wts/overview/tics/79/news?number=2",
+        )
+
+    def test_build_sector_comparison_path_uses_public_index_allowlist(self):
+        self.assertEqual(
+            sector.build_sector_comparison_path("79", "us", "SPX.CBI"),
+            "/api/v1/dashboard/wts/overview/tics/79/comparison-chart?"
+            "nation=US&securitiesType=STOCK&indicatorCode=SPX.CBI",
+        )
+        with self.assertRaisesRegex(ValueError, "indicator-code must be one of"):
+            sector.build_sector_comparison_path("79", "us", "DJI.DJI")
+
+    def test_sector_builders_reject_invalid_id_and_page_before_network(self):
+        with self.assertRaisesRegex(ValueError, "tics-id"):
+            sector.build_sector_overview_path("../79")
+        with self.assertRaisesRegex(ValueError, "stock-page must be at least 1"):
+            sector.build_sector_stocks_body("kr", "market-cap", "desc", 0)
+
+    def test_sector_builders_reject_unobserved_selectors_before_network(self):
+        with self.assertRaisesRegex(ValueError, "nation must be one of"):
+            sector.build_sector_ranking_body("account", "1m", "trading-amount")
+        with self.assertRaisesRegex(ValueError, "duration must be one of"):
+            sector.build_sector_simple_path("79", "kr", "all")
+        with self.assertRaisesRegex(ValueError, "stock-sort must be one of"):
+            sector.build_sector_stocks_body("kr", "price", "desc", 1)
+        with self.assertRaisesRegex(ValueError, "etf-order must be one of"):
+            sector.build_sector_etfs_body("all", "trading-value", "sideways", False, 1)
+
+    @patch("sector.api.get_result", return_value={})
+    def test_sector_detail_reports_request_and_snapshot_provenance(self, get_result):
+        payload = sector.fetch_sector_detail(
+            tics_id="79",
+            nation="us",
+            duration="1m",
+            stock_nation="us",
+            stock_sort="market-cap",
+            stock_order="desc",
+            stock_page=2,
+            etf_nation="all",
+            etf_sort="trading-value",
+            etf_order="desc",
+            etf_page=3,
+            include_leverage_inverse=True,
+            news_page=4,
+            include_comparison=True,
+            indicator_code="SPX.CBI",
+        )
+        self.assertEqual(get_result.call_count, 6)
+        self.assertEqual(payload["_meta"]["catalogCheckedAt"], "2026-08-04")
+        self.assertEqual(payload["_meta"]["transport"], "rest_snapshot")
+        self.assertEqual(payload["_meta"]["pagination"]["stocks"]["pageSize"], 10)
+        self.assertEqual(payload["_meta"]["pagination"]["news"]["pageSize"], 5)
+        self.assertEqual(payload["_meta"]["pagination"]["etfs"]["clientMaxPage"], 100)
+        self.assertEqual(payload["request"]["stocks"]["page"], 2)
+        self.assertEqual(payload["request"]["comparison"]["indicatorCode"], "SPX.CBI")
+
+    @patch("sector.api.get_result")
+    def test_sector_detail_validates_all_inputs_before_network(self, get_result):
+        common = {
+            "tics_id": "79",
+            "nation": "us",
+            "duration": "1m",
+            "stock_nation": "us",
+            "stock_sort": "market-cap",
+            "stock_order": "desc",
+            "stock_page": 1,
+            "etf_nation": "all",
+            "etf_sort": "trading-value",
+            "etf_order": "desc",
+            "etf_page": 1,
+            "include_leverage_inverse": True,
+        }
+        with self.assertRaisesRegex(ValueError, "news-page must be at least 1"):
+            sector.fetch_sector_detail(
+                **common,
+                news_page=0,
+                include_comparison=False,
+                indicator_code="SPX.CBI",
+            )
+        with self.assertRaisesRegex(ValueError, "indicator-code must be one of"):
+            sector.fetch_sector_detail(
+                **common,
+                news_page=1,
+                include_comparison=True,
+                indicator_code="DJI.DJI",
+            )
+        get_result.assert_not_called()
+
+
+class PensionFundTrendScriptTests(unittest.TestCase):
+    def test_year_windows_validate_dates_and_order(self):
+        self.assertEqual(
+            pension_fund_trend.year_windows("2025-12-31", "2026-01-02"),
+            [("2025-12-31", "2025-12-31"), ("2026-01-01", "2026-01-02")],
+        )
+        with self.assertRaisesRegex(ValueError, "from must be a valid YYYY-MM-DD"):
+            pension_fund_trend.year_windows("2026-02-30", "2026-03-01")
+        with self.assertRaisesRegex(ValueError, "start date"):
+            pension_fund_trend.year_windows("2026-03-02", "2026-03-01")
+
+    def test_year_window_rejects_out_of_range_year(self):
+        with self.assertRaisesRegex(ValueError, "year must be between"):
+            pension_fund_trend.year_window(10000)
+
+    @patch("pension_fund_trend.api.request_json")
+    def test_fixed_trend_normalizes_code_and_builds_encoded_query(self, request_json):
+        request_json.return_value = {"result": []}
+        self.assertEqual(pension_fund_trend.fixed_trend("005930", "2026-01-01", "2026-01-02"), [])
+        request_json.assert_called_once_with(
+            "/api/v1/stock-infos/trade/trend/fixed-trading-trend?"
+            "productCode=A005930&from=2026-01-01&to=2026-01-02"
+        )
+
+    @patch("pension_fund_trend.api.request_json")
+    def test_fixed_trend_rejects_reversed_dates_before_network(self, request_json):
+        with self.assertRaisesRegex(ValueError, "start date"):
+            pension_fund_trend.fixed_trend("005930", "2026-01-02", "2026-01-01")
+        request_json.assert_not_called()
 
 
 class IndicesScriptTests(unittest.TestCase):

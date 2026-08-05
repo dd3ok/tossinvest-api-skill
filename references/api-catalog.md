@@ -9,6 +9,8 @@ Additional page/API recheck: 2026-06-01 for `/calendar`, `/calendar/economic-ind
 Additional page/API recheck: 2026-06-08 for `/indices/KGG01P`, `/indices/exchange-rate`, and `/indices/VWAP.KRW-BTC` chart controls, related widgets, paging, and response shapes.
 Additional logged-out WebSocket/page recheck: 2026-07-10 for home tabs and search, sector, screener, feeds, stock-detail tabs, all home index links, real-time consumers, and HTTP paging boundaries.
 Additional public page/bundle/API recheck: 2026-07-16 for home search sections, all visible ranking durations, sector stock/ETF paging and sorts, index daily quotes, lounge comments, community rankings, and stock status helpers.
+Additional industry dashboard/sector recheck: 2026-08-04 against `buildId=-owfs18fvEJHIHRdmooMq` for home industry URL state, `/sector/79?nation=US|KR`, stock/ETF/news paging, comparison-index clicks, current response shapes, and shared live-price overlays.
+Additional route-manifest/bundle recheck: 2026-08-05 against `buildId=-owfs18fvEJHIHRdmooMq` for `/bonds/[guid]`, `/news`, `/cheetah`, `/cheetah/[code]`, `/stocks/[code]/option`, and account/marketing route boundaries.
 Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
@@ -25,6 +27,7 @@ Re-verify endpoints before depending on them because TossInvest web APIs are und
 - [Stock Summary APIs](#stock-summary-apis)
 - [Chart APIs](#chart-apis)
 - [Index And Market Indicator APIs](#index-and-market-indicator-apis)
+- [Bond APIs](#bond-apis)
 - [Analytics APIs](#analytics-apis)
 - [Filings And News APIs](#filings-and-news-apis)
 - [Transaction Status APIs](#transaction-status-apis)
@@ -278,6 +281,24 @@ from common ticker aliases. Direct rechecks on 2026-04-29 accepted `SPX.CBI` for
 S&P 500 and `COMP.NAI` for Nasdaq, while plain `SPX` and `NDX` returned 404/400
 from the index info/price endpoints.
 
+## Bond APIs
+
+Observed from the deployed public `/bonds/[guid]` page bundle on 2026-08-05.
+No stable public bond GUID was available from the logged-out navigation used for
+this audit, so these routes are bundle-observed and intentionally not
+script-backed. Re-open a current public bond page and confirm the exact response
+shape before depending on either endpoint.
+
+| Purpose | Status | Method | Path | Params and notes |
+|---|---|---:|---|---|
+| Bond detail | `observed` | GET | `/api/v1/bond-infos` | Query: `guid={bondGuid}`; the current page bundle passes one page GUID |
+| Simple bond metadata | `observed` | GET | `/api/v1/bond-infos/simple` | Query: repeated `guids={bondGuid}` values; current bundle serializes arrays with repeated keys |
+
+These endpoints are public-page bond metadata candidates, not the official
+OAuth Open API and not evidence for account holdings, buying power, or bond
+order workflows. Do not invent or enumerate GUIDs; use only a GUID visible on a
+public TossInvest bond page.
+
 ## Analytics APIs
 
 Observed from `/stocks/A005930/analytics`.
@@ -476,6 +497,14 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Realtime investor rankings | `script-backed` | GET | `/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Observed under `wts-cert-api`; public page ranking widget, but keep sensitive-host caution |
 | Economic calendar | `script-backed` | GET | `/api/v2/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
 | Calendar AI key events | `script-backed` | GET | `/api/v1/calendar/ai-summary/key-events` | Direct 2026-05-30 check returned `eci` and `earnings[]`; public market-calendar context |
+| Current home industry ranking | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/ranking` | Body: `nation=KR|US`, `duration=1d|1w|1m|3m|1y`, `sortBy=FLUCTUATION_RATE|TRADING_AMOUNT`; result has `basedAt`, `duration`, `tics[]`; deployed page refresh interval observed as 10 seconds |
+| Current sector overview | `script-backed` | GET | `/api/v2/dashboard/wts/overview/tics/{ticsId}/overview` | `ticsId`, `name`, `description`, `summary`, `companyCount`, `etfCount`, `depth`, `relatedTics[]` hierarchy |
+| Current sector compact header | `script-backed` | GET | `/api/v2/dashboard/wts/overview/tics/{ticsId}/simple` | Query: `nation=KR|US`, `duration=1d|1w|1m|3m|1y`; result includes `changeRate`, `imageUrl`, `name`, `summary` |
+| Current sector comparison chart | `script-backed` | GET | `/api/v1/dashboard/wts/overview/tics/{ticsId}/comparison-chart` | Query: `nation`, `securitiesType=STOCK`, `indicatorCode`; current selector exposes `SPX.CBI`, `COMP.NAI`, `KGG01P`, `QGG01P`; result has `baseDate`, `indicators[]` |
+| Current sector stocks | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/{ticsId}/stocks` | Body: `nation=ALL|KR|US`, `sortBy=MARKET_CAP|TRADING_VALUE|VOLUME|ANALYST`, `sortOrder=ASC|DESC`, one-based `page`; fixed `size=10` response with `stocks[]`, `totalCount`; page refetch observed every 10 seconds |
+| Current sector ETFs | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/{ticsId}/etfs` | Body: `nation=ALL|KR|US`, `sortBy=TRADING_VALUE|EXPENSE_RATIO`, `sortOrder=ASC|DESC`, `includeLeverageInverse`, one-based `page`; fixed `size=10` response with `etfs[]`, `totalCount`; page refetch observed every 10 seconds |
+| Current sector news | `script-backed` | GET | `/api/v2/dashboard/wts/overview/tics/{ticsId}/news` | Query: one-based `number`; fixed page size 5; result has `body[]`, `lastPage`, `pagingParam`, `totalCount`; news clicks open the existing `/api/v2/news/{newsId}` detail flow |
+| Auxiliary TICS ranking | `observed` | GET | `/api/v1/tics/rankings` | Current bundle-defined read-only route; direct check returned ranking metadata plus `data[]`; do not confuse it with the current home industry POST ranking |
 | Theme list | `script-backed` | GET | `/api/v1/tics/all` | Observed result includes `baseDateTime`, `ticsItems[]` |
 | Theme ranking by tag | `script-backed` | GET | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Observed tags include market-style values such as `kr`/`us`; result contains ranking metadata and rows |
 | Theme details | `script-backed` | GET | `/api/v1/tics/{ticsId}/details` | Returned `id`, `title`, `summary`, `description`, `companyCount`, `etfCount`, `stocks[]` |
@@ -483,9 +512,34 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Related themes | `script-backed` | GET | `/api/v1/tics/{ticsId}/related` | Related categories for a theme page |
 | Theme news | `script-backed` | GET | `/api/v2/news/tics/{ticsId}` | Query can include `size`; related news for a theme |
 | Theme fluctuations | `script-backed` | GET | `/api/v2/tics/{ticsId}/fluctuations` | Theme fluctuation/history data |
-| Current trending-industry ranking | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/ranking` | Current verified body `{nation: KR|US, duration: 1d}`; longer product-ranking durations are not accepted here; result includes `basedAt`, `duration`, and `tics[]` |
-| Sector stock table | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/{ticsId}/stocks` | Body includes `nation`, `sortBy`, `sortOrder`, and numbered `page`; visible sorts are market cap, trading value, volume, and analyst opinion |
-| Sector ETF table | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/{ticsId}/etfs` | Body includes `nation`, trading-value/expense-ratio sort, `includeLeverageInverse`, and numbered `page` |
+### Current Industry Dashboard And Sector Behavior
+
+The 2026-08-04 industry-page check established three different paging models:
+
+- the home industry ranking returns the full ranked `tics[]` snapshot and has no server page field;
+- `/stocks` and `/etfs` use one-based server pages of 10 rows; sorting or nation changes reset the UI page to 1;
+- `/news` uses one-based `number` pages of 5 rows, while the sector sidebar slices the already-loaded home ranking into client-side pages of 10 rows.
+
+`scripts/sector.py` preserves the applied request values and emits separate
+catalog-check and runtime-fetch timestamps. Its `clientMaxPage=100` metadata is
+a local safety cap, not an observed server maximum; the transport label remains
+`rest_snapshot` because the generic stock-trade WebSocket overlay is not merged
+into the composite.
+
+Home URL state uses `ranking-type=trending_category` plus optional
+`tics-nation`, `tics-duration`, `tics-sort`, and `focusedTicsId`. Clicking another
+home ranking tab clears `focusedTicsId` and `focusedProductCode`; the TICS filter
+parameters remain in the URL even while another ranking tab is selected. On a
+sector detail page, the `nation=KR|US` query seeds the header/chart market, but a
+later header market click changes local UI state without rewriting the URL.
+
+The home `focusedTicsId` aside reuses the current `/simple`,
+`/comparison-chart`, `/stocks`, and `/etfs` endpoints. Its stock request sends
+`{nation, page: 1}` and its ETF request sends `{nation}`, relying on server
+defaults for omitted sort and toggle fields. The aside displays the first five
+rows from each response and refreshes those stock and ETF requests on a
+one-minute interval. The `종목 전체보기` action navigates to
+`/sector/{ticsId}?nation=KR|US`.
 
 Screener endpoints are documented only in [Screener APIs](#screener-apis) to keep
 their `wts-cert-api` handling and filter-body constraints in one place.
@@ -917,6 +971,8 @@ Do not collect these as cataloged APIs, even if they appear in browser network t
 - Order-adjacent status helpers except the verified public read-only `https://wts-cert-api.tossinvest.com/api/v3/trading/order/{productCode}/trading-status`; keep all mutation, orderability, prepare, create, correct, and cancel routes excluded.
 - Guest bootstrap/upsert, experiment variables, tab/session initialization, and other page bootstrapping calls that do not directly return stock or market information.
 - Following/subscription feeds, personalized interest/reasoning content, account-personalized discovery surfaces, or unsanitized raw community/profile payloads.
+- Marketing or account/provision surfaces such as `/ai-campaign`, `/asap`, and `/open-api/*`; the last family belongs to the separate official Open API flow.
+- Feature-gated or blank logged-out routes whose current bundle does not expose a bounded public market-data workflow, including `/stocks/[code]/option` and `/cheetah*`.
 
 ## Known Observed Pages
 
@@ -931,7 +987,7 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/stocks/A005930/transaction-status` | Broker ranking, investor trend, program trading, credit, lending trading, short-selling trend, CFD |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status?contentType=net-buy...` | Same transaction-status APIs; URL query appears to focus a section |
 | `https://www.tossinvest.com/stocks/A005930/order` | Price details, quote/tick, upper/lower bounds, `c-chart` stock candles, TradingView chart studies; order namespace helpers and mutations excluded; no dedicated RSI/MACD/Bollinger data endpoint observed |
-| `https://www.tossinvest.com/?ranking-type=trending_category` | TICS rankings and TICS detail modal APIs |
+| `https://www.tossinvest.com/?ranking-type=trending_category&focusedTicsId=553` | Current home industry ranking with an industry detail aside; optional `tics-nation`, `tics-duration`, and `tics-sort` persist filter state |
 | `https://www.tossinvest.com/?ranking-type=domestic_investor_trend` | Investor buy/sell rankings from dashboard ranking APIs |
 | `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_amount` | Live-chart top100 ranking via overview ranking API |
 | `https://www.tossinvest.com/?market=us&live-chart=biggest_total_amount` | Same live-chart API with `tag=us` |
@@ -948,12 +1004,40 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/indices/SOX.NAI` | Public Philadelphia Semiconductor index value plus HTTP widgets |
 | `https://www.tossinvest.com/indices/exchange-rate` | FX chart and exchange-rate widgets |
 | `https://www.tossinvest.com/indices/VWAP.KRW-BTC` | Crypto-like index info/price, `r-chart/crypto`, crypto prices, related news |
+| `https://www.tossinvest.com/bonds/{guid}` | Bundle-observed bond detail and simple metadata; requires a current public page GUID and live response-shape recheck |
 | `https://www.tossinvest.com/indices/DJI.DJI` | Redirected to sign-in in the 2026-07-10 logged-out check; stop rather than probing a destination |
 | `https://www.tossinvest.com/indices/RFU.NQc1` | Redirected to sign-in in the 2026-07-10 logged-out check |
 | `https://www.tossinvest.com/indices/RFU.GCv1` | Redirected to sign-in in the 2026-07-10 logged-out check |
 | `https://www.tossinvest.com/calendar` | Monthly market calendar, economic/earnings and domestic/overseas local filters, weekly/key-event summary text |
 | `https://www.tossinvest.com/calendar/economic-indicator?date=2026-06-01&ric=USPMI%3DECI` | Economic indicator detail, historical data, related articles, upcoming indicators, AI analysis text |
 | `https://www.tossinvest.com/screener` | Screener presets, filter metadata, result count, result screen |
-| `https://www.tossinvest.com/sector/605?nation=US` | Public sector metrics and stock/ETF lists; rendered stock prices use the shared real-time store |
+| `https://www.tossinvest.com/sector/79?nation=US` | Public sector header/chart, ALL/KR/US stock and ETF filters, comparison-index menu, server-paged news, related-industry tree, and client-paged trending-industry sidebar |
+| `https://www.tossinvest.com/sector/79?nation=KR` | Same sector id with the KR header/chart seed and KR stock default; switching the header market after load does not rewrite the URL |
 | `https://www.tossinvest.com/feed/recommended` | Recommended community/feed posts |
 | `https://www.tossinvest.com/feed/news` | Dashboard news categories and news detail |
+
+### Route-manifest scope review
+
+The 2026-08-05 deployed route manifest contains more routes than this catalog.
+Route presence alone is not evidence of a usable public API, so the audit kept
+the following boundaries:
+
+| Route | Audit result | Catalog decision |
+|---|---|---|
+| `/bonds/[guid]` | Public page bundle contains the two read-only bond-info calls above | `observed`; recheck with a visible GUID before scripting |
+| `/news` | Logged-out direct navigation rendered no bounded data surface | `needs-recheck`; prefer the verified `/feed/news` flow |
+| `/cheetah`, `/cheetah/[code]` | Logged-out pages were blank; only `/api/v1/reasoning-news/count` was visible in the checked bundle | `needs-recheck`; no script or broader endpoint claim |
+| `/stocks/[code]/option` | Route module rendered no public content and loaded order-adjacent feature metadata | `excluded` until a logged-out public market-data surface is verified |
+| `/ai-campaign` | Marketing surface | `excluded` |
+| `/asap` | Account/provision terms surface | `excluded` |
+| `/open-api/*` | Official Open API onboarding/documentation flow | Separate scope; use `official-openapi-boundary.md` |
+
+Cross-checking other plausible gaps did not justify inventing new endpoint
+families. Display ticker resolution is already script-backed through
+`/api/v2/stock-infos/code-or-symbol/{productCode}` in `stock_page.py`; ETF/ETN
+detail has the observed `/api/v2/stock-infos/{productCode}/investment` route;
+and the home live chart, recommended feed lists, sector pages, and calendar are
+already cataloged. A first-class community-post permalink/body flow and public
+AI earnings-call transcript/translation surface remain `needs-recheck` because
+this audit did not establish a bounded logged-out route and response shape for
+them. Do not infer endpoints from product announcements or search results.

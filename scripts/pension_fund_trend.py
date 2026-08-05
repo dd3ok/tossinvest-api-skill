@@ -11,7 +11,6 @@ import argparse
 import csv
 import io
 import json
-import urllib.parse
 from datetime import date
 from pathlib import Path
 
@@ -20,9 +19,32 @@ import tossinvest_api as api
 DEFAULT_HISTORY_START = "2019-04-01"
 
 
+def normalize_date(name: str, value: str) -> str:
+    try:
+        return date.fromisoformat(value).isoformat()
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a valid YYYY-MM-DD date") from exc
+
+
+def normalize_date_range(start: str, end: str) -> tuple[str, str]:
+    normalized_start = normalize_date("from", start)
+    normalized_end = normalize_date("to", end)
+    if normalized_start > normalized_end:
+        raise ValueError("start date must be before or equal to end date")
+    return normalized_start, normalized_end
+
+
 def fixed_trend(product_code: str, start: str, end: str) -> list[dict]:
-    query = urllib.parse.urlencode({"productCode": product_code, "from": start, "to": end})
-    payload = api.request_json(f"/api/v1/stock-infos/trade/trend/fixed-trading-trend?{query}")
+    start, end = normalize_date_range(start, end)
+    path = api.build_path(
+        "/api/v1/stock-infos/trade/trend/fixed-trading-trend",
+        {
+            "productCode": api.normalize_product_code(product_code),
+            "from": start,
+            "to": end,
+        },
+    )
+    payload = api.request_json(path)
     result = payload.get("result")
     if not isinstance(result, list):
         raise RuntimeError("Unexpected fixed-trading-trend response shape")
@@ -30,14 +52,15 @@ def fixed_trend(product_code: str, start: str, end: str) -> list[dict]:
 
 
 def year_window(year: int) -> tuple[str, str]:
+    if year < 1 or year > 9999:
+        raise ValueError("year must be between 1 and 9999")
     return f"{year:04d}-01-01", f"{year:04d}-12-31"
 
 
 def year_windows(start: str, end: str) -> list[tuple[str, str]]:
+    start, end = normalize_date_range(start, end)
     start_date = date.fromisoformat(start)
     end_date = date.fromisoformat(end)
-    if start_date > end_date:
-        raise ValueError("start date must be before or equal to end date")
 
     windows = []
     current_year = start_date.year
@@ -50,7 +73,10 @@ def year_windows(start: str, end: str) -> list[tuple[str, str]]:
 
 
 def fetch_history(product_code: str, start: str, end: str, chunk_yearly: bool) -> list[dict]:
-    ranges = year_windows(start, end) if chunk_yearly else [(start, end)]
+    validated_windows = year_windows(start, end)
+    ranges = (
+        validated_windows if chunk_yearly else [(validated_windows[0][0], validated_windows[-1][1])]
+    )
     rows_by_date = {}
     for window_start, window_end in ranges:
         for row in fixed_trend(product_code, window_start, window_end):
@@ -158,10 +184,11 @@ def main() -> int:
         start, end = args.start, args.end
         chunk_yearly = False
 
-    rows = fetch_history(args.code, start, end, chunk_yearly)
+    normalized_code = api.normalize_product_code(args.code)
+    rows = fetch_history(normalized_code, start, end, chunk_yearly)
     normalized = normalize_rows(rows)
     summary = {
-        "code": args.code,
+        "code": normalized_code,
         "from": start,
         "to": end,
         **summarize_rows(normalized),
