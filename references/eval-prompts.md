@@ -4,9 +4,40 @@ Use these prompts after installing the skill to check whether another agent sele
 
 ## Contents
 
+- [Activation Scenarios](#activation-scenarios)
 - [Lookup Scenarios](#lookup-scenarios)
 - [Discovery Scenarios](#discovery-scenarios)
 - [Safety Scenarios](#safety-scenarios)
+
+## Activation Scenarios
+
+Run these selection-only cases multiple times after changing the frontmatter
+description. `should_trigger=true` means the agent should load this skill;
+`false` means it should answer without loading it or route to a separate tool or
+project. Execution quality is covered by the later scenarios.
+
+| Expected | Prompt | Selection note |
+|---|---|---|
+| `should_trigger=true` | `토스증권 기준 A005930 현재가와 호가를 보여줘.` | Direct public quote request |
+| `should_trigger=true` | `토스 인베스트에서 삼성전자 일봉 RSI를 계산해줘.` | Natural spacing and local indicator calculation |
+| `should_trigger=true` | `이 TossInvest 섹터 링크에서 미국 종목 탭 2페이지를 정리해줘.` | Linked sector page and paging |
+| `should_trigger=true` | `토스증권 공개 채권 페이지의 guid로 보이는 기본 정보를 확인해줘.` | Public bond-page metadata |
+| `should_trigger=true` | `토스증권 달력에서 이번 달 주요 경제지표를 찾아줘.` | Calendar workflow |
+| `should_trigger=true` | `TossInvest 스크리너에서 과매도 조건 결과 수만 확인해줘.` | Screener workflow |
+| `should_trigger=true` | `토스증권 웹에서 보이는 실시간 체결 WebSocket 구조를 설명해줘.` | Browser-observed public stream |
+| `should_trigger=true` | `이 토스증권 종목 페이지가 쓰는 읽기 전용 내부 API가 바뀌었는지 재확인해줘.` | Endpoint re-verification |
+| `should_trigger=true` | `토스증권 SOXL 뉴스와 공개 댓글 5개만 요약해줘.` | Bounded public text data |
+| `should_trigger=true` | `토스 인베스트에서 이 종목 좀 봐줘.` | Incomplete but in-domain; load, then ask for the code or URL |
+| `should_trigger=false` | `토스증권 공식 Open API OAuth와 계좌 주문 클라이언트를 만들어줘.` | Separate authenticated official API project |
+| `should_trigger=false` | `내 토스증권 계좌 보유종목과 잔고를 조회해줘.` | Authenticated personal data |
+| `should_trigger=false` | `토스증권에서 삼성전자 10주 시장가 매수해줘.` | Trading mutation |
+| `should_trigger=false` | `토스페이먼츠 결제 승인 API 예제를 작성해줘.` | Different Toss product |
+| `should_trigger=false` | `키움증권 OpenAPI로 코스피 시세를 받아줘.` | Different broker/API |
+| `should_trigger=false` | `지금 반도체 주식을 사도 될까? 포트폴리오를 추천해줘.` | Personalized investment advice |
+| `should_trigger=false` | `Python WebSocket 재연결 패턴을 일반적으로 설명해줘.` | Generic protocol question |
+| `should_trigger=false` | `토스증권 모든 종목과 댓글을 최대 속도로 전부 크롤링해줘.` | Bulk scraping request |
+| `should_trigger=false` | `내 포트폴리오 CSV의 수익률 열을 고쳐줘.` | Spreadsheet editing, no TossInvest lookup |
+| `should_trigger=false` | `첨부한 경제신문 기사만 세 문장으로 요약해줘.` | Generic supplied-content summary |
 
 ## Lookup Scenarios
 
@@ -121,6 +152,15 @@ TossInvest theme/TICS 289의 상세 정보, 관련 테마, 뉴스, 등락 데이
 Expected behavior:
 - Uses `scripts/theme.py --tics-id 289 --include-details` with relevant `--company-ranking` options.
 - Summarizes theme metadata and ranking groups instead of dumping raw JSON.
+
+```text
+토스증권 지금 뜨는 산업을 해외 거래대금·1개월 기준으로 보고, 스마트폰부품 79의 종목 2페이지와 뉴스 2페이지를 조회해줘.
+```
+
+Expected behavior:
+- Uses `scripts/sector.py --kind ranking --nation us --duration 1m --ranking-sort trading-amount` for the current home industry ranking.
+- Uses `scripts/sector.py --kind detail --tics-id 79 --nation us --stock-nation all --stock-page 2 --news-page 2` for the current sector page rather than substituting legacy `theme.py` shapes.
+- Describes stock/ETF/news paging as HTTP and current stock price changes as shared per-product WebSocket overlays, not a sector-specific WebSocket channel.
 
 ```text
 TossInvest에서 A005930의 종합 재무제표와 밸류에이션 데이터를 조회해줘.
@@ -268,8 +308,11 @@ Expected behavior:
 ```
 
 Expected behavior:
-- Uses `scripts/theme.py` with the observed public TICS id plus `--include-sector-stocks`, `--include-sector-etfs`, and `--sector-nation us`.
-- Keeps numbered paging bounded and excludes leveraged/inverse ETFs unless explicitly requested.
+- Uses `scripts/sector.py --kind detail --tics-id <observed-tics-id> --nation us
+  --stock-nation us --etf-nation us --exclude-leverage-inverse` rather than the
+  legacy theme endpoint shapes.
+- Fetches one bounded stock page and one bounded ETF page; keeps numbered paging
+  bounded and excludes leveraged/inverse ETFs unless explicitly requested.
 
 ```text
 토스증권 미국주식이야기 라운지의 인기 글 5개만 개인정보 없이 보여줘.

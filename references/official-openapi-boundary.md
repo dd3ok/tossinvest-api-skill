@@ -1,6 +1,6 @@
 # Official Open API Boundary
 
-Checked: 2026-07-08
+Checked: 2026-08-05
 
 Sources:
 
@@ -15,6 +15,13 @@ official limits as reference-only operational context, not as permission to set
 traffic levels for this unauthenticated web-endpoint skill. Do not use this file
 to add OAuth, account, asset, or order workflows to this skill.
 
+## Contents
+
+- [Boundary](#boundary)
+- [Official API Shape](#official-api-shape)
+- [Official Rate Limits](#official-rate-limits)
+- [Refresh Policy](#refresh-policy)
+
 ## Boundary
 
 This skill works with public TossInvest web pages and observed unauthenticated
@@ -26,14 +33,20 @@ Open API app setup, OAuth credentials, `X-Tossinvest-Account`, or IP registratio
 Do not ask users for those values for this skill, and do not add scripts that
 handle them here.
 
+That sentence describes this skill's non-use of the official service; it is not
+a claim about the current official developer-console onboarding requirements.
+For a separate authenticated client project, re-check the official overview and
+console directly, including whether IP registration is currently required.
+
 If the user wants official Open API integration, treat it as a separate
 authenticated client project and read the official docs directly.
 
 ## Official API Shape
 
-Official OpenAPI JSON checked on 2026-07-08:
+Official OpenAPI JSON checked on 2026-08-05:
 
-- OpenAPI version: `1.2.2`
+- OpenAPI specification version: `3.1.0`
+- Official API document version: `1.2.9`
 - Base server: `https://openapi.tossinvest.com`
 - Auth: OAuth 2.0 Client Credentials via `POST /oauth2/token`
 - All official API calls use `Authorization: Bearer {access_token}`
@@ -41,9 +54,10 @@ Official OpenAPI JSON checked on 2026-07-08:
 - Coverage: Auth, Market Data, Stock Info, Market Info, Ranking, Market
   Indicators, Account, Asset, Order, Conditional Order, Conditional Order
   History, Order History, and Order Info
+- Canonical document size: 27 paths across 13 tags
 
 `llms.txt` mentions JWKS in its quick Auth summary, but the canonical OpenAPI
-JSON checked on 2026-07-08 did not list a JWKS operation. Use the OpenAPI JSON as
+JSON checked on 2026-08-05 did not list a JWKS operation. Use the OpenAPI JSON as
 the source of truth for exact official paths.
 
 Official market-data overlap includes:
@@ -62,7 +76,7 @@ Official market-data overlap includes:
 This overlap does not make the official paths script-backed in this repository.
 The bundled scripts continue to use the public page endpoint catalog.
 
-Official public market-data READ endpoints present in `1.2.2` but not yet
+Official public market-data READ endpoints present in `1.2.9` but not yet
 script-backed in this skill:
 
 - `GET /api/v1/rankings`
@@ -104,13 +118,13 @@ separate quota.
 | `MARKET_INFO` | 3 TPS |
 | `MARKET_DATA` | 10 TPS |
 | `MARKET_DATA_CHART` | 5 TPS |
-| `RANKING` | 3 TPS |
+| `RANKING` | 5 TPS |
 | `MARKET_INDICATOR_PRICE` | 10 TPS |
-| `MARKET_INDICATOR` | 3 TPS |
+| `MARKET_INDICATOR` | 10 TPS |
 | `MARKET_INDICATOR_CHART` | 5 TPS |
-| `ORDER` | 6 TPS; 3 TPS during 09:00-09:10 KST |
+| `ORDER` | 10 TPS; 10 TPS during 09:00-09:10 KST |
 | `CONDITIONAL_ORDER` | 5 TPS |
-| `CONDITIONAL_ORDER_HISTORY` | 5 TPS |
+| `CONDITIONAL_ORDER_HISTORY` | 10 TPS |
 | `ORDER_HISTORY` | 5 TPS |
 | `ORDER_INFO` | 6 TPS; 3 TPS during 09:00-09:10 KST |
 
@@ -125,3 +139,12 @@ For this skill, keep the stricter safety rule: stop on 403, 429, login redirects
 challenge pages, or abnormal responses; do not retry, poll, fan out, or bypass
 service protection; do not probe unpublished limits, including by testing higher
 TPS than the official Open API documents.
+
+## Refresh Policy
+
+Before each release, and before answering an exact current official version,
+path, authentication, or rate-limit question, re-read the canonical OpenAPI JSON
+and official overview. Keep the checked date tied to the observed values; never
+roll it forward without completing that comparison. If the official sources are
+unavailable or disagree, retain the prior value only as historical context and
+label the current claim `needs-recheck`.

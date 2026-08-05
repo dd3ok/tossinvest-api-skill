@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Python ${{ matrix.python-version }}
@@ -27,7 +30,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install development tools
-        run: python -m pip install ruff
+        run: python -m pip install "ruff==0.15.22"
+
+      - name: Install Agent Skills validator
+        if: matrix.python-version == '3.12'
+        run: python -m pip install "skills-ref==0.1.1"
 
       - name: Check formatting
         run: ruff format --check .
@@ -56,6 +63,9 @@ jobs:
           test -f "$skill_dir/references/websocket-api-reference.md"
           test -f "$skill_dir/requirements-websocket.txt"
           test -f "$skill_dir/scripts/websocket_prices.py"
+          if [[ "${{ matrix.python-version }}" == "3.12" ]]; then
+            agentskills validate "$skill_dir"
+          fi
           python "$skill_dir/scripts/stock_summary.py" --help >/dev/null
           python "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
 

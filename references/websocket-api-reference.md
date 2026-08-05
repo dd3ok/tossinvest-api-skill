@@ -2,6 +2,8 @@
 
 Checked: 2026-07-10
 
+Additional sector-page live-overlay check: 2026-08-04.
+
 Status: browser-observed, unofficial, unstable, and script-backed by a minimal bounded client.
 
 This document describes the read-only real-time interface in API-reference form. It is not a TossInvest-supported public API or a complete AsyncAPI contract. The optional `scripts/websocket_prices.py` client implements only the confirmed public trade/index/crypto subset with memory-only guest metadata and strict runtime limits.
@@ -306,6 +308,13 @@ A client that mirrors this page should:
 | `/screener` | Each rendered result can register a shared trade-price subscription | Filters, count, sort columns, and 50-row numbered pages use HTTP; the UI virtualizes/infinite-loads them. |
 | `/sector/{tics-id}` | Stock cards and comparison/ETF rows can use shared trade-price overlays | Sector metrics, membership, sorting, signals, and list loading use HTTP. |
 | `/feed/news` and `/feed/recommended` | Related-stock price chips can use the shared live-price store | Articles, posts, reactions, comments, and feed cursors use HTTP; mutations require login and are excluded. |
+
+On 2026-08-04, `/sector/79?nation=US` showed current price/change changes in
+two visible stock rows during a 3.5-second observation while rank, market cap,
+trading value, volume, analyst opinion, and signal cells stayed unchanged. This
+confirms the sector table as another `HTTP snapshot + per-product trade overlay`
+consumer. No sector-ranking or sector-page-specific WebSocket destination was
+found; stock rows reuse `/topic/v1/{market}/stock/trade/{productCode}`.
 
 ### Logged-out navigation check
 

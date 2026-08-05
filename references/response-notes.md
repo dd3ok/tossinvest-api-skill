@@ -118,6 +118,13 @@ case for dotted indicator codes.
 | `/api/v1/tics/all` | Object: `baseDateTime`, `ticsItems[]` |
 | `/api/v1/rankings/contents/tics_margin_depth1/tags/{tag}` | Object: ranking metadata such as `rankingId`, `info`, `type`, and ranking rows |
 | `/api/v2/news/tics/{ticsId}` | Object: `pagingParam`, `body[]`, `lastPage` |
+| `POST /api/v2/dashboard/wts/overview/tics/ranking` | Object: `basedAt`, `duration`, `tics[]`; rows include `rank`, `ticsId`, `name`, `fluctuationRate`, KRW/USD trading amount and market cap, `stockCount`, `leadingStock` |
+| `/api/v2/dashboard/wts/overview/tics/{ticsId}/overview` | Object: `ticsId`, `name`, `description`, `summary`, `companyCount`, `etfCount`, `depth`, `relatedTics[]` |
+| `/api/v2/dashboard/wts/overview/tics/{ticsId}/simple` | Object: `ticsId`, `name`, `summary`, `imageUrl`, `duration`, `changeRate` |
+| `/api/v1/dashboard/wts/overview/tics/{ticsId}/comparison-chart` | Object: `baseDate`, `indicators[]`; indicator rows include identity fields plus `prices` and `fluctuationRates` arrays |
+| `POST /api/v2/dashboard/wts/overview/tics/{ticsId}/stocks` | Object: `ticsId`, `nation`, `page`, `size=10`, `totalCount`, `sortBy`, `sortOrder`, `stocks[]`; rows include price, change, market cap, trading value, volume, analyst opinion, and public UI signal fields |
+| `POST /api/v2/dashboard/wts/overview/tics/{ticsId}/etfs` | Object: `ticsId`, `nation`, `page`, `size=10`, `totalCount`, `sortBy`, `sortOrder`, `includeLeverageInverse`, `etfs[]`; rows include price, change, trading value, expense ratio, leverage factor, and top holding |
+| `/api/v2/dashboard/wts/overview/tics/{ticsId}/news?number={page}` | Object: `body[]`, `lastPage`, next `pagingParam`, `totalCount`; fixed observed page size 5 |
 | `wts-cert-api /api/v1/screener/screen/count` | Number count for body `{ "filters": [], "nation": "kr" }` or `"us"`; also accepted `RSI_범위`, selected price-condition filters, and selected technical-analysis `conditions[]` filters in verification |
 | `wts-cert-api /api/v2/screener/screen` | Object: `totalCount`, `page`, `lastPage`, `stocks[]`, `columns[]`; body requires `pagingParam.size` in addition to `filters[]` and `nation`; `pagingParam.number` worked for page selection; observed `sort` shape uses `column`, `label`, `order` |
 | `/api/v1/dashboard/wts/overview/signals?codes={codes}` | Object: `stockCode`, `signals[]`; used for the home live-chart AI summary column |

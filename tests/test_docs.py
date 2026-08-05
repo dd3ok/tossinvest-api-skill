@@ -199,6 +199,39 @@ class DocumentationPromptTests(unittest.TestCase):
         body = text.split("---", 2)[2]
         self.assertIn("Requires Python 3.10+ and network access.", body)
 
+    def test_skill_local_links_and_reference_anchors_exist(self):
+        skill_path = ROOT / "SKILL.md"
+        skill = skill_path.read_text(encoding="utf-8")
+
+        def heading_slug(value: str) -> str:
+            value = value.strip().lower()
+            value = re.sub(r"[^\w\- ]", "", value)
+            return re.sub(r"\s+", "-", value)
+
+        for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", skill):
+            if target.startswith(("http://", "https://", "#")):
+                continue
+            path_text, _, fragment = target.partition("#")
+            linked_path = skill_path.parent / path_text
+            with self.subTest(target=target):
+                self.assertTrue(linked_path.exists(), f"Missing local link target: {target}")
+                if fragment and linked_path.is_file():
+                    headings = {
+                        heading_slug(match.group(1))
+                        for match in re.finditer(
+                            r"^#{1,6}\s+(.+?)\s*$",
+                            linked_path.read_text(encoding="utf-8"),
+                            re.MULTILINE,
+                        )
+                    }
+                    self.assertIn(fragment, headings, f"Missing Markdown anchor: {target}")
+
+        for reference in (ROOT / "references").glob("*.md"):
+            lines = reference.read_text(encoding="utf-8").splitlines()
+            if len(lines) > 100:
+                with self.subTest(reference=reference.name):
+                    self.assertIn("## Contents", lines)
+
     def test_websocket_api_reference_documents_protocol_schema_and_safety(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -551,6 +584,14 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("/api/v1/holdings", boundary)
         self.assertIn("/api/v1/commissions", boundary)
         self.assertIn("authenticated official-only", boundary)
+        self.assertIn("Checked: 2026-08-05", boundary)
+        self.assertIn("OpenAPI specification version: `3.1.0`", boundary)
+        self.assertIn("Official API document version: `1.2.9`", boundary)
+        self.assertIn("| `RANKING` | 5 TPS |", boundary)
+        self.assertIn("| `MARKET_INDICATOR` | 10 TPS |", boundary)
+        self.assertIn("## Refresh Policy", boundary)
+        self.assertIn("Before each release", boundary)
+        self.assertIn("label the current claim `needs-recheck`", boundary)
 
     def test_index_page_recheck_docs_cover_current_public_widgets(self):
         catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
@@ -627,6 +668,26 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("Observed drift, excluded, and sensitive public-social endpoints", catalog)
         self.assertNotIn("Observed 2026-06-01 drift and excluded endpoints", catalog)
 
+    def test_route_manifest_recheck_keeps_new_surfaces_bounded(self):
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("## Bond APIs", catalog)
+        self.assertIn("/api/v1/bond-infos", catalog)
+        self.assertIn("/api/v1/bond-infos/simple", catalog)
+        self.assertIn("/bonds/{guid}", catalog)
+        self.assertIn("### Route-manifest scope review", catalog)
+        self.assertIn("/cheetah", catalog)
+        self.assertIn("/stocks/[code]/option", catalog)
+        self.assertIn("bond pages", skill)
+
+    def test_activation_eval_set_has_balanced_realistic_cases(self):
+        evals = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")
+        self.assertIn("## Activation Scenarios", evals)
+        self.assertEqual(evals.count("| `should_trigger=true` |"), 10)
+        self.assertEqual(evals.count("| `should_trigger=false` |"), 10)
+        self.assertIn("Incomplete but in-domain", evals)
+        self.assertIn("토스페이먼츠", evals)
+
     def test_endpoint_drift_guidance_is_explicit_and_routed(self):
         skill_text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("## Lookup Failures\n", skill_text)
@@ -657,11 +718,12 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
-        self.assertIn('display_name: "비공식 토스증권 API"', text)
-        self.assertIn("토스증권 공개 시세·검색·섹터·커뮤니티와 WebSocket 조회", text)
+        self.assertIn('display_name: "토스증권 공개 웹 데이터"', text)
+        self.assertIn("토스증권 공개 종목·시장 데이터와 읽기 전용 웹 API 조회", text)
         self.assertIn("$tossinvest-web-api", text)
-        self.assertIn("공개 시세·검색·지수·섹터·커뮤니티 데이터를 안전하게 조회", text)
-        self.assertIn("WebSocket 체결 스트림을 설명해줘", text)
+        self.assertIn("공개 종목·시장 데이터를 안전하게 조회", text)
+        self.assertIn("관찰 상태를 구분해줘", text)
+        self.assertIn("allow_implicit_invocation: true", text)
 
         license_text = (ROOT / "LICENSE.txt").read_text(encoding="utf-8")
         self.assertEqual(license_text, (ROOT / "LICENSE").read_text(encoding="utf-8"))
@@ -670,6 +732,10 @@ class DocumentationPromptTests(unittest.TestCase):
         ci_text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         self.assertIn("name: TossInvest API Skill CI", ci_text)
         self.assertNotIn("name: TossInvest API Skills CI", ci_text)
+        self.assertIn("permissions:\n  contents: read", ci_text)
+        self.assertIn('python -m pip install "ruff==0.15.22"', ci_text)
+        self.assertIn('python -m pip install "skills-ref==0.1.1"', ci_text)
+        self.assertIn('agentskills validate "$skill_dir"', ci_text)
 
         checklist = (ROOT / ".github" / "RELEASE_CHECKLIST.md").read_text(encoding="utf-8")
         self.assertIn("agents/openai.yaml", checklist)
@@ -683,6 +749,8 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("do not", checklist)
         self.assertIn("depend on `$...` skill selectors or aliases", checklist)
         self.assertIn("references/websocket-api-reference.md", ci_text)
+        self.assertIn('cp requirements-websocket.txt "$skill_dir"/', ci_text)
+        self.assertIn('test -f "$skill_dir/requirements-websocket.txt"', ci_text)
         self.assertIn("references/websocket-api-reference.md", checklist)
         self.assertIn("Ephemeral WebSocket guest metadata", checklist)
         self.assertIn("standalone public read-only WebSocket client", checklist)

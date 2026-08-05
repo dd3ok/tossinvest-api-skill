@@ -1,4 +1,7 @@
 interface:
-  display_name: "비공식 토스증권 API"
-  short_description: "토스증권 공개 시세·검색·섹터·커뮤니티와 WebSocket 조회"
-  default_prompt: "$tossinvest-web-api로 토스증권 공개 시세·검색·지수·섹터·커뮤니티 데이터를 안전하게 조회하고 필요한 경우 WebSocket 체결 스트림을 설명해줘."
+  display_name: "토스증권 공개 웹 데이터"
+  short_description: "토스증권 공개 종목·시장 데이터와 읽기 전용 웹 API 조회"
+  default_prompt: "$tossinvest-web-api로 토스증권 공개 종목·시장 데이터를 안전하게 조회하고 관찰 상태를 구분해줘."
+
+policy:
+  allow_implicit_invocation: true
