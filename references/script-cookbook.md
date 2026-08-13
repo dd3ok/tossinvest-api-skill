@@ -58,20 +58,28 @@ product/source code, use the `productCode` returned by the verified
 
 ## Real-Time WebSocket Streams
 
-Install the single optional dependency only when real-time streaming is needed:
+Install the single optional dependency only when real-time streaming is needed.
+Prefer a project-local virtual environment so the global Python environment is
+unchanged and cleanup is just removal of `.venv`:
 
 ```bash
-python3 -m pip install -r requirements-websocket.txt
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements-websocket.txt
 ```
+
+On Windows PowerShell, replace `.venv/bin/python` with
+`.venv/Scripts/python.exe` in every following command. After a one-off test,
+deactivate the environment if needed and remove only the `.venv` directory to
+remove the optional dependency.
 
 Use explicit public product codes and a short duration/event bound:
 
 ```bash
-python3 scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
-python3 scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
-python3 scripts/websocket_prices.py --kr-index KGG01P --duration 10 --max-events 5
-python3 scripts/websocket_prices.py --us-index COMP.NAI --duration 10 --max-events 5
-python3 scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 10 --max-events 5
+.venv/bin/python scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
+.venv/bin/python scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
+.venv/bin/python scripts/websocket_prices.py --kr-index KGG01P --duration 10 --max-events 5
+.venv/bin/python scripts/websocket_prices.py --kr-index QGG01P --duration 10 --max-events 5
+.venv/bin/python scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 10 --max-events 5
 ```
 
 The script emits normalized JSONL only. It obtains the anonymous guest key at
@@ -85,10 +93,15 @@ at 1 MiB. JSONL flushes immediately for the first event and then in small
 batches. US stocks require a TossInvest product/source code
 such as `US20100311002`, not a display ticker such as `SOXL` or `NVDA`.
 
-Index flags use an exact logged-out public allowlist: KR `KGG01P`; US
-`COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI`. The client rejects
-login-gated `DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1` instead of attempting a
-subscription.
+Index flags use an exact bounded-live allowlist: KR `KGG01P` and `QGG01P`.
+The public US index code paths `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI`
+each delivered zero events in the 2026-08-13 bounded checks, so the standalone
+client keeps US index subscriptions disabled. It also rejects login-gated
+`DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1`.
+
+Crypto flags use the exact public, bounded-live allowlist `VWAP.KRW-BTC`,
+`VWAP.KRW-ETH`, `VWAP.KRW-XRP`, and `VWAP.KRW-SOL`. A successful connection
+with zero events does not verify a channel or its fields.
 
 This minimal client intentionally excludes bid/offer, expected-match data,
 stock-status invalidation, orders, accounts, and automatic top100 ranking

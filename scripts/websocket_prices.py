@@ -23,7 +23,8 @@ import tossinvest_api as api
 
 PUBLIC_ORIGIN = "https://www.tossinvest.com"
 GUEST_KEY_URL = "https://wts-api.tossinvest.com/api/v1/refresh-utk"
-SOCKET_URL = "wss://realtime-socket.tossinvest.com/ws"
+SOCKET_HOST = "realtime-socket.tossinvest.com"
+SOCKET_URL = f"wss://{SOCKET_HOST}/ws"
 SUBPROTOCOL = "v12.stomp"
 HEARTBEAT_MS = 5_000
 CONNECT_TIMEOUT_SECONDS = 10
@@ -46,8 +47,9 @@ _US_STOCK_CODE = re.compile(r"^(?:US|NAS|NYS|AMX)[A-Z0-9._-]{5,45}$")
 _CRYPTO_CODE = re.compile(r"^VWAP\.[A-Z0-9._-]{2,40}$")
 _HEADER_ESCAPE = re.compile(r"\\([\\cnr])")
 
-_PUBLIC_KR_INDICES = frozenset({"KGG01P"})
-_PUBLIC_US_INDICES = frozenset({"COMP.NAI", "SPX.CBI", "RGI..VIX", "SOX.NAI"})
+_PUBLIC_KR_INDICES = frozenset({"KGG01P", "QGG01P"})
+_PUBLIC_US_INDICES: frozenset[str] = frozenset()
+_PUBLIC_CRYPTO_CODES = frozenset({"VWAP.KRW-BTC", "VWAP.KRW-ETH", "VWAP.KRW-SOL", "VWAP.KRW-XRP"})
 
 _PAYLOAD_FIELDS = (
     "code",
@@ -313,6 +315,7 @@ def _subscription_for(kind: str, code: str) -> Subscription:
     elif kind == "crypto":
         normalized = code.strip().upper()
         _require_code(normalized, _CRYPTO_CODE, "crypto VWAP")
+        _require_public_code(normalized, _PUBLIC_CRYPTO_CODES, "crypto VWAP")
         destination = f"/topic/v1/crypto/vwap/{normalized}"
     else:
         raise ValueError(f"Unsupported subscription kind: {kind}")
@@ -422,6 +425,7 @@ def _stream_prices_locked(
             "CONNECT",
             {
                 "accept-version": "1.2",
+                "host": SOCKET_HOST,
                 "heart-beat": f"{HEARTBEAT_MS},{HEARTBEAT_MS}",
                 "device-id": device_id,
                 "connection-id": connection_id,
@@ -500,7 +504,6 @@ def _send_subscriptions(
                     {
                         "id": subscription_id,
                         "destination": item.destination,
-                        "ack": "auto",
                     },
                 )
             )
@@ -562,8 +565,8 @@ def _load_websocket_module() -> Any:
         return importlib.import_module("websocket")
     except ModuleNotFoundError as exc:
         raise RuntimeError(
-            "WebSocket support is optional; install it with "
-            "`python -m pip install -r requirements-websocket.txt`"
+            "WebSocket support is optional; install it in the project-local `.venv` "
+            "as documented in references/script-cookbook.md"
         ) from exc
 
 
@@ -575,9 +578,16 @@ def _require_code(code: str, pattern: re.Pattern[str], label: str) -> None:
 def _require_public_index(code: str, allowed: frozenset[str], market: str) -> None:
     if code not in allowed:
         supported = ", ".join(sorted(allowed))
+        support_note = f"public codes: {supported}" if supported else "no bounded-live public codes"
         raise ValueError(
-            f"Unsupported or login-gated {market} index code: {code}; public codes: {supported}"
+            f"Unsupported, unconfirmed, or login-gated {market} index code: {code}; {support_note}"
         )
+
+
+def _require_public_code(code: str, allowed: frozenset[str], label: str) -> None:
+    if code not in allowed:
+        supported = ", ".join(sorted(allowed))
+        raise ValueError(f"Unsupported {label} code: {code}; public codes: {supported}")
 
 
 def _unescape_header(value: str) -> str:
@@ -600,10 +610,20 @@ def main() -> int:
         default=[],
         help="US TossInvest product/source code(s), not display tickers",
     )
-    parser.add_argument("--kr-index", action="append", default=[], help="Public KR index code(s)")
-    parser.add_argument("--us-index", action="append", default=[], help="Public US index code(s)")
     parser.add_argument(
-        "--crypto", action="append", default=[], help="Crypto VWAP code(s), e.g. VWAP.KRW-BTC"
+        "--kr-index", action="append", default=[], help="Supported KR index: KGG01P or QGG01P"
+    )
+    parser.add_argument(
+        "--us-index",
+        action="append",
+        default=[],
+        help="US index streaming is unconfirmed and currently disabled",
+    )
+    parser.add_argument(
+        "--crypto",
+        action="append",
+        default=[],
+        help="Supported crypto: VWAP.KRW-BTC, VWAP.KRW-ETH, VWAP.KRW-XRP, or VWAP.KRW-SOL",
     )
     parser.add_argument("--duration", type=int, default=30, help="Run for at most 1-300 seconds")
     parser.add_argument(
