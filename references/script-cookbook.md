@@ -40,6 +40,7 @@ python3 scripts/stock_summary.py --code A005930
 python3 scripts/stock_page.py --code NVDA --no-ai-detail --no-comments
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/filings.py --code A005930 --size 5
+python3 scripts/filings.py --code A005930 --page 2 --size 5
 python3 scripts/news.py --code A005930 --size 5
 ```
 
@@ -99,9 +100,11 @@ per-product subscriptions only in a separately reviewed bounded workflow.
 Use `stock_page.py` when the user asks for the public stock main-page view,
 including the page's current price block, public AI detail such as "why did it
 drop?", and sanitized public community comments. Use `community_comments.py`
-when the user asks only for the public community tab or replies; it accepts a
-TossInvest product code or display symbol. These scripts emit sanitized comment
-fields only; do not expose profile ids, avatar URLs, follow/bookmark flags, or other social/profile metadata from the source payload.
+when the user asks only for the public community tab, a lounge, replies, or a
+public `/community/posts/{post-id}` permalink. Stock mode accepts a TossInvest
+product code or display symbol. These scripts emit sanitized comment fields
+only; do not expose profile ids, avatar URLs, follow/bookmark flags, or other
+social/profile metadata from the source payload.
 
 ```bash
 python3 scripts/stock_page.py --code SOXL --comment-limit 5
@@ -109,10 +112,17 @@ python3 scripts/stock_page.py --code US20100311002 --comment-pages 2 --comment-l
 python3 scripts/stock_page.py --code A005930 --no-comments --include-red-flags --include-trading-status --include-trading-analysis
 python3 scripts/community_comments.py --code NVDA --sort popular --limit 5
 python3 scripts/community_comments.py --code US20100311002 --sort recent --pages 2 --limit 20
+python3 scripts/community_comments.py --code US20100311002 --sort recent --last-comment-id 309855038 --pages 2 --limit 20
 python3 scripts/community_comments.py --lounge-id LOUNGE_193394 --sort popular --limit 5
+python3 scripts/community_comments.py --post-id 309855038 --pages 2 --limit 20
+python3 scripts/community_comments.py --post-id 309855038 --last-reply-id 309855039 --pages 2 --limit 20
 ```
 
-The lounge mode uses the same sanitizer and 1-5 page bound as stock comments.
+Lounge mode uses the same sanitizer and 1-5 page bound as stock comments.
+Post-permalink mode follows the public v1 reply cursor with `lastReplyId`, also
+within the 1-5 page and 100-row safety caps. Continue only from the normalized
+`nextLastCommentId` or `nextLastReplyId` emitted by the script, passing it back
+as `--last-comment-id` or `--last-reply-id` respectively.
 Never emit raw profile ids, avatar URLs, follow flags, or unredacted free-form
 text. The stock status flags fetch public page metadata only and do not expose
 orderability, balances, accounts, or order mutations.
@@ -159,11 +169,17 @@ python3 scripts/trading_trend.py --code A005930 --type investor --size 20
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-04-24 --to 2026-04-24 --normalize-investors
 python3 scripts/trading_trend.py --code A005930 --type broker
 python3 scripts/trading_trend.py --code A005930 --type lending-trading --size 5
+python3 scripts/trading_trend.py --code A005930 --type lending-trading --page 2 --key 2026-08-12 --size 5
 python3 scripts/trading_trend.py --code A005930 --type short-selling-trend --size 5
 python3 scripts/trading_trend.py --code A005930 --type cfd --size 5
 ```
 
-Credit, lending-trading, short-selling-trend, and CFD routes are public transaction-status page datasets only. Use them for visible public page data, not for account credit limits, margin eligibility, borrowing, orderability, leverage decisions, or trading advice.
+Credit, lending-trading, short-selling-trend, and CFD routes are
+public transaction-status page datasets only. For another page, pass the response
+`pagingParam.number` and `pagingParam.key` back as `--page` and `--key`; do not
+invent a date key. Use these routes for visible public page data, not for
+account credit limits, margin eligibility, borrowing, orderability, leverage decisions,
+or trading advice.
 
 ## Themes And TICS
 
@@ -274,6 +290,7 @@ python3 scripts/feed.py --kind news --news-type ALL_HIGHLIGHT
 python3 scripts/feed.py --kind news --news-type SOARING_STOCK
 python3 scripts/feed.py --kind news --news-type INDEX --index-code KGG01P
 python3 scripts/feed.py --kind recommended
+python3 scripts/feed.py --kind recommended --last-recommend-id 309855038
 python3 scripts/feed.py --kind community-ranking --community-ranking profit --community-limit 10
 python3 scripts/feed.py --kind community-ranking --community-ranking followers --community-limit 10
 python3 scripts/news.py --code A005930 --page 2 --order-by latest --size 20
@@ -281,8 +298,11 @@ python3 scripts/news.py --code A005930 --page 2 --order-by relevant --size 5
 ```
 
 Visible home ranking durations are `1d`, `5d`, `20d`, `60d`, `120d`, `240d`,
-and `realtime`. Public community rankings are limited to 10 sanitized rows;
-profile ids, avatar URLs, and follow/personal flags are removed.
+and `realtime`. Recommended feed posts and public community rankings are
+sanitized; profile ids, avatar URLs, and follow/personal flags are removed.
+Recommended feed output exposes `nextLastRecommendId`; pass that exact value as
+`--last-recommend-id` for one bounded continuation request. Public community
+rankings remain limited to 10 rows.
 
 `--hide-investment-risk` mirrors the logged-out home `투자위험 주식 숨기기`
 button by applying the three observed filters `KRX_MANAGEMENT_STOCK`,
@@ -325,11 +345,15 @@ python3 scripts/pension_fund_trend.py --code A005930 --from 2026-01-01 --to 2026
 
 ## Page API Smoke Checks
 
-Use `page_api_check.py` when a user asks whether the stock page APIs still call
-cleanly for a single product. It checks only read-only stock information endpoint
-groups and skips account, balance, orderability, and mutation routes.
+Use `page_api_check.py` when a user asks whether the KR stock page APIs still
+call cleanly for a single `A`-prefixed product code. It checks only read-only
+stock information endpoint groups, stops at the first request/JSON/result-shape
+failure, and skips account, balance, orderability, and mutation routes.
 
 The `order` page group is an order page read-only smoke check only. It does not call order placement, amendment, cancellation, or account-impacting APIs.
+The checker intentionally excludes the community tab. Verify that surface with
+`community_comments.py`, whose output sanitizer removes public social/profile
+metadata.
 
 ```bash
 python3 scripts/page_api_check.py --code A005930

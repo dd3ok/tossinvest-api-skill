@@ -1,3 +1,5 @@
+import io
+import json
 import subprocess
 import sys
 import unittest
@@ -68,6 +70,18 @@ class TossInvestApiTests(unittest.TestCase):
             api.render_csv(rows),
             "date,close,volume\r\n2026-01-01,100,\r\n2026-01-02,101,2000\r\n",
         )
+
+    def test_emit_output_escapes_only_characters_the_console_cannot_encode(self):
+        buffer = io.BytesIO()
+        stream = io.TextIOWrapper(buffer, encoding="cp949", write_through=True)
+        with patch.object(api.sys, "stdout", stream):
+            api.emit_output(api.render_json({"message": "한글 • 😀"}), None)
+        rendered = buffer.getvalue().decode("cp949")
+        stream.detach()
+
+        self.assertEqual(json.loads(rendered), {"message": "한글 • 😀"})
+        self.assertIn("\\u2022", rendered)
+        self.assertIn("\\ud83d\\ude00", rendered)
 
     def test_request_json_rejects_account_or_order_paths_before_network(self):
         with self.assertRaisesRegex(RuntimeError, "Blocked TossInvest endpoint"):
@@ -315,6 +329,7 @@ class TossInvestApiTests(unittest.TestCase):
             ("/api/v4/comments?subjectType=LOUNGE&subjectId=LOUNGE_123&commentSortType=RECENT"),
             "/api/v2/comments/287893106/replies",
             "/api/v1/comments/287893106/replies",
+            "/api/v1/comments/287893106/replies?lastReplyId=287893107",
             "/api/v4/feed/recommend/ranking-posts",
             "/api/v4/dashboard/wts/overview/indicator",
             "/api/v1/boards/STOCK/US20100311002/related",
@@ -344,6 +359,10 @@ class TossInvestApiTests(unittest.TestCase):
             "/api/v1/comments/287893106/reaction/LIKE",
             "/api/v1/comments/287893106/bookmark/true",
             "/api/v2/comments/report",
+            "/api/v1/comments/287893106/replies?lastReplyId=not-a-number",
+            "/api/v1/comments/287893106/replies?lastReplyId=%EF%BC%91%EF%BC%92%EF%BC%93",
+            "/api/v1/comments/287893106/replies?lastReplyId=%D9%A1%D9%A2%D9%A3",
+            "/api/v1/comments/287893106/replies?accountNo=123",
             "/api/v2/comments/upload/picture",
             "/api/v1/user-profiles/update",
             "/api/v3/trading/order/US20100311002/create",

@@ -160,14 +160,34 @@ def fetch_live_chart(
 
 def fetch_investor_rankings(size: int, side: str) -> dict[str, Any]:
     size = api.require_int_range("investor-size", size, minimum=1, maximum=100)
+    side = _require_choice("side", side, {"buy", "sell"})
+    result = api.get_result(
+        build_investor_rankings_path(size),
+        base_url=CERT_BASE_URL,
+    )
     return {
         "kind": "investors",
         "side": side,
-        "result": api.get_result(
-            build_investor_rankings_path(size),
-            base_url=CERT_BASE_URL,
-        ),
+        "result": result,
+        "selectedRankings": select_investor_rankings(result, side),
     }
+
+
+def select_investor_rankings(result: Any, side: str) -> dict[str, Any]:
+    side = _require_choice("side", side, {"buy", "sell"})
+    if not isinstance(result, dict) or not isinstance(result.get("rankings"), dict):
+        raise RuntimeError("Unexpected TossInvest response: investor rankings are missing")
+    stock_key = "buyStocks" if side == "buy" else "sellStocks"
+    selected: dict[str, Any] = {}
+    for investor_type, ranking in result["rankings"].items():
+        if not isinstance(ranking, dict) or not isinstance(ranking.get(stock_key), list):
+            continue
+        selected[investor_type] = {
+            "basedAt": ranking.get("basedAt"),
+            "type": ranking.get("type"),
+            "stocks": ranking[stock_key],
+        }
+    return selected
 
 
 def fetch_overview_signals(product_codes: list[str]) -> dict[str, Any]:

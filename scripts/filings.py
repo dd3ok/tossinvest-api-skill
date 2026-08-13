@@ -25,6 +25,7 @@ def fetch_filings(code: str, page: int, size: int, key: str | None) -> dict[str,
         "companyCode": api.to_company_code(code),
         "page": page,
         "size": size,
+        "key": key,
         "result": result,
     }
 

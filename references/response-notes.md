@@ -8,6 +8,7 @@ Most checked endpoints returned JSON with a top-level `result` key. Do not assum
 - [Index And Indicator Shapes](#index-and-indicator-shapes)
 - [Analytics Shapes](#analytics-shapes)
 - [Filings And News Shapes](#filings-and-news-shapes)
+- [Calendar Shapes](#calendar-shapes)
 - [Discovery And Screener Shapes](#discovery-and-screener-shapes)
 - [Public Community Shapes](#public-community-shapes)
 - [Financial POST Shapes](#financial-post-shapes)
@@ -78,7 +79,7 @@ case for dotted indicator codes.
 |---|---|
 | `/api/v1/companies/{companyCode}/sales-compositions` | Object: `code`, `fiscalYear`, `endDate`, `compositions[]`, `dataSource`; compositions include `business`, `product`, `ratio` |
 | `/api/v2/companies/{companyCode}/tics` | Object: `baseDate`, `majorList[]`, `minorList[]`; list entries include `id`, `title`, `imageUrl`, `representative`, `companyCount`, `rankings` |
-| `/api/v2/stock-infos/{productCode}/overview` | Object: `type`, `market`, `company`, `marketValueKrw`, `marketValue`, `enterpriseValueKrw`, `enterpriseValue`, `dataSource`, `listDate` |
+| `/api/v2/stock-infos/{productCode}/overview` | Object: `type`, `market`, `company`, `marketValueKrw`, `marketValue`, `enterpriseValueKrw`, `enterpriseValue`, `dataSource`, `listDate`, `etp`, `etf`, `etn` |
 | `/api/v2/stock-infos/consensus/{productCode}` | Object: `targetPrice`, `pointDate`, `pastClosePrices[]` |
 | `/api/v1/stock-detail/ui/wts/{productCode}/analyst-opinion` | Object: opinion counts, `targetPrice`, `description` |
 | `/api/v1/stock-detail/ui/wts/{productCode}/analyst-reports` | Object: `analystReportGroups[]` |
@@ -157,6 +158,8 @@ price change up/down, 20-day price change up, 5-day consecutive rise/fall,
 |---|---|
 | `wts-cert-api /api/v4/comments` | Object: `results[]`, `hasNext`, `key`, `totalCount`; use `lastCommentId={key}` for the next page |
 | `wts-cert-api /api/v2/comments/{commentId}/replies` | Object: `results[]`, `hasNext`, `key`, `totalCount`; v1 replies returned object keys `comment`, `replies`, `topic` |
+| `wts-cert-api /api/v1/comments/{postId}/replies` | Object: `topic`, `comment`, `replies`; `replies.body[]` is continued with the numeric `lastReplyId` cursor |
+| `wts-cert-api /api/v4/feed/recommend/ranking-posts` | Object: `feeds[]`, `key.lastRecommendId`; source rows include profile/social fields, so `feed.py` emits sanitized comments and normalized `nextLastRecommendId` only |
 | `wts-cert-api /api/v1/boards/STOCK/{productCode}/related` | Object: `about`, `commentCount`, `followingCount`, `isMember`, `logoImageUrl`, `subjectId`, `title` |
 | `wts-cert-api /api/v1/community/board/{productCode}/recommend-profiles` | List of profile suggestions; sanitize before displaying |
 | `wts-cert-api /api/v1/community/top-rankings/{ranking}` | Object: `type`, `items[]`; `scripts/feed.py --kind community-ranking` emits at most 10 rows and removes profile ids, avatar URLs, and follow/personal flags |
@@ -166,13 +169,17 @@ Raw comment rows include public profile and interaction fields such as
 `shortDescription`, `statistic.followerCount`, `isFollowing`, `isBookmarked`,
 and `isMyProfile`. Do not return raw rows from user-facing scripts.
 
-`scripts/community_comments.py` supports `subjectType=STOCK` and bounded
-`subjectType=LOUNGE` reads. It emits sanitized rows with fields such as
+`scripts/community_comments.py` supports `subjectType=STOCK`, bounded
+`subjectType=LOUNGE` reads, and public post permalinks. It emits sanitized rows with fields such as
 `commentId`, `type`, `authorNickname`, `message`, `board`, `statistic`,
 `holding`, `createdAt`, `updatedAt`, and optional media summary. The sanitizer
 removes profile ids, profile/avatar URLs, follow/bookmark flags, follower counts,
 and replaces obvious phone, email, and long-number strings with tokens such as
-`redacted-phone`.
+`redacted-phone`. Permalink output adds bounded `replies[]`, `hasNext`, and
+`nextLastReplyId`; feed output applies the same sanitizer boundary before
+emitting `feeds[]`. Numeric profile ids embedded in mention markup are removed,
+and a prior normalized cursor can be supplied with `--last-comment-id` or
+`--last-reply-id`.
 
 ## Financial POST Shapes
 
@@ -197,14 +204,14 @@ Observed result keys:
 |---|---|
 | `/financial-statements/comprehensive` | `selectedFactor`, `selectableFactors`, `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `graph`, `table` |
 | `/financial-statement-records` | `selectedFactor`, `selectableFactors`, `selectedPeriod`, `selectablePeriods`, `isKr`, `table` |
-| `/financial/estimate/revenue` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `revenueEst`, `revenueEstKrw`, `fluctuationRate`, `graphs`, `tables` |
-| `/financial/estimate/eps` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `epsEst`, `epsEstKrw`, `fluctuationRate`, `graphs`, `tables` |
-| `/financial/estimate/operating-income` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `operatingIncomeEst`, `operatingIncomeEstKrw`, `fluctuationRate`, `graphs`, `tables` |
+| `/financial/estimate/revenue` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `revenueEst`, `revenueEstKrw`, `revenueEstJpy`, `fluctuation`, `fluctuationKrw`, `fluctuationRate`, `position`, `graphs`, `tables` |
+| `/financial/estimate/eps` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `epsEst`, `epsEstKrw`, `epsEstJpy`, `fluctuation`, `fluctuationKrw`, `fluctuationRate`, `position`, `graphs`, `tables` |
+| `/financial/estimate/operating-income` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `operatingIncomeEst`, `operatingIncomeEstKrw`, `operatingIncomeEstJpy`, `fluctuation`, `fluctuationKrw`, `fluctuationRate`, `position`, `graphs`, `tables` |
 | `/evaluation` | `per`, `pbr`, `psr`, `median`, `position` |
-| `/evaluation-comparison` | `selectedFactor`, `selectableFactors`, `selectedTics`, `selectableTics`, `stockGraphs`, `stockTables`, `median`, `position`, `ttmValue` |
+| `/evaluation-comparison` | `selectedFactor`, `selectableFactors`, `selectableFactorsList`, `selectedTics`, `selectableTics`, `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `graphType`, `stockGraphs`, `stockTables`, `ticsStocks`, `median`, `position`, `ttmValue` |
 | `/stability` | `liabilityRatio`, `currentRatio`, `interestCoverageRatio`, `median`, `position` |
-| `/revenue-and-net-profit` | `companyName`, `recentFiscalYear`, `recentFiscalQuarter`, `recentNetProfit`, `graph`, `table` |
-| `/operating-income` | `companyName`, `recentFiscalYear`, `recentFiscalQuarter`, `recentOperatingIncome`, `graph`, `table` |
+| `/revenue-and-net-profit` | `companyName`, `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `recentFiscalYear`, `recentFiscalQuarter`, `recentNetProfit`, `recentNetProfitKrw`, `recentNetProfitJpy`, `fluctuationRate`, `position`, `graph`, `table` |
+| `/operating-income` | `companyName`, `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `recentFiscalYear`, `recentFiscalQuarter`, `recentOperatingIncome`, `recentOperatingIncomeKrw`, `recentOperatingIncomeJpy`, `fluctuationRate`, `position`, `graph`, `table` |
 
 ## Transaction Status Shapes
 
@@ -220,3 +227,7 @@ Observed result keys:
 | `/api/v1/mds/info/lending-trading` | Object: `pagingParam`, `body[]`, `lastPage`; rows include `executionQuantity`, `repaymentQuantity`, `lendingTradingBalanceVolume`, `lendingTradingBalanceAmount` |
 | `/api/v1/mds/info/short-selling-trend` | Object: `pagingParam`, `body[]`, `lastPage`; rows include `shortTradingVolume`, `shortTradingAmount`, `shortSellingTradingAmountRatio`, `shortSellingAveragePrice` |
 | `/api/v1/mds/info/cfd` | Object: `pagingParam`, `body[]`, `lastPage`; rows include new/settle/balance buy and sell quantity/rate fields |
+
+For the four MDS page families, continue with the returned
+`pagingParam.number` and `pagingParam.key`; `trading_trend.py --page/--key`
+preserves those applied inputs in its output.

@@ -42,7 +42,7 @@ _CALENDAR_ECONOMIC_INDICATOR_PATTERN = re.compile(
     r"^/api/v1/calendar/economic-indicators/[A-Z0-9_.=-]{2,48}$"
 )
 _PUBLIC_PRODUCT_CODE_PATTERN = r"[A-Z0-9._-]{2,48}"
-_DIGIT_ID_PATTERN = r"\d{1,30}"
+_DIGIT_ID_PATTERN = r"[0-9]{1,30}"
 _PUBLIC_CERT_COMMENT_REPLIES_PATTERNS = (
     re.compile(rf"^/api/v1/comments/{_DIGIT_ID_PATTERN}/replies$"),
     re.compile(rf"^/api/v2/comments/{_DIGIT_ID_PATTERN}/replies$"),
@@ -406,6 +406,16 @@ def _validate_public_cert_query(request_path: str, pairs: list[tuple[str, str]])
             raise RuntimeError("Blocked TossInvest endpoint: unsupported lastRecommendId")
         return
 
+    if _PUBLIC_CERT_COMMENT_REPLIES_PATTERNS[0].fullmatch(request_path):
+        params = _single_query_params(pairs)
+        if set(params) - {"lastReplyId"}:
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: unexpected query parameters for public replies"
+            )
+        if "lastReplyId" in params and not re.fullmatch(_DIGIT_ID_PATTERN, params["lastReplyId"]):
+            raise RuntimeError("Blocked TossInvest endpoint: lastReplyId must contain digits")
+        return
+
     if pairs:
         raise RuntimeError(
             "Blocked TossInvest endpoint: public cert read route does not accept query parameters"
@@ -528,6 +538,39 @@ def require_int_range(name: str, value: int, *, minimum: int, maximum: int) -> i
     return value
 
 
+def _unicode_escape(codepoint: int) -> str:
+    if codepoint <= 0xFFFF:
+        return f"\\u{codepoint:04x}"
+    codepoint -= 0x10000
+    high = 0xD800 + (codepoint >> 10)
+    low = 0xDC00 + (codepoint & 0x3FF)
+    return f"\\u{high:04x}\\u{low:04x}"
+
+
+def _text_for_stream(text: str, stream: Any) -> str:
+    encoding = getattr(stream, "encoding", None)
+    if not encoding:
+        return text
+    try:
+        text.encode(encoding)
+        return text
+    except (LookupError, UnicodeEncodeError):
+        pass
+
+    escaped: list[str] = []
+    for character in text:
+        try:
+            character.encode(encoding)
+            escaped.append(character)
+        except UnicodeEncodeError:
+            escaped.append(_unicode_escape(ord(character)))
+    return "".join(escaped)
+
+
+def _write_stream(stream: Any, text: str) -> None:
+    stream.write(_text_for_stream(text, stream))
+
+
 def run_cli(main_func: Any) -> int:
     try:
         return int(main_func())
@@ -543,7 +586,7 @@ def run_cli(main_func: Any) -> int:
         if os.environ.get("TOSSINVEST_DEBUG"):
             traceback.print_exc()
         else:
-            print(f"error: {exc}", file=sys.stderr)
+            _write_stream(sys.stderr, f"error: {exc}\n")
         return 1
 
 
@@ -587,7 +630,7 @@ def emit_output(text: str, output_path: str | None) -> None:
     if output_path:
         Path(output_path).write_text(text, encoding="utf-8")
     else:
-        print(text, end="" if text.endswith("\n") else "\n")
+        _write_stream(sys.stdout, text if text.endswith("\n") else f"{text}\n")
 
 
 def _query_value(value: Any) -> str:

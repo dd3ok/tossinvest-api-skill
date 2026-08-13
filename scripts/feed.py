@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from typing import Any
 
 import community_comments
@@ -12,12 +13,14 @@ import tossinvest_api as api
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 
 FEED_PATHS = {
-    "recommended": "/api/v3/feed/recommend/posts",
+    "recommended": "/api/v4/feed/recommend/ranking-posts",
     "recommended-ranking": "/api/v4/feed/recommend/ranking-posts",
 }
 FEED_BASE_URLS = {
+    "recommended": CERT_BASE_URL,
     "recommended-ranking": CERT_BASE_URL,
 }
+_RECOMMEND_ID_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 
 NEWS_TYPES = {
     "ALL_HIGHLIGHT",
@@ -55,12 +58,44 @@ def build_news_body(news_type: str, index_code: str | None) -> dict[str, Any]:
 def fetch_feed(kind: str, last_recommend_id: str | None) -> dict[str, Any]:
     if kind not in FEED_PATHS:
         raise ValueError(f"unknown feed kind: {kind}")
+    result = api.get_result(
+        build_feed_path(kind, last_recommend_id),
+        base_url=FEED_BASE_URLS.get(kind, api.BASE_URL),
+    )
+    sanitized = sanitize_recommended_feed_result(result)
     return {
         "kind": kind,
-        "result": api.get_result(
-            build_feed_path(kind, last_recommend_id),
-            base_url=FEED_BASE_URLS.get(kind, api.BASE_URL),
-        ),
+        "lastRecommendId": last_recommend_id,
+        **sanitized,
+    }
+
+
+def sanitize_recommended_feed_result(result: Any) -> dict[str, Any]:
+    if not isinstance(result, dict) or not isinstance(result.get("feeds"), list):
+        raise RuntimeError("Unexpected TossInvest response: recommended feed rows are missing")
+    feeds: list[dict[str, Any]] = []
+    for row in result["feeds"]:
+        if not isinstance(row, dict):
+            continue
+        comment = row.get("comment")
+        if not isinstance(comment, dict):
+            continue
+        sanitized_row: dict[str, Any] = {
+            "comment": community_comments.sanitize_post_comment(comment),
+        }
+        if isinstance(row.get("type"), str):
+            sanitized_row["type"] = row["type"]
+        feeds.append(sanitized_row)
+
+    key = result.get("key") if isinstance(result.get("key"), dict) else {}
+    next_id = key.get("lastRecommendId")
+    if not isinstance(next_id, str) or not _RECOMMEND_ID_RE.fullmatch(next_id):
+        next_id = None
+    return {
+        "feedCount": len(feeds),
+        "hasNext": next_id is not None,
+        "nextLastRecommendId": next_id,
+        "feeds": feeds,
     }
 
 

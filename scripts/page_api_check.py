@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -28,6 +29,7 @@ ROW_KEYS = (
     "indicatorSections",
     "analystReportGroups",
 )
+_KR_PRODUCT_CODE_RE = re.compile(r"^A[0-9]{6}$")
 
 
 @dataclass(frozen=True)
@@ -63,6 +65,8 @@ def build_check_plan(
     candle_count: int,
 ) -> list[EndpointCheck]:
     product_code = api.normalize_product_code(code)
+    if not _KR_PRODUCT_CODE_RE.fullmatch(product_code):
+        raise ValueError("page API smoke checks require a KR product code such as A005930")
     context = CheckContext(
         product_code=product_code,
         company_code=api.to_company_code(product_code),
@@ -381,29 +385,18 @@ def summarize_result(result: Any) -> dict[str, Any]:
 def run_checks(plan: list[EndpointCheck]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for item in plan:
-        try:
-            payload = api.request_json(item.path, method=item.method, body=item.body)
-            rows.append(
-                {
-                    "page": item.page,
-                    "purpose": item.purpose,
-                    "method": item.method,
-                    "path": item.path,
-                    "ok": True,
-                    "resultShape": summarize_result(payload.get("result")),
-                }
-            )
-        except Exception as exc:
-            rows.append(
-                {
-                    "page": item.page,
-                    "purpose": item.purpose,
-                    "method": item.method,
-                    "path": item.path,
-                    "ok": False,
-                    "error": str(exc),
-                }
-            )
+        payload = api.request_json(item.path, method=item.method, body=item.body)
+        result = api.result_or_raise(payload)
+        rows.append(
+            {
+                "page": item.page,
+                "purpose": item.purpose,
+                "method": item.method,
+                "path": item.path,
+                "ok": True,
+                "resultShape": summarize_result(result),
+            }
+        )
     return rows
 
 
@@ -415,9 +408,13 @@ def _parse_pages(value: str) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Smoke-check read-only TossInvest stock page API endpoint groups."
+        description=("Fail-fast smoke check for read-only TossInvest KR stock page API groups.")
     )
-    parser.add_argument("--code", default="A005930", help="TossInvest product code")
+    parser.add_argument(
+        "--code",
+        default="A005930",
+        help="KR TossInvest product code (community uses community_comments.py)",
+    )
     parser.add_argument(
         "--pages",
         default="all",

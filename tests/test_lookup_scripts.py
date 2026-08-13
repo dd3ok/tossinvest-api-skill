@@ -1144,6 +1144,27 @@ class DashboardRankingScriptTests(unittest.TestCase):
             "/api/v1/dashboard/wts/overview/rankings/by-investors?size=100",
         )
 
+    def test_select_investor_rankings_applies_buy_or_sell_side(self):
+        result = {
+            "rankings": {
+                "foreigner": {
+                    "basedAt": "2026-08-13",
+                    "type": "FOREIGNER",
+                    "buyStocks": [{"code": "A005930"}],
+                    "sellStocks": [{"code": "A000660"}],
+                }
+            }
+        }
+
+        self.assertEqual(
+            dashboard_ranking.select_investor_rankings(result, "buy")["foreigner"]["stocks"],
+            [{"code": "A005930"}],
+        )
+        self.assertEqual(
+            dashboard_ranking.select_investor_rankings(result, "sell")["foreigner"]["stocks"],
+            [{"code": "A000660"}],
+        )
+
     def test_build_live_chart_body_matches_home_url_params(self):
         self.assertEqual(
             dashboard_ranking.build_live_chart_body("biggest_total_amount", "KR", "realtime", None),
@@ -1198,6 +1219,12 @@ class DashboardRankingScriptTests(unittest.TestCase):
 
 
 class FeedScriptTests(unittest.TestCase):
+    def test_build_recommended_alias_uses_current_public_cert_route(self):
+        self.assertEqual(
+            feed.build_feed_path("recommended", None),
+            "/api/v4/feed/recommend/ranking-posts",
+        )
+
     def test_build_feed_path_for_recommended_ranking(self):
         self.assertEqual(
             feed.build_feed_path("recommended-ranking", None),
@@ -1221,8 +1248,47 @@ class FeedScriptTests(unittest.TestCase):
             payload = feed.fetch_feed("recommended-ranking", None)
 
         self.assertEqual(payload["kind"], "recommended-ranking")
+        self.assertEqual(payload["feeds"], [])
+        self.assertNotIn("result", payload)
         self.assertEqual(calls[0][0], "/api/v4/feed/recommend/ranking-posts")
         self.assertEqual(calls[0][1]["base_url"], feed.CERT_BASE_URL)
+
+    def test_recommended_feed_sanitizes_profile_and_social_metadata(self):
+        result = {
+            "feeds": [
+                {
+                    "type": "COMMENT",
+                    "comment": {
+                        "commentId": 10,
+                        "authorUserProfileId": "private-profile",
+                        "author": {
+                            "nickname": "public name",
+                            "userProfileId": "private-profile",
+                            "profilePictureUrl": "https://example.com/private.png",
+                        },
+                        "message": {"message": "mail me@example.com"},
+                        "statistic": {"likeCount": 1, "isFollowing": True},
+                    },
+                    "recommendationAttribution": {"accountId": "private-account"},
+                }
+            ],
+            "key": {"lastRecommendId": "next:10"},
+        }
+
+        sanitized = feed.sanitize_recommended_feed_result(result)
+
+        self.assertEqual(sanitized["feedCount"], 1)
+        self.assertTrue(sanitized["hasNext"])
+        self.assertEqual(sanitized["nextLastRecommendId"], "next:10")
+        self.assertEqual(
+            sanitized["feeds"][0]["comment"]["message"]["message"],
+            "mail [redacted-email]",
+        )
+        dumped = repr(sanitized)
+        self.assertNotIn("private-profile", dumped)
+        self.assertNotIn("private-account", dumped)
+        self.assertNotIn("profilePictureUrl", dumped)
+        self.assertNotIn("isFollowing", dumped)
 
     def test_sanitize_community_ranking_strips_profile_identifiers(self):
         item = {
@@ -1289,6 +1355,22 @@ class CommunityCommentsScriptTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "LOUNGE_<digits>"):
             community_comments.build_lounge_comments_path("LOUNGE_account", "recent", None)
 
+    def test_build_community_post_path_uses_reply_cursor(self):
+        self.assertEqual(
+            community_comments.build_community_post_path(309855290, None),
+            "/api/v1/comments/309855290/replies",
+        )
+        self.assertEqual(
+            community_comments.build_community_post_path(309855290, 309855291),
+            "/api/v1/comments/309855290/replies?lastReplyId=309855291",
+        )
+        with self.assertRaisesRegex(ValueError, "last_reply_id must contain digits"):
+            community_comments.build_community_post_path(309855290, "bad")
+        for unicode_cursor in ["１２３", "١٢٣"]:
+            with self.subTest(cursor=unicode_cursor):
+                with self.assertRaisesRegex(ValueError, "last_reply_id must contain digits"):
+                    community_comments.build_community_post_path(309855290, unicode_cursor)
+
     def test_sanitize_comment_removes_profile_and_personal_flags(self):
         raw = {
             "commentId": 287893106,
@@ -1341,6 +1423,47 @@ class CommunityCommentsScriptTests(unittest.TestCase):
                 )
                 self.assertEqual(sanitized["message"]["message"], "call [redacted-phone]")
 
+    def test_sanitize_comment_removes_profile_id_from_public_mention_markup(self):
+        sanitized = community_comments.sanitize_post_comment(
+            {
+                "id": 1,
+                "message": "#[써니님v](2782547) 의견에 동의해요",
+                "author": {"nickname": "public"},
+            }
+        )
+
+        self.assertEqual(sanitized["message"]["message"], "#[써니님v] 의견에 동의해요")
+        self.assertNotIn("2782547", repr(sanitized))
+
+    def test_sanitize_post_comment_drops_unexpected_structured_scalar_fields(self):
+        sanitized = community_comments.sanitize_post_comment(
+            {
+                "id": {"accountId": "private-comment-id"},
+                "type": {"accountId": "private-type"},
+                "author": {
+                    "nickname": {"userProfileId": "private-author-profile"},
+                },
+                "title": {"accountId": "private-title"},
+                "message": {"accountId": "private-message"},
+                "subjectType": {"accountId": "private-subject-type"},
+                "subjectId": {"accountId": "private-subject-id"},
+                "stockCode": {"accountId": "private-stock-code"},
+                "topic": {"accountId": "private-topic"},
+                "likeCount": {"accountId": "private-like-count"},
+                "replyCount": {"accountId": "private-reply-count"},
+                "readCount": {"accountId": "private-read-count"},
+                "instrumentHoldingStatus": {"accountId": "private-holding"},
+                "createdAt": {"accountId": "private-created-at"},
+                "updatedAt": {"accountId": "private-updated-at"},
+                "edited": {"accountId": "private-edited"},
+                "media": [{"type": {"accountId": "private-media-type"}}],
+            }
+        )
+
+        self.assertNotIn("private-", repr(sanitized))
+        self.assertNotIn("commentId", sanitized)
+        self.assertEqual(sanitized["media"], {"count": 1, "types": []})
+
     def test_fetch_stock_comments_uses_key_pagination_and_sanitizes_rows(self):
         responses = [
             {
@@ -1385,6 +1508,23 @@ class CommunityCommentsScriptTests(unittest.TestCase):
         self.assertEqual([row["commentId"] for row in payload["comments"]], [1, 2])
         self.assertIn("lastCommentId=1", paths[1][0])
         self.assertEqual(paths[0][1]["base_url"], community_comments.CERT_BASE_URL)
+
+    def test_fetch_stock_comments_accepts_explicit_start_cursor(self):
+        def fake_get_result(path, **kwargs):
+            self.assertIn("lastCommentId=77", path)
+            return {"results": [], "hasNext": False, "key": None}
+
+        with patch.object(community_comments.api, "get_result", fake_get_result):
+            payload = community_comments.fetch_stock_comments(
+                "A005930",
+                sort="popular",
+                pages=1,
+                limit=5,
+                include_replies=False,
+                last_comment_id="77",
+            )
+
+        self.assertEqual(payload["lastCommentId"], "77")
 
     def test_fetch_stock_comments_resolves_display_symbol_before_comment_lookup(self):
         calls = []
@@ -1446,6 +1586,132 @@ class CommunityCommentsScriptTests(unittest.TestCase):
 
         self.assertEqual([row["commentId"] for row in payload["comments"]], [1])
         self.assertEqual(payload["nextLastCommentId"], "1")
+
+    def test_comment_limit_exposes_continuation_even_on_server_last_page(self):
+        with patch.object(
+            community_comments.api,
+            "get_result",
+            return_value={
+                "results": [
+                    {"commentId": 1, "author": {"nickname": "first"}},
+                    {"commentId": 2, "author": {"nickname": "second"}},
+                ],
+                "hasNext": False,
+                "key": None,
+            },
+        ):
+            payload = community_comments.fetch_stock_comments(
+                "US20100311002",
+                sort="popular",
+                pages=1,
+                limit=1,
+                include_replies=False,
+            )
+
+        self.assertTrue(payload["hasNext"])
+        self.assertEqual(payload["nextLastCommentId"], "1")
+
+    def test_fetch_community_post_pages_and_sanitizes_permalink_payload(self):
+        responses = [
+            {
+                "topic": "삼성전자",
+                "comment": {
+                    "id": 100,
+                    "type": "COMMENT",
+                    "message": "parent",
+                    "topic": {"accountId": "private-nested-topic"},
+                    "createdAt": "2026-08-13T09:00:00+09:00",
+                    "author": {
+                        "nickname": "parent author",
+                        "id": "private-parent",
+                        "profilePictureUrl": "https://example.com/parent.png",
+                    },
+                    "replyCount": 2,
+                },
+                "replies": {
+                    "body": [
+                        {
+                            "id": 101,
+                            "message": "first 010-1234-5678",
+                            "author": {"nickname": "first", "id": "private-first"},
+                        }
+                    ],
+                    "hasNext": True,
+                },
+            },
+            {
+                "topic": "삼성전자",
+                "comment": {"id": 100, "message": "parent", "author": {}},
+                "replies": {
+                    "body": [
+                        {
+                            "id": 102,
+                            "message": "second@example.com",
+                            "author": {"nickname": "second", "id": "private-second"},
+                        }
+                    ],
+                    "hasNext": False,
+                },
+            },
+        ]
+        paths = []
+
+        def fake_get_result(path, **kwargs):
+            paths.append((path, kwargs))
+            return responses.pop(0)
+
+        with patch.object(community_comments.api, "get_result", fake_get_result):
+            payload = community_comments.fetch_community_post(100, pages=2, limit=10)
+
+        self.assertEqual(payload["postId"], "100")
+        self.assertEqual(payload["pagesFetched"], 2)
+        self.assertFalse(payload["hasNext"])
+        self.assertEqual(payload["comment"]["createdAt"], "2026-08-13T09:00:00+09:00")
+        self.assertEqual([row["commentId"] for row in payload["replies"]], [101, 102])
+        self.assertEqual(
+            payload["replies"][0]["message"]["message"],
+            "first [redacted-phone]",
+        )
+        self.assertEqual(
+            payload["replies"][1]["message"]["message"],
+            "[redacted-email]",
+        )
+        self.assertIn("lastReplyId=101", paths[1][0])
+        self.assertNotIn("private-", repr(payload))
+
+    def test_fetch_community_post_does_not_emit_structured_topic_metadata(self):
+        with patch.object(
+            community_comments.api,
+            "get_result",
+            return_value={
+                "topic": {"profileId": "private", "title": "topic"},
+                "comment": {"id": 100, "message": "parent", "author": {}},
+                "replies": {"body": [], "hasNext": False},
+            },
+        ):
+            payload = community_comments.fetch_community_post(100, pages=1, limit=5)
+
+        self.assertIsNone(payload["topic"])
+        self.assertNotIn("private", repr(payload))
+
+    def test_fetch_community_post_accepts_explicit_start_cursor(self):
+        def fake_get_result(path, **kwargs):
+            self.assertEqual(path, "/api/v1/comments/100/replies?lastReplyId=99")
+            return {
+                "topic": "topic",
+                "comment": {"id": 100, "message": "parent", "author": {}},
+                "replies": {"body": [], "hasNext": False},
+            }
+
+        with patch.object(community_comments.api, "get_result", fake_get_result):
+            payload = community_comments.fetch_community_post(
+                100,
+                pages=1,
+                limit=5,
+                last_reply_id="99",
+            )
+
+        self.assertEqual(payload["lastReplyId"], "99")
 
     def test_fetch_comment_replies_sanitizes_reply_rows(self):
         def fake_get_result(path, **kwargs):
@@ -1978,6 +2244,36 @@ class TradingTrendScriptTests(unittest.TestCase):
             "/api/v1/mds/info/cfd?stockCode=A005930&number=1&size=3",
         )
 
+    def test_build_mds_path_accepts_previous_response_page_and_key(self):
+        self.assertEqual(
+            trading_trend.build_mds_info_path(
+                "A005930",
+                "credit",
+                5,
+                page=2,
+                key="2026-08-06",
+            ),
+            ("/api/v1/mds/info/credit?stockCode=A005930&number=2&size=5&key=2026-08-06"),
+        )
+        with self.assertRaisesRegex(ValueError, "YYYY-MM-DD"):
+            trading_trend.build_mds_info_path(
+                "A005930",
+                "credit",
+                5,
+                page=2,
+                key="not-a-date",
+            )
+        for non_canonical_key in ["20260813", "2026-W33-4"]:
+            with self.subTest(key=non_canonical_key):
+                with self.assertRaisesRegex(ValueError, "YYYY-MM-DD"):
+                    trading_trend.build_mds_info_path(
+                        "A005930",
+                        "credit",
+                        5,
+                        page=2,
+                        key=non_canonical_key,
+                    )
+
 
 class PageApiCheckScriptTests(unittest.TestCase):
     def test_build_check_plan_maps_stock_pages_to_read_only_endpoints(self):
@@ -2052,6 +2348,21 @@ class PageApiCheckScriptTests(unittest.TestCase):
             with self.subTest(path=item.path):
                 self.assertFalse(any(fragment in item.path for fragment in forbidden_fragments))
 
+    def test_build_check_plan_rejects_non_kr_product_codes(self):
+        for invalid_code in ["US20100311002", "ASECRET", "A１２３４５６"]:
+            with self.subTest(code=invalid_code):
+                with self.assertRaisesRegex(ValueError, "require a KR product code"):
+                    page_api_check.build_check_plan(
+                        invalid_code,
+                        ["order"],
+                        start="2026-04-01",
+                        end="2026-04-24",
+                        news_size=5,
+                        filing_size=5,
+                        tick_count=5,
+                        candle_count=5,
+                    )
+
     def test_summarize_result_reports_shapes_without_storing_full_payload(self):
         summary = page_api_check.summarize_result(
             {
@@ -2075,6 +2386,36 @@ class PageApiCheckScriptTests(unittest.TestCase):
                 "rowKeys": {"body": ["id", "title", "summary"]},
             },
         )
+
+    def test_run_checks_rejects_missing_result_and_stops(self):
+        plan = [
+            page_api_check.EndpointCheck("order", "first", "GET", "/api/v1/first"),
+            page_api_check.EndpointCheck("order", "second", "GET", "/api/v1/second"),
+        ]
+        with patch.object(
+            page_api_check.api,
+            "request_json",
+            side_effect=[{"data": []}, {"result": {"ok": True}}],
+        ) as request_json:
+            with self.assertRaisesRegex(RuntimeError, "missing top-level result"):
+                page_api_check.run_checks(plan)
+
+        self.assertEqual(request_json.call_count, 1)
+
+    def test_run_checks_fails_fast_on_transport_or_access_error(self):
+        plan = [
+            page_api_check.EndpointCheck("order", "first", "GET", "/api/v1/first"),
+            page_api_check.EndpointCheck("order", "second", "GET", "/api/v1/second"),
+        ]
+        with patch.object(
+            page_api_check.api,
+            "request_json",
+            side_effect=RuntimeError("HTTP 429; stop automated retries"),
+        ) as request_json:
+            with self.assertRaisesRegex(RuntimeError, "HTTP 429"):
+                page_api_check.run_checks(plan)
+
+        self.assertEqual(request_json.call_count, 1)
 
     def test_build_check_plan_rejects_unknown_pages(self):
         with self.assertRaisesRegex(ValueError, "unknown page"):
