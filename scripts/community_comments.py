@@ -15,12 +15,13 @@ COMMENT_SORTS = {"popular": "POPULAR", "recent": "RECENT"}
 _PRODUCT_CODE_RE = re.compile(r"^[A-Z0-9._-]{2,48}$")
 _STOCK_PRODUCT_CODE_RE = re.compile(r"^(A\d{6}|US\d{11})$")
 _LOUNGE_ID_RE = re.compile(r"^LOUNGE_\d{1,30}$")
-_DIGIT_ID_RE = re.compile(r"^\d{1,30}$")
+_DIGIT_ID_RE = re.compile(r"^[0-9]{1,30}$")
 _PHONE_RE = re.compile(
     r"(?<!\w)(?:\+82[\s.-]?)?(?:0?1[016789]|0\d{1,2})[\s.-]?\d{3,4}[\s.-]?\d{4}(?!\w)"
 )
 _EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
 _LONG_DIGIT_RE = re.compile(r"\b\d{8,}\b")
+_MENTION_PROFILE_RE = re.compile(r"(\#\[[^\]\r\n]{1,80}\])\([0-9]{1,30}\)")
 
 
 def build_stock_comments_path(
@@ -73,6 +74,23 @@ def build_comment_replies_path(comment_id: str | int) -> str:
     return f"/api/v2/comments/{validate_digit_id('comment_id', comment_id)}/replies"
 
 
+def build_community_post_path(
+    post_id: str | int,
+    last_reply_id: str | int | None,
+) -> str:
+    path = f"/api/v1/comments/{validate_digit_id('post_id', post_id)}/replies"
+    return api.build_path(
+        path,
+        {
+            "lastReplyId": (
+                validate_digit_id("last_reply_id", last_reply_id)
+                if last_reply_id is not None
+                else None
+            )
+        },
+    )
+
+
 def validate_product_code(code: str) -> str:
     value = code.strip().upper()
     if not _PRODUCT_CODE_RE.fullmatch(value):
@@ -120,36 +138,71 @@ def sanitize_comment(comment: dict[str, Any]) -> dict[str, Any]:
     board = _dict_or_empty(comment.get("board"))
     holding = _dict_or_empty(comment.get("holding"))
     sanitized: dict[str, Any] = {
-        "commentId": comment.get("commentId"),
-        "type": comment.get("type"),
+        "commentId": _digit_id_or_none(comment.get("commentId")),
+        "type": _string_or_none(comment.get("type")),
         "authorNickname": redact_public_text(author.get("nickname")),
         "message": {
             "title": redact_public_text(message.get("title")),
             "message": redact_public_text(message.get("message")),
         },
         "board": {
-            "subjectType": board.get("subjectType"),
-            "subjectId": board.get("subjectId"),
-            "stockCode": board.get("stockCode"),
-            "topic": board.get("topic"),
+            "subjectType": _string_or_none(board.get("subjectType")),
+            "subjectId": _string_or_none(board.get("subjectId")),
+            "stockCode": _string_or_none(board.get("stockCode")),
+            "topic": redact_public_text(board.get("topic")),
         },
         "statistic": {
-            "likeCount": statistic.get("likeCount"),
-            "replyCount": statistic.get("replyCount"),
-            "readCount": statistic.get("readCount"),
+            "likeCount": _integer_or_none(statistic.get("likeCount")),
+            "replyCount": _integer_or_none(statistic.get("replyCount")),
+            "readCount": _integer_or_none(statistic.get("readCount")),
         },
         "holding": {
-            "shareHoldingStatus": holding.get("shareHoldingStatus"),
+            "shareHoldingStatus": _string_or_none(holding.get("shareHoldingStatus")),
         },
-        "createdAt": comment.get("createdAt"),
-        "updatedAt": comment.get("updatedAt"),
-        "edited": comment.get("edited"),
+        "createdAt": _string_or_none(comment.get("createdAt")),
+        "updatedAt": _string_or_none(comment.get("updatedAt")),
+        "edited": _boolean_or_none(comment.get("edited")),
     }
     if comment.get("media"):
         sanitized["media"] = _summarize_media(comment.get("media"))
     if comment.get("image"):
         sanitized["hasImage"] = True
     return _drop_none(sanitized)
+
+
+def sanitize_post_comment(comment: dict[str, Any]) -> dict[str, Any]:
+    """Normalize the public permalink response without profile/social metadata."""
+    if "commentId" in comment:
+        return sanitize_comment(comment)
+    normalized = {
+        "commentId": comment.get("id"),
+        "type": comment.get("type"),
+        "author": comment.get("author"),
+        "message": {
+            "title": comment.get("title"),
+            "message": comment.get("message"),
+        },
+        "board": {
+            "subjectType": comment.get("subjectType"),
+            "subjectId": comment.get("subjectId"),
+            "stockCode": comment.get("stockCode"),
+            "topic": comment.get("topic"),
+        },
+        "statistic": {
+            "likeCount": comment.get("likeCount"),
+            "replyCount": comment.get("replyCount"),
+            "readCount": comment.get("readCount"),
+        },
+        "holding": {
+            "shareHoldingStatus": comment.get("instrumentHoldingStatus"),
+        },
+        "createdAt": comment.get("createdAt"),
+        "updatedAt": comment.get("updatedAt"),
+        "edited": comment.get("edited"),
+        "media": comment.get("media"),
+        "image": comment.get("commentPictureUrl"),
+    }
+    return sanitize_comment(normalized)
 
 
 def fetch_stock_comments(
@@ -159,6 +212,7 @@ def fetch_stock_comments(
     pages: int,
     limit: int,
     include_replies: bool,
+    last_comment_id: str | int | None = None,
 ) -> dict[str, Any]:
     product_code = resolve_comment_subject_code(code)
     return _fetch_subject_comments(
@@ -168,6 +222,7 @@ def fetch_stock_comments(
         pages=pages,
         limit=limit,
         include_replies=include_replies,
+        last_comment_id=last_comment_id,
     )
 
 
@@ -178,6 +233,7 @@ def fetch_lounge_comments(
     pages: int,
     limit: int,
     include_replies: bool,
+    last_comment_id: str | int | None = None,
 ) -> dict[str, Any]:
     return _fetch_subject_comments(
         "LOUNGE",
@@ -186,6 +242,7 @@ def fetch_lounge_comments(
         pages=pages,
         limit=limit,
         include_replies=include_replies,
+        last_comment_id=last_comment_id,
     )
 
 
@@ -197,11 +254,17 @@ def _fetch_subject_comments(
     pages: int,
     limit: int,
     include_replies: bool,
+    last_comment_id: str | int | None = None,
 ) -> dict[str, Any]:
     pages = api.require_int_range("pages", pages, minimum=1, maximum=5)
     limit = api.require_int_range("limit", limit, minimum=1, maximum=100)
     comments: list[dict[str, Any]] = []
-    last_comment_id: str | None = None
+    applied_last_comment_id = (
+        validate_digit_id("last_comment_id", last_comment_id)
+        if last_comment_id is not None
+        else None
+    )
+    cursor = applied_last_comment_id
     has_next = False
     pages_fetched = 0
     next_key: Any = None
@@ -209,7 +272,7 @@ def _fetch_subject_comments(
 
     for _ in range(pages):
         result = api.get_result(
-            build_subject_comments_path(subject_type, subject_id, sort, last_comment_id),
+            build_subject_comments_path(subject_type, subject_id, sort, cursor),
             base_url=CERT_BASE_URL,
         )
         if not isinstance(result, dict):
@@ -236,22 +299,120 @@ def _fetch_subject_comments(
             if len(comments) >= limit:
                 truncated_mid_page = row_index < len(rows) - 1
                 break
-        has_next = bool(result.get("hasNext"))
-        next_key = result.get("key")
+        server_has_next = bool(result.get("hasNext"))
+        next_key = result.get("key") if server_has_next else None
         if truncated_mid_page:
             next_key = last_emitted_comment_id
-        if len(comments) >= limit or not has_next or next_key is None:
+        if next_key is not None:
+            next_key = validate_digit_id("last_comment_id", next_key)
+        has_next = bool(next_key is not None and (server_has_next or truncated_mid_page))
+        if len(comments) >= limit or not has_next:
             break
-        last_comment_id = validate_digit_id("last_comment_id", next_key)
+        cursor = validate_digit_id("last_comment_id", next_key)
 
     return {
         "subjectType": subject_type,
         "subjectId": subject_id,
         "sort": _require_sort(sort),
+        "lastCommentId": applied_last_comment_id,
         "pagesFetched": pages_fetched,
         "hasNext": has_next,
         "nextLastCommentId": next_key,
         "comments": comments,
+    }
+
+
+def fetch_community_post(
+    post_id: str | int,
+    *,
+    pages: int,
+    limit: int,
+    last_reply_id: str | int | None = None,
+) -> dict[str, Any]:
+    normalized_post_id = validate_digit_id("post_id", post_id)
+    pages = api.require_int_range("pages", pages, minimum=1, maximum=5)
+    limit = api.require_int_range("limit", limit, minimum=1, maximum=100)
+    replies: list[dict[str, Any]] = []
+    applied_last_reply_id = (
+        validate_digit_id("last_reply_id", last_reply_id) if last_reply_id is not None else None
+    )
+    cursor = applied_last_reply_id
+    next_key: str | None = None
+    has_next = False
+    pages_fetched = 0
+    sanitized_comment: dict[str, Any] | None = None
+    topic: Any = None
+
+    for _ in range(pages):
+        result = api.get_result(
+            build_community_post_path(normalized_post_id, cursor),
+            base_url=CERT_BASE_URL,
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError(
+                "Unexpected TossInvest response: community post result is not a dictionary"
+            )
+        raw_comment = result.get("comment")
+        reply_page = result.get("replies")
+        if not isinstance(raw_comment, dict) or not isinstance(reply_page, dict):
+            raise RuntimeError(
+                "Unexpected TossInvest response: community post or replies are missing"
+            )
+        rows = reply_page.get("body")
+        if not isinstance(rows, list):
+            raise RuntimeError(
+                "Unexpected TossInvest response: community post replies body is not a list"
+            )
+        if sanitized_comment is None:
+            sanitized_comment = sanitize_post_comment(raw_comment)
+            raw_topic = result.get("topic")
+            topic = redact_public_text(raw_topic) if isinstance(raw_topic, str) else None
+
+        pages_fetched += 1
+        truncated_mid_page = False
+        last_emitted_reply_id: str | None = None
+        for row_index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                raise RuntimeError(
+                    "Unexpected TossInvest response: community post reply is not a dictionary"
+                )
+            sanitized = sanitize_post_comment(row)
+            replies.append(sanitized)
+            reply_id = sanitized.get("commentId")
+            if reply_id is not None:
+                last_emitted_reply_id = validate_digit_id("reply_id", reply_id)
+            if len(replies) >= limit:
+                truncated_mid_page = row_index < len(rows) - 1
+                break
+
+        server_has_next = bool(reply_page.get("hasNext"))
+        if truncated_mid_page:
+            next_key = last_emitted_reply_id
+        elif server_has_next and rows:
+            next_key = last_emitted_reply_id
+        else:
+            next_key = None
+        if server_has_next and next_key is None:
+            raise RuntimeError(
+                "Unexpected TossInvest response: community post reply cursor is missing"
+            )
+        has_next = bool(next_key is not None and (server_has_next or truncated_mid_page))
+        if len(replies) >= limit or not has_next:
+            break
+        cursor = next_key
+
+    if sanitized_comment is None:
+        raise RuntimeError("Unexpected TossInvest response: community post comment is missing")
+    return {
+        "kind": "community-post",
+        "postId": normalized_post_id,
+        "lastReplyId": applied_last_reply_id,
+        "topic": topic,
+        "comment": sanitized_comment,
+        "pagesFetched": pages_fetched,
+        "hasNext": has_next,
+        "nextLastReplyId": next_key,
+        "replies": replies,
     }
 
 
@@ -268,9 +429,32 @@ def _dict_or_empty(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def redact_public_text(value: Any) -> Any:
-    if not isinstance(value, str):
+def _string_or_none(value: Any) -> str | None:
+    return value if isinstance(value, str) else None
+
+
+def _digit_id_or_none(value: Any) -> str | int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if _DIGIT_ID_RE.fullmatch(str(value)) else None
+    if isinstance(value, str) and _DIGIT_ID_RE.fullmatch(value):
         return value
+    return None
+
+
+def _integer_or_none(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _boolean_or_none(value: Any) -> bool | None:
+    return value if isinstance(value, bool) else None
+
+
+def redact_public_text(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    value = _MENTION_PROFILE_RE.sub(r"\1", value)
     value = _EMAIL_RE.sub("[redacted-email]", value)
     value = _PHONE_RE.sub("[redacted-phone]", value)
     return _LONG_DIGIT_RE.sub("[redacted-number]", value)
@@ -282,7 +466,11 @@ def _summarize_media(value: Any) -> dict[str, Any]:
     return {
         "count": len(value),
         "types": sorted(
-            {str(item.get("type")) for item in value if isinstance(item, dict) and item.get("type")}
+            {
+                item["type"]
+                for item in value
+                if isinstance(item, dict) and isinstance(item.get("type"), str)
+            }
         ),
     }
 
@@ -297,14 +485,23 @@ def _drop_none(value: Any) -> Any:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Fetch sanitized public TossInvest stock or lounge community comments."
+        description=("Fetch sanitized public TossInvest stock/lounge comments or a community post.")
     )
     subject_group = parser.add_mutually_exclusive_group(required=True)
     subject_group.add_argument("--code", help="TossInvest stock product code")
     subject_group.add_argument("--lounge-id", help="Public lounge id, e.g. LOUNGE_193394")
+    subject_group.add_argument("--post-id", help="Public community post id from a permalink")
     parser.add_argument("--sort", choices=sorted(COMMENT_SORTS), default="popular")
     parser.add_argument("--pages", type=int, default=1, help="Maximum comment pages to fetch")
     parser.add_argument("--limit", type=int, default=10, help="Maximum sanitized comments to emit")
+    parser.add_argument(
+        "--last-comment-id",
+        help="Stock/lounge cursor from a previous nextLastCommentId",
+    )
+    parser.add_argument(
+        "--last-reply-id",
+        help="Post cursor from a previous nextLastReplyId",
+    )
     parser.add_argument(
         "--include-replies", action="store_true", help="Fetch replies for returned comments"
     )
@@ -312,21 +509,36 @@ def main() -> int:
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
-    if args.lounge_id:
+    if args.post_id:
+        if args.last_comment_id is not None:
+            raise ValueError("--last-comment-id cannot be used with --post-id")
+        payload = fetch_community_post(
+            args.post_id,
+            pages=args.pages,
+            limit=args.limit,
+            last_reply_id=args.last_reply_id,
+        )
+    elif args.lounge_id:
+        if args.last_reply_id is not None:
+            raise ValueError("--last-reply-id requires --post-id")
         payload = fetch_lounge_comments(
             args.lounge_id,
             sort=args.sort,
             pages=args.pages,
             limit=args.limit,
             include_replies=args.include_replies,
+            last_comment_id=args.last_comment_id,
         )
     else:
+        if args.last_reply_id is not None:
+            raise ValueError("--last-reply-id requires --post-id")
         payload = fetch_stock_comments(
             args.code,
             sort=args.sort,
             pages=args.pages,
             limit=args.limit,
             include_replies=args.include_replies,
+            last_comment_id=args.last_comment_id,
         )
     api.emit_output(api.render_json(payload), args.output)
     return 0

@@ -11,6 +11,7 @@ Additional logged-out WebSocket/page recheck: 2026-07-10 for home tabs and searc
 Additional public page/bundle/API recheck: 2026-07-16 for home search sections, all visible ranking durations, sector stock/ETF paging and sorts, index daily quotes, lounge comments, community rankings, and stock status helpers.
 Additional industry dashboard/sector recheck: 2026-08-04 against `buildId=-owfs18fvEJHIHRdmooMq` for home industry URL state, `/sector/79?nation=US|KR`, stock/ETF/news paging, comparison-index clicks, current response shapes, and shared live-price overlays.
 Additional route-manifest/bundle recheck: 2026-08-05 against `buildId=-owfs18fvEJHIHRdmooMq` for `/bonds/[guid]`, `/news`, `/cheetah`, `/cheetah/[code]`, `/stocks/[code]/option`, and account/marketing route boundaries.
+Additional public surface/API recheck: 2026-08-13 against `buildId=Sg-uF4vsHmKQC9cjQ6v9G` for all five stock-detail tabs, stock news/disclosure state, community post and lounge pages, recommended-feed v4 paging/sanitization, `/indices/QGG01P`, `/screener/[preset-id]`, numbered/cursor pagination, and 44 bounded read-only page endpoints. The old and current route manifests both contained 59 routes with no additions or removals.
 Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
@@ -32,6 +33,8 @@ Re-verify endpoints before depending on them because TossInvest web APIs are und
 - [Filings And News APIs](#filings-and-news-apis)
 - [Transaction Status APIs](#transaction-status-apis)
 - [Dashboard And Discovery APIs](#dashboard-and-discovery-apis)
+- [Calendar APIs](#calendar-apis)
+- [Dashboard And Screener Page Behavior](#dashboard-and-screener-page-behavior)
 - [Feed And News APIs](#feed-and-news-apis)
 - [Screener APIs](#screener-apis)
 - [Cert And Status Helpers](#cert-and-status-helpers)
@@ -84,11 +87,11 @@ Observed on stock detail pages such as `/stocks/A005930`.
 
 | Purpose | Status | Method | Path | Key response fields / notes |
 |---|---|---:|---|---|
-| Common stock detail UI | `observed` | GET | `/api/v1/stock-detail/ui/{productCode}/common` | `name`, `detailName`, `guid`, `symbol`, `marketCode`, `companyCode`, `badges`, `notices` |
-| Header info | `observed` | GET | `/api/v1/stock-infos/header/{productCode}` | `sections[]`; section keys include ranking fields such as `netBuyVolumeRanking` |
-| WTS badges | `observed` | GET | `/api/v1/stock-infos/{productCode}/wts-badges` | Badges shown around stock header/detail |
+| Common stock detail UI | `script-backed` | GET | `/api/v1/stock-detail/ui/{productCode}/common` | `name`, `detailName`, `guid`, `symbol`, `marketCode`, `companyCode`, `badges`, `notices` |
+| Header info | `script-backed` | GET | `/api/v1/stock-infos/header/{productCode}` | `sections[]`; section keys include ranking fields such as `netBuyVolumeRanking` |
+| WTS badges | `script-backed` | GET | `/api/v1/stock-infos/{productCode}/wts-badges` | Badges shown around stock header/detail |
 | Stock info | `script-backed` | GET | `/api/v2/stock-infos/{productCode}` | `code`, `guid`, `symbol`, `isinCode`, `status`, `name`, `market`, `companyCode`, `companyName` |
-| Code or symbol lookup | `observed` | GET | `/api/v2/stock-infos/code-or-symbol/{productCode}` | Same general metadata shape as stock info |
+| Code or symbol lookup | `script-backed` | GET | `/api/v2/stock-infos/code-or-symbol/{productCode}` | Same general metadata shape as stock info; used by stock-page and community scripts to resolve display symbols |
 | Batch stock info | `observed` | GET | `/api/v1/stock-infos?codes={codes}` | Long comma-separated code list |
 | Price batch v1 | `observed` | GET | `/api/v1/product/stock-prices?meta=true&productCodes={codes}` | Price list with optional metadata |
 | Price batch v3 | `observed` | GET | `/api/v3/stock-prices?meta=true&productCodes={codes}` | Newer price list shape |
@@ -98,7 +101,7 @@ Observed on stock detail pages such as `/stocks/A005930`.
 | Intraday ticks | `script-backed` | GET | `/api/v2/stock-prices/{productCode}/ticks` | Query: `viewType`, `count`, `investMode`; observed rows include `time`, `price`, `base`, `volume`, `tradeType`, `cumulativeVolume` |
 | Main-session prices | `observed` | GET | `/api/v1/stock-prices/mainsession?codes={codes}` | Observed result object includes `prices` |
 | After-session prices | `observed` | GET | `/api/v1/stock-prices/after?codes={codes}` | Observed list items include `code`, `changeType`, `close`, `value`, `volume`, `amount` |
-| Upper/lower price bounds | `observed` | GET | `/api/v2/stock-prices/{productCode}/upper-lower` | `date`, `upperLimit`, `lowerLimit` |
+| Upper/lower price bounds | `script-backed` | GET | `/api/v2/stock-prices/{productCode}/upper-lower` | `date`, `upperLimit`, `lowerLimit` |
 
 Examples:
 
@@ -305,19 +308,19 @@ Observed from `/stocks/A005930/analytics`.
 
 | Purpose | Status | Method | Path | Key response fields / notes |
 |---|---|---:|---|---|
-| Sales composition | `observed` | GET | `/api/v1/companies/{companyCode}/sales-compositions` | `code`, `fiscalYear`, `endDate`, `compositions[]`, `dataSource`; company code without leading `A` |
-| Related themes/categories | `observed` | GET | `/api/v2/companies/{companyCode}/tics` | `baseDate`, `majorList[]`, `minorList[]`; company code without leading `A` |
-| Stock overview | `script-backed` | GET | `/api/v2/stock-infos/{productCode}/overview` | `type`, `market`, `company`, `marketValueKrw`, `enterpriseValueKrw`, `dataSource`, `listDate` |
-| Business/holding composition | `observed` | GET | `/api/v2/stock-infos/{productCode}/compositions` | Observed result includes `code`, `type`, `fiscalYear`, `endDate`, `items[]`, `dataSource`; used for composition widgets |
+| Sales composition | `script-backed` | GET | `/api/v1/companies/{companyCode}/sales-compositions` | `code`, `fiscalYear`, `endDate`, `compositions[]`, `dataSource`; company code without leading `A` |
+| Related themes/categories | `script-backed` | GET | `/api/v2/companies/{companyCode}/tics` | `baseDate`, `majorList[]`, `minorList[]`; company code without leading `A` |
+| Stock overview | `script-backed` | GET | `/api/v2/stock-infos/{productCode}/overview` | `type`, `market`, `company`, `marketValueKrw`, `enterpriseValueKrw`, `dataSource`, `listDate`, `etp`, `etf`, `etn` |
+| Business/holding composition | `script-backed` | GET | `/api/v2/stock-infos/{productCode}/compositions` | Observed result includes `code`, `type`, `fiscalYear`, `endDate`, `items[]`, `dataSource`; used for composition widgets |
 | ETF/ETN investment detail | `observed` | GET | `/api/v2/stock-infos/{productCode}/investment` | Useful for ETF/ETN pages; observed result includes market/asset/NAV-style fields and base date fields |
-| Consensus | `observed` | GET | `/api/v2/stock-infos/consensus/{productCode}` | `targetPrice`, `pointDate`, `pastClosePrices[]` |
-| Analyst opinion | `observed` | GET | `/api/v1/stock-detail/ui/wts/{productCode}/analyst-opinion` | `type`, `strongSell`, `sell`, `hold`, `buy`, `strongBuy`, `targetPrice`, `description` |
-| Analyst reports | `observed` | GET | `/api/v1/stock-detail/ui/wts/{productCode}/analyst-reports` | `analystReportGroups[]` with `displayDateAndEditor`, `analystReports`, `publishedAt` |
-| Investment indicators | `observed` | GET | `/api/v1/stock-detail/ui/wts/{productCode}/investment-indicators` | `indicatorSections[]` with `sectionName`, `data` |
-| Analytics section order | `observed` | GET | `/api/v1/stock-detail/ui/wts/{productCode}/section-orders` | UI ordering metadata |
-| Dividend summary | `observed` | GET | `/api/v1/stock-infos/dividend/{productCode}/summary` | List items include `exDate`, `paymentDate`, `currency`, `ratio`, `cash`, `cashKrw`, `yieldRatio`, `ttmYieldRatio` |
-| Dividend years | `observed` | GET | `/api/v1/stock-infos/dividend/{productCode}/years` | Dividend year options |
-| Dividend yield history | `observed` | GET | `/api/v1/stock-infos/{productCode}/dividends/yield-ratio/histories` | Yield-ratio history |
+| Consensus | `script-backed` | GET | `/api/v2/stock-infos/consensus/{productCode}` | `targetPrice`, `pointDate`, `pastClosePrices[]` |
+| Analyst opinion | `script-backed` | GET | `/api/v1/stock-detail/ui/wts/{productCode}/analyst-opinion` | `type`, `strongSell`, `sell`, `hold`, `buy`, `strongBuy`, `targetPrice`, `description` |
+| Analyst reports | `script-backed` | GET | `/api/v1/stock-detail/ui/wts/{productCode}/analyst-reports` | `analystReportGroups[]` with `displayDateAndEditor`, `analystReports`, `publishedAt` |
+| Investment indicators | `script-backed` | GET | `/api/v1/stock-detail/ui/wts/{productCode}/investment-indicators` | `indicatorSections[]` with `sectionName`, `data` |
+| Analytics section order | `script-backed` | GET | `/api/v1/stock-detail/ui/wts/{productCode}/section-orders` | UI ordering metadata |
+| Dividend summary | `script-backed` | GET | `/api/v1/stock-infos/dividend/{productCode}/summary` | List items include `exDate`, `paymentDate`, `currency`, `ratio`, `cash`, `cashKrw`, `yieldRatio`, `ttmYieldRatio` |
+| Dividend years | `script-backed` | GET | `/api/v1/stock-infos/dividend/{productCode}/years` | Dividend year options |
+| Dividend yield history | `script-backed` | GET | `/api/v1/stock-infos/{productCode}/dividends/yield-ratio/histories` | Yield-ratio history |
 | Comprehensive financial statements | `script-backed` | POST | `/api/v2/companies/{productCode}/financial-statements/comprehensive` | JSON body `{}` accepted in verification |
 | Financial statement records | `script-backed` | POST | `/api/v2/companies/{productCode}/financial-statement-records` | JSON body `{}` accepted in verification |
 | Financial estimate date | `script-backed` | GET | `/api/v2/companies/{productCode}/financial/estimate/date` | Estimate reference date |
@@ -345,14 +348,14 @@ Observed response-shape highlights:
 |---|---|
 | `/financial-statements/comprehensive` | `selectedFactor`, `selectableFactors`, `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `graph`, `table` |
 | `/financial-statement-records` | `selectedFactor`, `selectableFactors`, `selectedPeriod`, `selectablePeriods`, `isKr`, `table` |
-| `/financial/estimate/revenue` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `revenueEst`, `revenueEstKrw`, `fluctuationRate`, `graphs`, `tables` |
-| `/financial/estimate/eps` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `epsEst`, `epsEstKrw`, `fluctuationRate`, `graphs`, `tables` |
-| `/financial/estimate/operating-income` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `operatingIncomeEst`, `operatingIncomeEstKrw`, `fluctuationRate`, `graphs`, `tables` |
+| `/financial/estimate/revenue` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `revenueEst`, `revenueEstKrw`, `revenueEstJpy`, `fluctuation`, `fluctuationKrw`, `fluctuationRate`, `position`, `graphs`, `tables` |
+| `/financial/estimate/eps` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `epsEst`, `epsEstKrw`, `epsEstJpy`, `fluctuation`, `fluctuationKrw`, `fluctuationRate`, `position`, `graphs`, `tables` |
+| `/financial/estimate/operating-income` | `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `operatingIncomeEst`, `operatingIncomeEstKrw`, `operatingIncomeEstJpy`, `fluctuation`, `fluctuationKrw`, `fluctuationRate`, `position`, `graphs`, `tables` |
 | `/evaluation` | `per`, `pbr`, `psr`, `median`, `position` |
-| `/evaluation-comparison` | `selectedFactor`, `selectableFactors`, `selectedTics`, `selectableTics`, `stockGraphs`, `stockTables`, `median`, `position`, `ttmValue` |
+| `/evaluation-comparison` | `selectedFactor`, `selectableFactors`, `selectableFactorsList`, `selectedTics`, `selectableTics`, `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `graphType`, `stockGraphs`, `stockTables`, `ticsStocks`, `median`, `position`, `ttmValue` |
 | `/stability` | `liabilityRatio`, `currentRatio`, `interestCoverageRatio`, `median`, `position` |
-| `/revenue-and-net-profit` | `companyName`, `recentFiscalYear`, `recentFiscalQuarter`, `recentNetProfit`, `graph`, `table` |
-| `/operating-income` | `companyName`, `recentFiscalYear`, `recentFiscalQuarter`, `recentOperatingIncome`, `graph`, `table` |
+| `/revenue-and-net-profit` | `companyName`, `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `recentFiscalYear`, `recentFiscalQuarter`, `recentNetProfit`, `recentNetProfitKrw`, `recentNetProfitJpy`, `fluctuationRate`, `position`, `graph`, `table` |
+| `/operating-income` | `companyName`, `selectedRange`, `selectableRanges`, `selectedPeriod`, `selectablePeriods`, `recentFiscalYear`, `recentFiscalQuarter`, `recentOperatingIncome`, `recentOperatingIncomeKrw`, `recentOperatingIncomeJpy`, `fluctuationRate`, `position`, `graph`, `table` |
 
 ## Filings And News APIs
 
@@ -377,7 +380,9 @@ GET https://wts-info-api.tossinvest.com/api/v2/news/companies/005930?size=20&ord
 
 ## Transaction Status APIs
 
-Observed from `/stocks/A005930/transaction-status` and the `contentType=net-buy` URL variant.
+Observed from `/stocks/A005930/transaction-status`. On 2026-08-13, the program,
+credit, lending, short-selling, and CFD sub-tabs kept this URL unchanged; treat
+older `contentType` variants as historical client state, not stable deep links.
 
 | Purpose | Status | Method | Path | Params and key response fields |
 |---|---|---:|---|---|
@@ -387,7 +392,7 @@ Observed from `/stocks/A005930/transaction-status` and the `contentType=net-buy`
 | Fixed-date trading trend | `script-backed` | GET | `/api/v1/stock-infos/trade/trend/fixed-trading-trend` | Query: `productCode={productCode}&from={YYYY-MM-DD}&to={YYYY-MM-DD}`; result is a date-bounded list |
 | Accumulated fixed trading trend | `script-backed` | GET | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend` | Query: `productCode`, `from`, `to`; observed rows include accumulated net investor-volume fields |
 | Accumulated fixed trend detail | `script-backed` | GET | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend/detail` | Query: `productCode`, `from`, `to`; observed object includes accumulated net detail fields by investor category |
-| MDS info pages | `script-backed` | GET | `/api/v1/mds/info/{type}` | Query usually uses `stockCode`, `number`, `size`, optional `key`; direct 2026-05-29 checks accepted `credit`, `lending-trading`, `short-selling-trend`, and `cfd` |
+| MDS info pages | `script-backed` | GET | `/api/v1/mds/info/{type}` | Query uses `stockCode`, `number`, `size`, optional `key`; direct checks accepted `credit`, `lending-trading`, `short-selling-trend`, and `cfd`; continue with the returned `pagingParam.number` and `pagingParam.key` |
 
 Examples:
 
@@ -411,7 +416,8 @@ that exact use case; a 2026-05-10 smoke check returned HTTP 400 for
 
 Notes:
 
-- The `contentType=net-buy` page URL variant did not introduce a separate API in observed captures.
+- Historical `contentType=net-buy` URL state did not introduce a separate API;
+  the current sub-tabs did not rewrite the URL.
 - Treat `from` and `to` as dynamic dates derived by the page, not hard-coded constants.
 - Direct response checks showed top-level key `result` for all four endpoints above.
 - `fixed-trading-trend` is the preferred endpoint for date-bounded pension-fund history. It returned rows back to `2019-04-01` for `A005930` in verification; earlier ranges returned no rows.
@@ -494,7 +500,7 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | WTS news feed | `observed` | GET | `/api/v1/dashboard/wts/news` | Feed/news panel data; `scripts/feed.py` uses the POST form documented under Feed And News APIs |
 | Public WTS search | `script-backed` | POST | `/api/v3/search-all/wts-auto-complete` | `scripts/market_search.py`; body contains a bounded query plus observed `PRODUCT`, `NEWS`, `TICS`, `SCREENER`, and `MARKET_INDEX` sections; output is limited and field-filtered |
 | Home live-chart top100 ranking | `script-backed` | POST | `https://wts-cert-api.tossinvest.com/api/v2/dashboard/wts/overview/ranking` | Body maps URL params to `id={live-chart}`, `tag={market}`, `duration`; returns `products[]`, usually 100 rows; page refresh interval observed as 10 seconds and current-price cells receive per-product WebSocket overlays |
-| Realtime investor rankings | `script-backed` | GET | `/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Observed under `wts-cert-api`; public page ranking widget, but keep sensitive-host caution |
+| Realtime investor rankings | `script-backed` | GET | `/api/v1/dashboard/wts/overview/rankings/by-investors?size={size}` | Observed under `wts-cert-api`; `rankings.foreigner`, `.institution`, and `.individual` each expose `buyStocks` and `sellStocks`; the script emits the chosen side as `selectedRankings` |
 | Economic calendar | `script-backed` | GET | `/api/v2/dashboard/wts/overview/calendar/economic-events` | Observed under `wts-cert-api`; result list includes `id`, `date`, `title` |
 | Calendar AI key events | `script-backed` | GET | `/api/v1/calendar/ai-summary/key-events` | Direct 2026-05-30 check returned `eci` and `earnings[]`; public market-calendar context |
 | Current home industry ranking | `script-backed` | POST | `/api/v2/dashboard/wts/overview/tics/ranking` | Body: `nation=KR|US`, `duration=1d|1w|1m|3m|1y`, `sortBy=FLUCTUATION_RATE|TRADING_AMOUNT`; result has `basedAt`, `duration`, `tics[]`; deployed page refresh interval observed as 10 seconds |
@@ -582,6 +588,8 @@ accepts only `countryType=kr|us`, uses an empty POST body, and should not be
 extended to arbitrary query keys. The economic-indicator detail route is linked
 from monthly economic events via `view.economicIndicatorValue.ric` plus the
 event `date`.
+
+## Dashboard And Screener Page Behavior
 
 Direct checks on 2026-04-20 for `scripts/theme.py --tag kr --include-all --tics-id 289 --include-details --company-ranking marketcap --company-ranking revenue --company-ranking operating-margin` returned `ranking`, `allThemes`, `details`, `related`, `news`, `fluctuations`, and all three requested company ranking groups.
 
@@ -686,7 +694,8 @@ on the home page. The recurring architecture was:
   the logged-out user to sign in.
 
 Public index navigation succeeded for `COMP.NAI`, `SPX.CBI`, `RGI..VIX`,
-`KGG01P`, `SOX.NAI`, `VWAP.KRW-BTC`, and the HTTP-only `exchange-rate` page.
+`KGG01P`, `QGG01P`, `SOX.NAI`, `VWAP.KRW-BTC`, and the HTTP-only
+`exchange-rate` page.
 `DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1` redirected to sign-in during the same
 check; do not treat a destination builder as authorization to bypass that
 route-level access boundary.
@@ -815,8 +824,8 @@ Observed from `/feed/recommended` and `/feed/news`. Keep only feed endpoints tha
 
 | Purpose | Status | Method | URL/path | Params/body and notes |
 |---|---|---:|---|---|
-| Recommended feed posts | `script-backed` | GET | `/api/v3/feed/recommend/posts` | Optional `lastRecommendId`; returned `feeds[]` and `key.lastRecommendId` |
-| Recommended ranking feed posts | `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | Optional `lastRecommendId`; current public `/feed` traffic uses cert-host mirror |
+| Historical recommended feed posts | `needs-recheck` | GET | `/api/v3/feed/recommend/posts` | Returned HTTP 404 in the bounded 2026-08-13 direct check; do not retry or fall back to this stale path |
+| Current recommended feed posts | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | Optional `lastRecommendId`; current public `/feed/recommended` traffic; `feed.py --kind recommended` emits only sanitized comments plus `nextLastRecommendId` |
 | Dashboard/news tab feed | `script-backed` | POST | `/api/v1/dashboard/wts/news` | Body `{ "type": "HOT" }` etc.; result includes `type`, `title`, `news[]` |
 | News detail | `script-backed` | GET | `/api/v2/news/{newsId}` | Detail payload for a selected news item |
 
@@ -886,6 +895,11 @@ The result columns are still returned by `/api/v2/screener/screen`; visible
 sortable columns include market capitalization, volume, analyst rating, and
 the preset-specific `C_주가등락률_1W` column.
 
+The public `/screener/{preset-id}` route reuses these count/result families.
+`/screener/4` rendered the selected preset, filters, and virtualized result list
+without login in the 2026-08-13 check; preset ids remain page identifiers, not
+permission to call mutation or user-preset routes.
+
 ## Cert And Status Helpers
 
 These endpoints were observed during public page loads but live under `wts-cert-api`. Treat them as sensitive unless their current behavior is public visible page data or metadata with no cookies, auth headers, account identifiers, or personal data. Script-backed rows are restricted by `scripts/tossinvest_api.py` host/path policy.
@@ -916,22 +930,28 @@ The `/stocks/{code}/order` bundle also references order prepare/create/correct/c
 Additional web check: 2026-07-08 for `/?focusedProductCode=US20100311002`,
 `/stocks/US20100311002/community`, `/feed/recommended`, and `/feed/news`.
 These routes rendered without login and returned HTTP 200 from public APIs.
+Additional logged-out check: 2026-08-13 for
+`/community/lounges/LOUNGE_193394`, `/community/posts/{post-id}`, and the
+recommended-feed v4 continuation shape.
 
 Use `scripts/stock_page.py` when the user asks for the public stock main-page
 bundle: resolved product metadata, price details, AI signal detail, and
-sanitized public comments. Use `scripts/community_comments.py` for comments
-alone; it resolves display symbols through `code-or-symbol` before comment lookup.
+sanitized public comments. Use `scripts/community_comments.py` for comments,
+lounges, or public post permalinks; stock mode resolves display symbols through
+`code-or-symbol` before comment lookup.
 
 | Purpose | Status | Method | Path | Params and notes |
 |---|---|---:|---|---|
 | Stock page composite | `script-backed` | mixed | `scripts/stock_page.py` | Uses `code-or-symbol`, price details, AI detail, optional red flags/trading status/trading analysis, and sanitized comments |
-| Public stock comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=STOCK`, `subjectId={productCode}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; script input may be a product code or display symbol |
-| Public lounge comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=LOUNGE`, `subjectId=LOUNGE_{digits}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; same sanitizer and page limits as stock comments |
+| Public stock comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=STOCK`, `subjectId={productCode}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; script input may be a product code or display symbol and accepts a prior cursor through `--last-comment-id` |
+| Public lounge comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=LOUNGE`, `subjectId=LOUNGE_{digits}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; same sanitizer, start-cursor option, and page limits as stock comments |
 | Public comment replies | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/comments/{commentId}/replies` | Sanitized reply rows; v1 replies also observed but v2 is preferred |
+| Public community post permalink and replies | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/comments/{postId}/replies` | Result has `topic`, `comment`, and `replies.body`; optional numeric `lastReplyId` continues replies; `community_comments.py --post-id --last-reply-id` sanitizes both the post and reply rows |
 | Stock community related board | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/boards/STOCK/{productCode}/related` | Board metadata only |
 | Stock community recommended profiles | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/community/board/{productCode}/recommend-profiles` | Public profile suggestions; strip profile ids, URLs, avatars, and follow flags before display |
+| Popular-follower feed support | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/boards/popular-follower` | Observed in current public feed traffic; no first-class script output; sanitize any future wrapper before exposing fields |
 | Community top rankings | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/community/top-rankings/{ranking}` | `scripts/feed.py --kind community-ranking`; only the two exact allowlisted ranking ids are used, output is capped at 10 rows, and profile ids/URLs/follow flags are removed |
-| Feed community ranking posts | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | Public `/feed` traffic; optional `lastRecommendId` |
+| Feed community ranking posts | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | Public `/feed/recommended` traffic; optional `lastRecommendId`; both recommended CLI aliases sanitize posts and normalize `nextLastRecommendId` |
 
 Observed `GET /api/v4/comments` response shape:
 
@@ -947,8 +967,12 @@ Sanitization requirements:
   text, board topic, holding status, created/updated timestamps, and counts.
 - Remove profile ids, avatar/profile URLs, profile descriptions, follower
   counts, follow/bookmark/my-profile flags, and account-personalized fields.
+- Remove numeric profile ids embedded in public mention markup while retaining
+  the visible mention label.
 - Redact obvious phone, email, and long-number strings from free-form text.
 - Keep pagination bounded; do not bulk harvest public social content.
+- Treat v4 feed `feeds[].comment` and permalink v1 `comment`/`replies.body[]`
+  as the same sanitizer boundary; never expose either source object directly.
 
 Observed drift, excluded, and sensitive public-social endpoints:
 
@@ -960,7 +984,7 @@ Observed drift, excluded, and sensitive public-social endpoints:
 | `https://wts-api.tossinvest.com/api/v1/exchange/current-quote/for-buy` | `excluded` | `wts-api` exchange quote route observed on exchange-rate page; keep out until exact host/path safety review |
 | `https://wts-api.tossinvest.com/api/v1/exchange/current-quote/for-sell` | `excluded` | Same as above |
 | `https://wts-cert-api.tossinvest.com/api/v1/community/top-rankings/{ranking}` | `public-social-sensitive` | Public community/social ranking surface; only verified ranking ids are allowed and outputs must be sanitized |
-| `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | `script-backed` | Feed page currently calls cert-host mirror; `feed.py --kind recommended-ranking` uses this route |
+| `https://wts-cert-api.tossinvest.com/api/v4/feed/recommend/ranking-posts` | `public-social-sensitive` / `script-backed` | Current feed route; `feed.py --kind recommended` and its compatibility alias sanitize every emitted post |
 
 ## Excluded Non-Stock Calls
 
@@ -982,22 +1006,18 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 |---|---|
 | `https://www.tossinvest.com/?focusedProductCode=A000660` | Chart, stock summary, ranking, dashboard signals |
 | `https://www.tossinvest.com/?focusedProductCode=US20100311002` | US stock main-page metadata, price details, public AI detail, sanitized community comments |
+| `https://www.tossinvest.com/stocks/A005930` | Redirects to the public `/order` tab; top tabs link to `/order`, `/analytics`, `/news`, `/transaction-status`, and `/community` |
 | `https://www.tossinvest.com/stocks/US20100311002/community` | Public stock comments, comment replies, related board, recommended profiles |
-| `https://www.tossinvest.com/stocks/A005930/analytics` | Analytics, financials, dividends, analyst data |
-| `https://www.tossinvest.com/stocks/A005930/transaction-status` | Broker ranking, investor trend, program trading, credit, lending trading, short-selling trend, CFD |
-| `https://www.tossinvest.com/stocks/A005930/transaction-status?contentType=net-buy...` | Same transaction-status APIs; URL query appears to focus a section |
+| `https://www.tossinvest.com/stocks/A005930/analytics` | Analytics, financials, dividends, analyst data; visible statement tabs are income statement, balance sheet, and cash-flow statement, but their request bodies require a fresh capture before adding a selector |
+| `https://www.tossinvest.com/stocks/A005930/news?menu=news` | Company news; the visible latest/relevance sort is client state on this URL |
+| `https://www.tossinvest.com/stocks/A005930/news?menu=disclosure` | Company filings/disclosures |
+| `https://www.tossinvest.com/stocks/A005930/transaction-status` | Broker ranking, investor trend, program trading, credit, lending trading, short-selling trend, and CFD; current sub-tabs keep the URL unchanged |
 | `https://www.tossinvest.com/stocks/A005930/order` | Price details, quote/tick, upper/lower bounds, `c-chart` stock candles, TradingView chart studies; order namespace helpers and mutations excluded; no dedicated RSI/MACD/Bollinger data endpoint observed |
 | `https://www.tossinvest.com/?ranking-type=trending_category&focusedTicsId=553` | Current home industry ranking with an industry detail aside; optional `tics-nation`, `tics-duration`, and `tics-sort` persist filter state |
 | `https://www.tossinvest.com/?ranking-type=domestic_investor_trend` | Investor buy/sell rankings from dashboard ranking APIs |
-| `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_amount` | Live-chart top100 ranking via overview ranking API |
-| `https://www.tossinvest.com/?market=us&live-chart=biggest_total_amount` | Same live-chart API with `tag=us` |
-| `https://www.tossinvest.com/?market=kr&live-chart=biggest_total_volume&duration=realtime` | Live-chart top100 ranking via overview ranking API |
-| `https://www.tossinvest.com/?market=us&live-chart=biggest_total_volume&duration=realtime` | Same live-chart API with `tag=us` |
-| `https://www.tossinvest.com/?market=kr&live-chart=heavy_soar&duration=1d` | Live-chart top100 ranking via overview ranking API |
-| `https://www.tossinvest.com/?market=us&live-chart=heavy_soar&duration=1d` | Same live-chart API with `tag=us` |
-| `https://www.tossinvest.com/?market=kr&live-chart=heavy_descent&duration=1d` | Live-chart top100 ranking via overview ranking API |
-| `https://www.tossinvest.com/?market=us&live-chart=heavy_descent&duration=1d` | Same live-chart API with `tag=us` |
+| `https://www.tossinvest.com/?market={market}&live-chart={id}&duration={duration}` | `market` is `kr` or `us`; seven public live-chart ids: `biggest_total_amount`, `biggest_total_volume`, `biggest_market_amount`, `biggest_market_volume`, `heavy_soar`, `heavy_descent`, and `realtime_stock`; map only the cataloged duration values |
 | `https://www.tossinvest.com/indices/KGG01P` | Index info, price, chart, indicator/news widgets |
+| `https://www.tossinvest.com/indices/QGG01P` | Public KOSDAQ index price/chart, investor trend, numbered daily net-buy and daily-quote pages, and news; WebSocket support is not implied without a separate stream check |
 | `https://www.tossinvest.com/indices/COMP.NAI` | Public Nasdaq index value plus HTTP history/news/related-stock widgets |
 | `https://www.tossinvest.com/indices/SPX.CBI` | Public S&P 500 index value plus HTTP history/news/related-stock widgets |
 | `https://www.tossinvest.com/indices/RGI..VIX` | Public VIX index value plus HTTP history/news/related-stock widgets |
@@ -1011,16 +1031,19 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/calendar` | Monthly market calendar, economic/earnings and domestic/overseas local filters, weekly/key-event summary text |
 | `https://www.tossinvest.com/calendar/economic-indicator?date=2026-06-01&ric=USPMI%3DECI` | Economic indicator detail, historical data, related articles, upcoming indicators, AI analysis text |
 | `https://www.tossinvest.com/screener` | Screener presets, filter metadata, result count, result screen |
+| `https://www.tossinvest.com/screener/4` | Public preset-detail route with selected filters and the same numbered/virtualized screener result family |
 | `https://www.tossinvest.com/sector/79?nation=US` | Public sector header/chart, ALL/KR/US stock and ETF filters, comparison-index menu, server-paged news, related-industry tree, and client-paged trending-industry sidebar |
 | `https://www.tossinvest.com/sector/79?nation=KR` | Same sector id with the KR header/chart seed and KR stock default; switching the header market after load does not rewrite the URL |
-| `https://www.tossinvest.com/feed/recommended` | Recommended community/feed posts |
+| `https://www.tossinvest.com/community/lounges/LOUNGE_193394` | Public lounge description and sanitized popular/recent comments with `lastCommentId` paging |
+| `https://www.tossinvest.com/community/posts/{post-id}` | Public community post permalink and sanitized replies with `lastReplyId` paging |
+| `https://www.tossinvest.com/feed/recommended` | Recommended community/feed posts from the v4 cert route; sanitize post/profile fields and continue only with `nextLastRecommendId` |
 | `https://www.tossinvest.com/feed/news` | Dashboard news categories and news detail |
 
 ### Route-manifest scope review
 
-The 2026-08-05 deployed route manifest contains more routes than this catalog.
-Route presence alone is not evidence of a usable public API, so the audit kept
-the following boundaries:
+The 2026-08-13 deployed route manifest (`buildId=Sg-uF4vsHmKQC9cjQ6v9G`)
+contains the same 59 routes as the 2026-08-05 manifest. Route presence alone is
+not evidence of a usable public API, so the audit kept the following boundaries:
 
 | Route | Audit result | Catalog decision |
 |---|---|---|
@@ -1028,6 +1051,9 @@ the following boundaries:
 | `/news` | Logged-out direct navigation rendered no bounded data surface | `needs-recheck`; prefer the verified `/feed/news` flow |
 | `/cheetah`, `/cheetah/[code]` | Logged-out pages were blank; only `/api/v1/reasoning-news/count` was visible in the checked bundle | `needs-recheck`; no script or broader endpoint claim |
 | `/stocks/[code]/option` | Route module rendered no public content and loaded order-adjacent feature metadata | `excluded` until a logged-out public market-data surface is verified |
+| `/community/posts/[post-id]` | Logged-out permalink rendered a bounded post plus v1 reply cursor | `public-social-sensitive` / `script-backed` through the sanitizer |
+| `/community/lounges/[subjectId]` | Logged-out lounge rendered public description and comment tabs | `public-social-sensitive` / `script-backed` through the sanitizer |
+| `/screener/[preset-id]` | Logged-out preset detail rendered the public filter/result surface | `observed`; use existing screener read-only families only |
 | `/ai-campaign` | Marketing surface | `excluded` |
 | `/asap` | Account/provision terms surface | `excluded` |
 | `/open-api/*` | Official Open API onboarding/documentation flow | Separate scope; use `official-openapi-boundary.md` |
@@ -1036,8 +1062,9 @@ Cross-checking other plausible gaps did not justify inventing new endpoint
 families. Display ticker resolution is already script-backed through
 `/api/v2/stock-infos/code-or-symbol/{productCode}` in `stock_page.py`; ETF/ETN
 detail has the observed `/api/v2/stock-infos/{productCode}/investment` route;
-and the home live chart, recommended feed lists, sector pages, and calendar are
-already cataloged. A first-class community-post permalink/body flow and public
-AI earnings-call transcript/translation surface remain `needs-recheck` because
-this audit did not establish a bounded logged-out route and response shape for
-them. Do not infer endpoints from product announcements or search results.
+and the home live chart, recommended feed lists, sector pages, calendar,
+community post permalinks, lounges, and screener preset pages are already
+cataloged. A public AI earnings-call transcript/translation surface remains
+`needs-recheck` because this audit did not establish a bounded logged-out route
+and response shape for it. Do not infer endpoints from product announcements or
+search results.

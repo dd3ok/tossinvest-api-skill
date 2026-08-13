@@ -424,7 +424,7 @@ def main() -> int:
     parser.add_argument(
         "--include-results",
         action="store_true",
-        help="Also fetch the first page from /api/v2/screener/screen",
+        help="Also fetch the requested --page/--size from /api/v2/screener/screen",
     )
     parser.add_argument(
         "--include-common-presets",
@@ -490,6 +490,11 @@ def main() -> int:
     payload = fetch_screener_count(args.nation, filters)
     if args.include_results:
         sort = build_sort(args.sort, args.sort_order) if args.sort else None
+        payload["resultRequest"] = {
+            "page": args.page,
+            "size": args.size,
+            "sort": sort,
+        }
         payload["results"] = fetch_screener_results(
             args.nation,
             filters,

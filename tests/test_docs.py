@@ -6,6 +6,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def markdown_heading_slug(value: str) -> str:
+    value = value.strip().lower()
+    value = re.sub(r"[^\w\- ]", "", value)
+    return re.sub(r"\s+", "-", value)
+
+
 class DocumentationPromptTests(unittest.TestCase):
     def test_public_prompts_do_not_depend_on_dollar_skill_selectors(self):
         checked_paths = [
@@ -203,11 +209,6 @@ class DocumentationPromptTests(unittest.TestCase):
         skill_path = ROOT / "SKILL.md"
         skill = skill_path.read_text(encoding="utf-8")
 
-        def heading_slug(value: str) -> str:
-            value = value.strip().lower()
-            value = re.sub(r"[^\w\- ]", "", value)
-            return re.sub(r"\s+", "-", value)
-
         for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", skill):
             if target.startswith(("http://", "https://", "#")):
                 continue
@@ -217,7 +218,7 @@ class DocumentationPromptTests(unittest.TestCase):
                 self.assertTrue(linked_path.exists(), f"Missing local link target: {target}")
                 if fragment and linked_path.is_file():
                     headings = {
-                        heading_slug(match.group(1))
+                        markdown_heading_slug(match.group(1))
                         for match in re.finditer(
                             r"^#{1,6}\s+(.+?)\s*$",
                             linked_path.read_text(encoding="utf-8"),
@@ -231,6 +232,18 @@ class DocumentationPromptTests(unittest.TestCase):
             if len(lines) > 100:
                 with self.subTest(reference=reference.name):
                     self.assertIn("## Contents", lines)
+
+    def test_reference_contents_cover_every_h2_section(self):
+        for path in [
+            ROOT / "references" / "api-catalog.md",
+            ROOT / "references" / "response-notes.md",
+        ]:
+            text = path.read_text(encoding="utf-8")
+            contents = text.split("## Contents", 1)[1].split("\n## ", 1)[0]
+            headings = re.findall(r"^## (?!Contents\s*$)(.+?)\s*$", text, re.MULTILINE)
+            for heading in headings:
+                with self.subTest(path=path.name, heading=heading):
+                    self.assertIn(f"(#{markdown_heading_slug(heading)})", contents)
 
     def test_websocket_api_reference_documents_protocol_schema_and_safety(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -557,6 +570,9 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("/api/v4/comments", catalog)
         self.assertIn("lastCommentId", catalog)
         self.assertIn("/api/v2/comments/{commentId}/replies", catalog)
+        self.assertIn("/api/v1/comments/{postId}/replies", catalog)
+        self.assertIn("lastReplyId", catalog)
+        self.assertIn("nextLastRecommendId", catalog)
         self.assertIn("/api/v1/dashboard/wts/overview/ai-signals/detail", catalog)
         self.assertIn("/api/v3/trading/order/{productCode}/trading-status", catalog)
         self.assertIn("public-social-sensitive", catalog)
@@ -619,7 +635,13 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("1y/day:1", cookbook)
         self.assertIn("2026-06-08 direct check returned HTTP 400", cookbook)
         self.assertNotIn("user-supplied typo", catalog)
-        self.assertIn("Same live-chart API with `tag=us`", catalog)
+        for live_chart in [
+            "biggest_market_amount",
+            "biggest_market_volume",
+            "realtime_stock",
+        ]:
+            self.assertIn(live_chart, catalog)
+        self.assertIn("/indices/QGG01P", catalog)
         self.assertIn("FX 1y/day:1", evals)
         self.assertIn("--range 1w --step min:10 --include-crypto-prices", evals)
 
@@ -656,7 +678,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("시장 통합 검색", readme)
         self.assertIn("관련 테마·섹터 종목/ETF", readme)
         self.assertIn("지수와 일별 시세표", readme)
-        self.assertIn("주식·라운지 댓글·답글·커뮤니티 랭킹", readme)
+        self.assertIn("추천 피드·주식/라운지 댓글·답글·커뮤니티 게시물 퍼머링크·랭킹", readme)
 
     def test_capture_and_catalog_scope_include_current_public_surfaces(self):
         catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
@@ -679,6 +701,45 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("/cheetah", catalog)
         self.assertIn("/stocks/[code]/option", catalog)
         self.assertIn("bond pages", skill)
+
+    def test_latest_public_pages_tabs_and_paging_are_cataloged(self):
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")
+
+        for expected in [
+            "buildId=Sg-uF4vsHmKQC9cjQ6v9G",
+            "/stocks/A005930/news?menu=news",
+            "/stocks/A005930/news?menu=disclosure",
+            "/community/lounges/LOUNGE_193394",
+            "/community/posts/{post-id}",
+            "/screener/4",
+            "/api/v1/boards/popular-follower",
+            "HTTP 404",
+        ]:
+            with self.subTest(expected=expected):
+                self.assertIn(expected, catalog)
+
+        self.assertIn("scripts/filings.py --code A005930 --page 2", cookbook)
+        self.assertIn("--type lending-trading --page 2 --key", cookbook)
+        self.assertIn("--kind recommended --last-recommend-id", cookbook)
+        self.assertIn("--last-comment-id", cookbook)
+        self.assertIn("--last-reply-id", cookbook)
+        self.assertIn("nextLastReplyId", notes)
+        self.assertIn("revenueEstJpy", notes)
+        self.assertIn("selectableFactorsList", notes)
+        self.assertIn("recentOperatingIncomeJpy", notes)
+
+        for purpose in [
+            "Common stock detail UI",
+            "Upper/lower price bounds",
+            "Sales composition",
+            "Business/holding composition",
+            "Dividend yield history",
+        ]:
+            row = next(line for line in catalog.splitlines() if line.startswith(f"| {purpose} |"))
+            with self.subTest(purpose=purpose):
+                self.assertIn("`script-backed`", row)
 
     def test_activation_eval_set_has_balanced_realistic_cases(self):
         evals = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")
@@ -777,6 +838,9 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertEqual(" ".join(text.split()).count("does not call order placement"), 1)
         self.assertIn("order page read-only smoke", text)
         self.assertIn("order page read-only smoke", skill_text)
+        self.assertIn("KR stock page APIs", text)
+        self.assertIn("stops at the first", text)
+        self.assertIn("intentionally excludes the community tab", text)
 
     def test_eval_prompts_cover_core_script_routes(self):
         text = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")

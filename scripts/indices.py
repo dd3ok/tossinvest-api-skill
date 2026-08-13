@@ -252,6 +252,10 @@ def fetch_index_payload(
             )
         )
     if include_daily_quotes:
+        payload["dailyQuoteRequest"] = {
+            "count": daily_quote_count,
+            "from": daily_quote_from,
+        }
         payload["dailyQuotes"] = api.get_result(
             build_index_daily_quotes_path(
                 code,

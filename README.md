@@ -24,7 +24,7 @@
 - KOSPI 같은 지수와 일별 시세표, 환율 차트와 위젯, 채권·원자재 지표
 - 증시 캘린더, 경제지표·실적 발표 일정, 국내·해외 캘린더 탭
 - 국내·미국 실시간 차트 top100와 `투자위험 주식 숨기기`, 투자자 매매 동향, 브로커 순위, 스크리너 조건 검색
-- 공개 주식 메인 페이지의 AI·상태 보조 정보와 정제된 주식·라운지 댓글·답글·커뮤니티 랭킹
+- 공개 주식 메인 페이지의 AI·상태 보조 정보와 정제된 추천 피드·주식/라운지 댓글·답글·커뮤니티 게시물 퍼머링크·랭킹
 
 ### 차트 및 로컬 계산
 
@@ -163,12 +163,14 @@ python3 scripts/stock_page.py --code SOXL --comment-limit 5
 python3 scripts/market_search.py --query 삼성전자 --section product --section news --limit 5
 python3 scripts/community_comments.py --code NVDA --sort popular --limit 5
 python3 scripts/community_comments.py --lounge-id LOUNGE_193394 --sort popular --limit 5
+python3 scripts/community_comments.py --post-id 309855038 --pages 2 --limit 20
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market us --duration realtime --hide-investment-risk
 python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_market_amount --market us --duration 20d
 python3 scripts/dashboard_ranking.py --kind indicator
 python3 scripts/indices.py --code KGG01P --include-daily-quotes --daily-quote-count 20
-python3 scripts/theme.py --tag us --tics-id 925 --include-sector-stocks --include-sector-etfs --sector-nation us
+python3 scripts/sector.py --kind detail --tics-id 925 --nation us --stock-page 1 --etf-page 1 --news-page 1
+python3 scripts/feed.py --kind recommended
 python3 scripts/feed.py --kind community-ranking --community-ranking profit --community-limit 10
 python3 scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
 python3 scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5

@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import re
+from datetime import date
 from typing import Any
 
 import tossinvest_api as api
@@ -25,6 +27,7 @@ MDS_INFO_TYPES = {
     "short-selling-trend": "short-selling-trend",
     "cfd": "cfd",
 }
+_MDS_KEY_RE = re.compile(r"^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$")
 
 INVESTOR_NET_FIELDS = (
     ("individual", "개인", "netIndividualsBuyVolume"),
@@ -88,6 +91,8 @@ def build_trend_path(
     size: int | None,
     start: str | None,
     end: str | None,
+    page: int = 1,
+    key: str | None = None,
 ) -> str:
     product_code = api.normalize_product_code(code)
     if trend_type in RECENT_TYPES:
@@ -105,17 +110,31 @@ def build_trend_path(
     if trend_type == "broker":
         return api.build_path("/api/v1/mds/broker/trading-ranking", {"code": product_code})
     if trend_type in MDS_INFO_TYPES:
-        return build_mds_info_path(product_code, trend_type, size)
+        return build_mds_info_path(product_code, trend_type, size, page, key)
     raise ValueError(f"unknown trend type: {trend_type}")
 
 
-def build_mds_info_path(code: str, mds_type: str, size: int | None) -> str:
+def build_mds_info_path(
+    code: str,
+    mds_type: str,
+    size: int | None,
+    page: int = 1,
+    key: str | None = None,
+) -> str:
     product_code = api.normalize_product_code(code)
     if mds_type not in MDS_INFO_TYPES:
         raise ValueError(f"unknown mds info type: {mds_type}")
+    page = api.require_int_range("page", page, minimum=1, maximum=1000)
+    if key is not None:
+        if not _MDS_KEY_RE.fullmatch(key):
+            raise ValueError("key must be a YYYY-MM-DD paging key")
+        try:
+            date.fromisoformat(key)
+        except ValueError as exc:
+            raise ValueError("key must be a YYYY-MM-DD paging key") from exc
     return api.build_path(
         f"/api/v1/mds/info/{MDS_INFO_TYPES[mds_type]}",
-        {"stockCode": product_code, "number": 1, "size": size},
+        {"stockCode": product_code, "number": page, "size": size, "key": key},
     )
 
 
@@ -126,13 +145,23 @@ def fetch_trading_trend(
     start: str | None,
     end: str | None,
     normalize_investors: bool = False,
+    page: int = 1,
+    key: str | None = None,
 ) -> dict[str, Any]:
     if size is not None:
         size = api.require_int_range("size", size, minimum=1, maximum=120)
-    result = api.get_result(build_trend_path(code, trend_type, size, start, end))
+    if trend_type not in MDS_INFO_TYPES and (page != 1 or key is not None):
+        raise ValueError("--page and --key are supported only for credit/lending/short/CFD data")
+    result = api.get_result(build_trend_path(code, trend_type, size, start, end, page, key))
     payload = {
         "code": api.normalize_product_code(code),
         "type": trend_type,
+        "request": {
+            "size": size,
+            "from": start,
+            "to": end,
+            **({"page": page, "key": key} if trend_type in MDS_INFO_TYPES else {}),
+        },
         "result": result,
     }
     if normalize_investors and trend_type in {"investor", "fixed"}:
@@ -155,6 +184,16 @@ def main() -> int:
         help="Trend endpoint to call",
     )
     parser.add_argument("--size", type=int, default=60, help="Rows for recent/paged endpoints")
+    parser.add_argument(
+        "--page",
+        type=int,
+        default=1,
+        help="MDS page number for credit, lending, short-selling, or CFD",
+    )
+    parser.add_argument(
+        "--key",
+        help="MDS YYYY-MM-DD paging key from the previous response pagingParam",
+    )
     parser.add_argument("--from", dest="start", help="Start date YYYY-MM-DD")
     parser.add_argument("--to", dest="end", help="End date YYYY-MM-DD")
     parser.add_argument(
@@ -173,6 +212,8 @@ def main() -> int:
         args.start,
         args.end,
         normalize_investors=args.normalize_investors,
+        page=args.page,
+        key=args.key,
     )
     api.emit_output(api.render_json(payload), args.output)
     return 0
