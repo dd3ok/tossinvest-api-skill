@@ -4,6 +4,8 @@ Checked: 2026-07-10
 
 Additional sector-page live-overlay check: 2026-08-04.
 
+Additional bounded public-channel and page check: 2026-08-13.
+
 Status: browser-observed, unofficial, unstable, and script-backed by a minimal bounded client.
 
 This document describes the read-only real-time interface in API-reference form. It is not a TossInvest-supported public API or a complete AsyncAPI contract. The optional `scripts/websocket_prices.py` client implements only the confirmed public trade/index/crypto subset with memory-only guest metadata and strict runtime limits.
@@ -53,10 +55,13 @@ Use these evidence labels:
 - `observed-transport`: host, path, Upgrade result, or subprotocol token directly confirmed in sanitized browser network metadata.
 - `observed-protocol`: deployed browser client code directly identifies STOMP protocol/frame use without retaining raw frames.
 - `confirmed-public`: a logged-out public page visibly changed while the destination was active.
+- `bounded-live`: at least one read-only event arrived in one no-retry sample capped at 10 seconds and one event. It does not establish delivery guarantees, field requiredness, or schema completeness.
 - `observed-code`: the current public page and deployed bundle contain the destination and consumer path, but a live event was not independently observed in the bounded check.
 - `observed-field`: the deployed page consumer reads the field name; requiredness, type, units, and enum values remain undocumented unless stated separately.
 - `defined-unverified`: a builder exists, but logged-out public use was not established.
 - `excluded`: do not subscribe, implement, or present as supported by this skill.
+
+A zero-event bounded sample never promotes a channel to `bounded-live`; it remains inconclusive even when the deployed bundle contains a matching consumer.
 
 Logged-out page access is not credential-free access. The browser supplies ephemeral guest connection metadata associated with names such as `UTK`, `device-id`, `connection-id`, and platform metadata such as `Web/wts`.
 
@@ -109,7 +114,7 @@ version:1.2
 ^@
 ```
 
-STOMP 1.2 requires `accept-version` and `host` on `CONNECT`, and `version` on `CONNECTED`. The `host` value identifies a STOMP virtual host; this reference does not assume it equals the WebSocket hostname or document a TossInvest-specific value. `heart-beat` is optional. A server may reject session establishment and SHOULD send an `ERROR` frame before closing; a failed `SUBSCRIBE` MUST produce `ERROR` followed by close. These are protocol rules; the presence of optional headers in TossInvest frames is not guaranteed by this reference.
+STOMP 1.2 requires `accept-version` and `host` on `CONNECT`, and `version` on `CONNECTED`. The bundled standalone client sends the public WebSocket hostname as `host`; a bounded 2026-08-13 live sample accepted that frame. This does not establish that the hostname is TossInvest's unique or required STOMP virtual-host value. The complete `CONNECT` frame remains sensitive and is never shown or retained. `heart-beat` is optional. A server may reject session establishment and SHOULD send an `ERROR` frame before closing; a failed `SUBSCRIBE` MUST produce `ERROR` followed by close. These are protocol rules; the presence of optional headers in TossInvest frames is not guaranteed by this reference.
 
 ## Channels And Destinations
 
@@ -117,17 +122,17 @@ STOMP treats destination strings as opaque. Their names do not prove delivery gu
 
 ### Available logged-out page channels
 
-| Channel ID | STOMP destination | Parameters | Message | Evidence |
-| --- | --- | --- | --- | --- |
-| `krStockTradeUpdates` | `/topic/v1/kr/stock/trade/{productCode}` | TossInvest KR product code | `TradeUpdatePayload` | `confirmed-public` |
-| `usStockTradeUpdates` | `/topic/v1/us/stock/trade/{productCode}` | TossInvest US product/source code | `TradeUpdatePayload` | `confirmed-public` |
-| `krStockIndexUpdates` | `/topic/v1/kr/stock/index/{productCode}` | KR index product code | `IndexUpdatePayload` | `confirmed-public` for KOSPI |
-| `usStockIndexUpdates` | `/topic/v1/us/stock/index/{productCode}` | US index product code | `IndexUpdatePayload` | `observed-code` |
-| `cryptoVwapUpdates` | `/topic/v1/crypto/vwap/{productCode}` | crypto-like product code, for example `VWAP.KRW-BTC` | `CryptoVwapUpdatePayload` | `confirmed-public` |
+| Channel ID | STOMP destination | Parameters | Message | Evidence | Bundled client |
+| --- | --- | --- | --- | --- | --- |
+| `krStockTradeUpdates` | `/topic/v1/kr/stock/trade/{productCode}` | TossInvest KR product code | `TradeUpdatePayload` | `confirmed-public`; `A005930` was `bounded-live` | Supported for typed KR product codes |
+| `usStockTradeUpdates` | `/topic/v1/us/stock/trade/{productCode}` | TossInvest US product/source code | `TradeUpdatePayload` | `confirmed-public`; `US20100311002` was `bounded-live` | Supported for typed US product/source codes |
+| `krStockIndexUpdates` | `/topic/v1/kr/stock/index/{productCode}` | Exactly `KGG01P` or `QGG01P` | `IndexUpdatePayload` | Both codes were `bounded-live` | Supported for those two codes only |
+| `usStockIndexUpdates` | `/topic/v1/us/stock/index/{productCode}` | Observed public-page codes | `IndexUpdatePayload` | `observed-code` only | Disabled |
+| `cryptoVwapUpdates` | `/topic/v1/crypto/vwap/{productCode}` | Exactly `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, or `VWAP.KRW-SOL` | `CryptoVwapUpdatePayload` | Every listed code was `bounded-live` | Supported for those four codes only |
 
-`confirmed-public` means usable by the logged-out page, not usable without guest connection metadata. `observed-code` means the public code path exists but this reference does not claim an independently witnessed live event.
+`confirmed-public` means usable by the logged-out page, not usable without guest connection metadata. In the 2026-08-13 bounded checks, each supported KR index and crypto code received one event; `A005930` and `US20100311002` had also each produced one event in bounded public checks. These single events establish neither ongoing availability nor delivery guarantees. Arbitrary `VWAP.*` codes are not supported.
 
-The bundled client narrows the generic index builders to the public pages verified on 2026-07-10: KR `KGG01P`; US `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI`. It rejects login-gated `DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1`. A destination builder existing in deployed JavaScript is not by itself permission to subscribe.
+The deployed bundle contains US index consumers for `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI`, but each code received zero events in its no-retry 10-second check. Those results are inconclusive, so US index support remains disabled. The client also rejects login-gated `DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1`. A destination builder existing in deployed JavaScript is not by itself permission to subscribe.
 
 Destination builders also contained optional values named `viewType`, `fallbackKrx`, and `investMode`. Their format and effect are implementation details, not supported parameters.
 
@@ -164,7 +169,7 @@ destination:/topic/v1/kr/stock/trade/A005930
 ^@
 ```
 
-STOMP 1.2 requires a connection-unique `id` and `destination`. The `ack` header is optional; the TossInvest acknowledgment mode is not documented here. Do not add an `ack` mode based only on the STOMP default.
+STOMP 1.2 requires a connection-unique `id` and `destination`. The `ack` header is optional and defaults to `auto`. Both the deployed worker and the bundled standalone client omit `ack`; the bounded 2026-08-13 live sample accepted that subscription shape. This records an observed compatible shape, not a broader TossInvest acknowledgment guarantee.
 
 ## Message Envelope
 
@@ -183,6 +188,21 @@ message-id:<server-generated-id>
 STOMP 1.2 requires `destination`, `message-id`, and `subscription` on `MESSAGE`. An `ack` header is required only for explicit-ack subscriptions. `content-type`, `content-length`, and other headers are conditional and must not be claimed as TossInvest guarantees without fresh sanitized evidence.
 
 The 2026-07-10 live client check observed TossInvest `MESSAGE` frames that carried `subscription`, `message-id`, `content-type`, and `content-length` but omitted `destination`. The bundled parser therefore matches the connection-local `subscription` id when `destination` is absent. This is a defensive compatibility rule for the observed deployment, not a change to the STOMP standard.
+
+### Normalized JSONL output contract
+
+For every accepted JSON object, the standalone client injects `kind` and the canonical `destination`. It then copies only scalar or `null` values from this 26-key allowlist:
+
+```text
+code, exchange, currency, changeType,
+base, baseKrw, close, closeKrw,
+open, openKrw, high, highKrw, low, lowKrw,
+high52w, low52w, high1y, low1y,
+volume, cumulativeVolume, cumulativeAmount, cumulativeAmountKrw,
+dt, tradeType, session, tradingStrength
+```
+
+Here, scalar means a JSON string, number, or boolean. Unknown keys and array/object values are removed; explicit `null` is preserved only for an allowlisted key. This is a privacy- and stability-oriented normalized-output contract, not a claim that all listed keys occur on every channel or event.
 
 ## Payload Schemas And Synthetic Examples
 
@@ -219,11 +239,25 @@ dt
 
 ### `IndexUpdatePayload`
 
-The standard-index page consumer reads `base` and `close`. Additional field names, requiredness, and types are unverified.
+The standard-index page consumer reads `base` and `close`. The bounded samples below contained additional top-level fields, but their requiredness and cross-event stability remain unverified.
 
 ### `CryptoVwapUpdatePayload`
 
-The crypto-like page consumer reads `base`, `close`, and `cumulativeVolume`, mapping the cumulative value to its displayed volume state. Additional field names, requiredness, and types are unverified.
+The crypto-like page consumer reads `base`, `close`, and `cumulativeVolume`, mapping the cumulative value to its displayed volume state. The bounded samples below contained additional top-level fields, but their requiredness and cross-event stability remain unverified.
+
+### 2026-08-13 bounded sampled shapes
+
+The following field/type inventories came from one event per named code in read-only, no-retry checks capped at 10 seconds and one event. Values, guest metadata, complete frames, and raw payloads were not retained. JSON represents both integer-like and floating-point observations as `number`.
+
+| Sample | Top-level `string` fields | Top-level `number` fields |
+| --- | --- | --- |
+| KR stock `A005930` | `changeType`, `code`, `currency`, `dt`, `exchange`, `session`, `tradeType` | `base`, `close`, `cumulativeAmount`, `cumulativeVolume`, `tradingStrength`, `volume` |
+| KR indices `KGG01P`, `QGG01P` | `changeType`, `code`, `dt` | `base`, `close`, `cumulativeAmount`, `cumulativeVolume` |
+| Crypto `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, `VWAP.KRW-SOL` | `changeType`, `code`, `currency`, `dt` | `base`, `close`, `cumulativeAmount`, `cumulativeVolume` |
+
+An earlier one-event bounded check for US stock `US20100311002` retained normalized output fields only: injected `kind` and `destination`, plus `base`, `baseKrw`, `changeType`, `close`, `closeKrw`, `code`, `cumulativeAmount`, `cumulativeAmountKrw`, `cumulativeVolume`, `currency`, `dt`, `session`, `tradeType`, `tradingStrength`, and `volume`. That list is not a raw top-level payload inventory.
+
+Every row is a single-event sample, not a complete schema. It establishes neither requiredness nor fields that may appear in other events, sessions, or future deployments.
 
 ### `BidOfferUpdatePayload`
 
@@ -299,15 +333,19 @@ A client that mirrors this page should:
 | `/stocks/{code}/news` | Header and shared live-price overlays | News and filings use HTTP paging. |
 | `/stocks/{code}/transaction-status` | Header and shared live-price overlays | Investor/program/credit/lending/short-selling/CFD tables use HTTP. |
 | `/stocks/{code}/community` | Header and shared live-price overlays | Posts, comments, and replies use HTTP cursor paging. |
-| `/indices/{index-code}` | Standard index or crypto-like current value | History, news, and related products use HTTP. |
+| `/indices/{index-code}` | Client-supported current-value streams are limited to KR indices `KGG01P`, `QGG01P` and crypto codes `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, `VWAP.KRW-SOL` | History, news, and related products use HTTP; no other index-route code is implied to be WebSocket-supported. |
 | `/indices/exchange-rate` | None verified | Exchange-rate widgets are HTTP-only. |
 | `/` live-chart top100 | Up to 100 per-product trade subscriptions update current price and change rate | Ranking membership and non-price columns use a 10-second HTTP snapshot. |
+| `/` general index and market cards | Deployed cards reuse standard-index or crypto current-value consumers for their selected code (`observed-code`) | Card membership and metadata use HTTP; only the exact client-supported code allowlists above may be streamed. |
 | `/` search dialog | Popular/result stock prices and related-stock chips register with the shared live-price store | Search results, news, industry matches, and ranking membership use HTTP. |
 | `/` trending-industry tab | No ranking-specific WebSocket channel was found | Industry rank, change, amount, market cap, representative stock, and signal are HTTP data. |
 | `/` domestic-investor-trend tab | Stock price/change cells can use shared trade-price overlays | Foreign/institution/individual rank, time, and net amount use HTTP ranking data. |
 | `/screener` | Each rendered result can register a shared trade-price subscription | Filters, count, sort columns, and 50-row numbered pages use HTTP; the UI virtualizes/infinite-loads them. |
 | `/sector/{tics-id}` | Stock cards and comparison/ETF rows can use shared trade-price overlays | Sector metrics, membership, sorting, signals, and list loading use HTTP. |
+| `/calendar/economic-indicator` | The selected indicator can reuse a standard-index or crypto current-value consumer (`observed-code`) | Calendar, history, and selector data use HTTP; the page creates no separate calendar destination and does not expand standalone client support. |
 | `/feed/news` and `/feed/recommended` | Related-stock price chips can use the shared live-price store | Articles, posts, reactions, comments, and feed cursors use HTTP; mutations require login and are excluded. |
+
+This table is an explicit route scope, not a pattern that grants support to similar pages. A route absent from the table does not imply a WebSocket destination. Community lists, post permalinks, and lounge/feed content are HTTP cursor surfaces; they may reuse a related-stock price chip, but no separate community, permalink, or lounge WebSocket destination was found.
 
 On 2026-08-04, `/sector/79?nation=US` showed current price/change changes in
 two visible stock rows during a 3.5-second observation while rank, market cap,
@@ -318,12 +356,13 @@ found; stock rows reuse `/topic/v1/{market}/stock/trade/{productCode}`.
 
 ### Logged-out navigation check
 
-The following routes were opened directly from or alongside the public home-page links on 2026-07-10. This is an access observation, not a promise that the same route will remain public.
+The following routes were opened directly from or alongside public home-page links on 2026-07-10, with the `QGG01P` page and bounded event rechecked on 2026-08-13. This is an access observation, not a promise that the same route will remain public.
 
 | Result | Routes | Real-time conclusion |
 | --- | --- | --- |
-| Public index pages | `/indices/COMP.NAI`, `/indices/SPX.CBI`, `/indices/RGI..VIX`, `/indices/KGG01P`, `/indices/SOX.NAI` | Standard-index current values use the index destination in deployed consumers. |
-| Public crypto-like page | `/indices/VWAP.KRW-BTC` | Current value and cumulative volume use the crypto VWAP destination. |
+| Public KR index pages | `/indices/KGG01P`, `/indices/QGG01P` | Both pages were public and both exact codes produced one bounded-live index event; both are client-supported. |
+| Public US index pages | `/indices/COMP.NAI`, `/indices/SPX.CBI`, `/indices/RGI..VIX`, `/indices/SOX.NAI` | Deployed consumers use index destinations, but every code produced zero events in its bounded 10-second check; the client keeps US indices disabled. |
+| Public crypto-like pages | `/indices/VWAP.KRW-BTC`, `/indices/VWAP.KRW-ETH`, `/indices/VWAP.KRW-XRP`, `/indices/VWAP.KRW-SOL` | All four logged-out pages rendered live value and volume data, and every exact code produced one bounded-live crypto VWAP event. |
 | Public but HTTP-only in this check | `/indices/exchange-rate` | No exchange-rate WebSocket consumer was verified. |
 | Redirected to sign-in | `/indices/DJI.DJI`, `/indices/RFU.NQc1`, `/indices/RFU.GCv1` | Stop at the redirect. Do not bootstrap or subscribe on behalf of a login-gated page. |
 
@@ -360,12 +399,18 @@ The bundled minimal client deliberately performs no automatic reconnect. It exit
 6. Stop on login prompts, access-control errors, challenges, account/order data, or exhausted bounded reconnect attempts. Do not bypass controls.
 7. Report every TossInvest-specific claim as unstable and browser-internal. Do not present it as the official TossInvest Open API.
 
-Install and run the bounded client only when continuous updates are needed:
+Install and run the bounded client only when continuous updates are needed.
+Keep the optional dependency in a project-local environment:
 
 ```text
-python -m pip install -r requirements-websocket.txt
-python scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
+python -m venv .venv
+.venv/bin/python -m pip install -r requirements-websocket.txt
+.venv/bin/python scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
 ```
+
+On Windows PowerShell, replace `.venv/bin/python` with
+`.venv/Scripts/python.exe`. After a one-off check, deactivate if needed and
+remove only `.venv`; the global Python environment remains unchanged.
 
 The client accepts only typed stock/index/crypto code flags and reconstructs each canonical destination internally. It does not accept a server URL, destination, guest key, device id, connection id, cookie, or authorization header from the command line or environment. The optional dependency is exactly pinned and hash-checked in `requirements-websocket.txt`.
 

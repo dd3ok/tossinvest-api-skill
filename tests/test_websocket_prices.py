@@ -62,7 +62,7 @@ class WebSocketPriceTests(unittest.TestCase):
         subscriptions = stream.build_subscriptions(
             kr_stocks=["005930", "A005930"],
             us_stocks=["us20100311002"],
-            us_indices=["COMP.NAI", "SPX.CBI"],
+            kr_indices=["KGG01P", "QGG01P"],
             crypto=["vwap.krw-btc"],
         )
 
@@ -71,8 +71,8 @@ class WebSocketPriceTests(unittest.TestCase):
             [
                 ("kr-stock", "A005930"),
                 ("us-stock", "US20100311002"),
-                ("us-index", "COMP.NAI"),
-                ("us-index", "SPX.CBI"),
+                ("kr-index", "KGG01P"),
+                ("kr-index", "QGG01P"),
                 ("crypto", "VWAP.KRW-BTC"),
             ],
         )
@@ -83,10 +83,30 @@ class WebSocketPriceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at most 100"):
             stream.build_subscriptions(kr_stocks=[f"A{i:06d}" for i in range(101)])
 
-    def test_build_subscriptions_rejects_login_gated_indices(self):
-        for code in ("DJI.DJI", "RFU.NQc1", "RFU.GCv1"):
+    def test_build_subscriptions_rejects_unconfirmed_or_login_gated_indices(self):
+        for code in (
+            "COMP.NAI",
+            "SPX.CBI",
+            "RGI..VIX",
+            "SOX.NAI",
+            "DJI.DJI",
+            "RFU.NQc1",
+            "RFU.GCv1",
+        ):
             with self.subTest(code=code), self.assertRaisesRegex(ValueError, "login-gated"):
                 stream.build_subscriptions(us_indices=[code])
+
+    def test_build_subscriptions_uses_exact_public_crypto_allowlist(self):
+        subscriptions = stream.build_subscriptions(
+            crypto=["VWAP.KRW-BTC", "VWAP.KRW-ETH", "VWAP.KRW-XRP", "VWAP.KRW-SOL"]
+        )
+
+        self.assertEqual(
+            [item.code for item in subscriptions],
+            ["VWAP.KRW-BTC", "VWAP.KRW-ETH", "VWAP.KRW-XRP", "VWAP.KRW-SOL"],
+        )
+        with self.assertRaisesRegex(ValueError, "Unsupported crypto VWAP"):
+            stream.build_subscriptions(crypto=["VWAP.KRW-FAKE"])
 
     def test_validate_subscriptions_rejects_injected_or_duplicate_destinations(self):
         injected = stream.Subscription("kr-stock", "A005930", "/topic/v1/kr/stock/bidoffer/A005930")
@@ -158,6 +178,42 @@ class WebSocketPriceTests(unittest.TestCase):
             },
         )
 
+    def test_normalize_message_preserves_bounded_live_crypto_fields(self):
+        subscription = stream.Subscription(
+            "crypto", "VWAP.KRW-BTC", "/topic/v1/crypto/vwap/VWAP.KRW-BTC"
+        )
+        event = stream.normalize_message(
+            subscription,
+            {
+                "code": "VWAP.KRW-BTC",
+                "currency": "KRW",
+                "changeType": "RISE",
+                "base": 1,
+                "close": 2,
+                "cumulativeVolume": 3.0,
+                "cumulativeAmount": 4.0,
+                "dt": "synthetic",
+                "unknownScalar": "drop",
+                "unknownNested": {"drop": True},
+            },
+        )
+
+        self.assertEqual(
+            event,
+            {
+                "kind": "crypto",
+                "destination": "/topic/v1/crypto/vwap/VWAP.KRW-BTC",
+                "code": "VWAP.KRW-BTC",
+                "currency": "KRW",
+                "changeType": "RISE",
+                "base": 1,
+                "close": 2,
+                "cumulativeVolume": 3.0,
+                "cumulativeAmount": 4.0,
+                "dt": "synthetic",
+            },
+        )
+
     def test_fetch_guest_key_returns_result_without_logging_or_persisting_it(self):
         class Response:
             def __enter__(self):
@@ -200,9 +256,23 @@ class WebSocketPriceTests(unittest.TestCase):
         self.assertEqual(count, 1)
         self.assertEqual(events[0]["close"], 100)
         self.assertNotIn("authorization", events[0])
-        self.assertEqual(module.options["subprotocols"], ["v12.stomp"])
-        self.assertTrue(any(message.startswith("CONNECT\n") for message in socket.sent))
-        self.assertTrue(any(message.startswith("SUBSCRIBE\n") for message in socket.sent))
+        self.assertEqual(
+            module.options,
+            {
+                "url": stream.SOCKET_URL,
+                "subprotocols": [stream.SUBPROTOCOL],
+                "origin": stream.PUBLIC_ORIGIN,
+                "timeout": stream.CONNECT_TIMEOUT_SECONDS,
+            },
+        )
+        connect_frame = next(message for message in socket.sent if message.startswith("CONNECT\n"))
+        self.assertEqual(connect_frame.count(f"\nhost:{stream.SOCKET_HOST}\n"), 1)
+        subscribe_frame = next(
+            message for message in socket.sent if message.startswith("SUBSCRIBE\n")
+        )
+        self.assertIn("\nid:sub-0\n", subscribe_frame)
+        self.assertIn(f"\ndestination:{destination}\n", subscribe_frame)
+        self.assertNotIn("\nack:", subscribe_frame)
         self.assertTrue(any(message.startswith("UNSUBSCRIBE\n") for message in socket.sent))
         self.assertTrue(
             any(
@@ -264,6 +334,20 @@ class WebSocketPriceTests(unittest.TestCase):
         self.assertIn("--require-hashes", requirements)
         self.assertIn("websocket-client==1.9.0", requirements)
         self.assertIn("sha256:", requirements)
+
+    def test_missing_dependency_routes_to_project_local_install_docs(self):
+        real_import = stream.importlib.import_module
+
+        def import_without_websocket(name):
+            if name == "websocket":
+                raise ModuleNotFoundError(name)
+            return real_import(name)
+
+        with patch(
+            "websocket_prices.importlib.import_module", side_effect=import_without_websocket
+        ):
+            with self.assertRaisesRegex(RuntimeError, r"project-local `\.venv`"):
+                stream._load_websocket_module()
 
 
 if __name__ == "__main__":

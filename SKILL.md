@@ -94,11 +94,16 @@ python3 scripts/market_search.py --query 삼성전자 --section product --sectio
 python3 scripts/quote.py --code A005930 --ticks 5
 python3 scripts/sector.py --kind ranking --nation us --duration 1d
 python3 scripts/sector.py --kind detail --tics-id 79 --nation us --stock-page 1 --news-page 1
-python3 scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
+.venv/bin/python scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
 python3 scripts/calendar.py --year-month 2026-05
 python3 scripts/page_api_check.py --code A005930 --pages order,analytics,news,transaction-status
 ```
+
+The WebSocket command assumes the project-local optional dependency setup in
+[Real-Time WebSocket Streams](references/script-cookbook.md#real-time-websocket-streams),
+including the Windows Python path substitution. The other HTTP commands use only
+the standard library.
 
 `page_api_check.py --pages order` is an order page read-only smoke check only; it does not call order placement or mutation APIs.
 

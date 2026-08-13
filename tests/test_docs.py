@@ -265,10 +265,10 @@ class DocumentationPromptTests(unittest.TestCase):
             "- `scripts/websocket_prices.py`로 공개 국내·미국 주식 체결, 지수, 가상자산형 지수 이벤트",
             "- 서버·STOMP 연결·destination·`MESSAGE`·payload 필드는",
             "- 임시 게스트 연결값은 실행 중 메모리에서만 사용하며",
-            "- 공개 지수(`KGG01P`, `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI`)만 허용",
+            "- 실수신이 확인된 공개 국내 지수(`KGG01P`, `QGG01P`)만 허용",
             "- 국내·미국 top100은 단일 WebSocket 랭킹 채널이 아니라 10초 주기 HTTP 랭킹 snapshot",
             "- 호가·예상체결·종목상태 채널은 공개 시장 데이터만 실험적으로 다루며",
-            "- 검색·산업·투자자 동향·조건검색·뉴스 목록과 `scripts/quote.py`",
+            "- 검색·산업·투자자 동향·조건검색·뉴스의 핵심 목록은 HTTP로 조회하며",
             "[WebSocket 클라이언트 운영 제한](#websocket-클라이언트-운영-제한)",
             "A005930 실시간 체결 WebSocket 채널과 수신 필드를 설명해줘",
             "API 카탈로그, WebSocket API 레퍼런스",
@@ -289,6 +289,7 @@ class DocumentationPromptTests(unittest.TestCase):
             "## Errors, Heartbeats, And Close Behavior",
             "observed-transport",
             "observed-protocol",
+            "bounded-live",
             "101 Switching Protocols",
             "Sec-WebSocket-Protocol",
             "CONNECT → CONNECTED",
@@ -324,6 +325,7 @@ class DocumentationPromptTests(unittest.TestCase):
             "50 rows per numbered page",
             "Logged-out navigation check",
             "/indices/DJI.DJI",
+            "/indices/QGG01P",
             "quote panel itself displayed that login was required",
             "SharedWorker",
             "batches of 20 with a 400-ms interval",
@@ -335,7 +337,7 @@ class DocumentationPromptTests(unittest.TestCase):
             "receiveKrStockIndexUpdate",
             "receiveUsStockIndexUpdate",
             "host:<virtual-host>",
-            "does not assume it equals the WebSocket hostname",
+            "public WebSocket hostname as `host`",
             "final-frame delivery can still be lost on connection reset",
             "https://datatracker.ietf.org/doc/html/rfc6455",
             "https://stomp.github.io/stomp-specification-1.2.html",
@@ -370,13 +372,14 @@ class DocumentationPromptTests(unittest.TestCase):
         )
         self.assertNotIn("websocat", websocket)
         self.assertNotIn("new WebSocket(", websocket)
-        self.assertNotIn("host:realtime-socket.tossinvest.com", websocket)
+        self.assertNotRegex(websocket, r"(?m)^host:realtime-socket\.tossinvest\.com$")
         self.assertNotIn('"base": 0', websocket)
         self.assertIn("로그인하지 않고 토스증권 A005930", eval_prompts)
         self.assertIn("내 UTK를 줄 테니", eval_prompts)
         self.assertTrue((ROOT / "requirements-websocket.txt").exists())
         self.assertTrue((ROOT / "scripts" / "websocket_prices.py").exists())
         self.assertIn("scripts/websocket_prices.py", skill)
+        self.assertIn(".venv/bin/python scripts/websocket_prices.py", skill)
         self.assertIn("scripts/websocket_prices.py", readme)
         for expected in [
             "### WebSocket 클라이언트 운영 제한",
@@ -387,7 +390,10 @@ class DocumentationPromptTests(unittest.TestCase):
             "DISCONNECT` 영수증을 최대 1초 대기",
             "python3 -m unittest tests.test_websocket_prices -v",
             "python3 -m pip install --dry-run -r requirements-websocket.txt",
-            "--crypto VWAP.KRW-BTC --duration 15 --max-events 1",
+            ".venv/bin/python scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 15 --max-events 1",
+            "VWAP.KRW-ETH",
+            "정상 종료했더라도 이벤트가 0건이면",
+            ".venv/Scripts/python.exe",
         ]:
             with self.subTest(readme_operating_limit=expected):
                 self.assertIn(expected, readme)
@@ -642,6 +648,8 @@ class DocumentationPromptTests(unittest.TestCase):
         ]:
             self.assertIn(live_chart, catalog)
         self.assertIn("/indices/QGG01P", catalog)
+        for crypto_code in ("BTC", "ETH", "XRP", "SOL"):
+            self.assertIn(f"/indices/VWAP.KRW-{crypto_code}", catalog)
         self.assertIn("FX 1y/day:1", evals)
         self.assertIn("--range 1w --step min:10 --include-crypto-prices", evals)
 

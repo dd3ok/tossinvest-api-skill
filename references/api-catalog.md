@@ -12,6 +12,8 @@ Additional public page/bundle/API recheck: 2026-07-16 for home search sections, 
 Additional industry dashboard/sector recheck: 2026-08-04 against `buildId=-owfs18fvEJHIHRdmooMq` for home industry URL state, `/sector/79?nation=US|KR`, stock/ETF/news paging, comparison-index clicks, current response shapes, and shared live-price overlays.
 Additional route-manifest/bundle recheck: 2026-08-05 against `buildId=-owfs18fvEJHIHRdmooMq` for `/bonds/[guid]`, `/news`, `/cheetah`, `/cheetah/[code]`, `/stocks/[code]/option`, and account/marketing route boundaries.
 Additional public surface/API recheck: 2026-08-13 against `buildId=Sg-uF4vsHmKQC9cjQ6v9G` for all five stock-detail tabs, stock news/disclosure state, community post and lounge pages, recommended-feed v4 paging/sanitization, `/indices/QGG01P`, `/screener/[preset-id]`, numbered/cursor pagination, and 44 bounded read-only page endpoints. The old and current route manifests both contained 59 routes with no additions or removals.
+
+Additional bounded WebSocket recheck: 2026-08-13 for public KR/US stock, KR/US index, and `VWAP.KRW-*` channels; see [Unofficial WebSocket API Reference](websocket-api-reference.md) for exact event evidence and client allowlists.
 Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`
@@ -1017,13 +1019,16 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/?ranking-type=domestic_investor_trend` | Investor buy/sell rankings from dashboard ranking APIs |
 | `https://www.tossinvest.com/?market={market}&live-chart={id}&duration={duration}` | `market` is `kr` or `us`; seven public live-chart ids: `biggest_total_amount`, `biggest_total_volume`, `biggest_market_amount`, `biggest_market_volume`, `heavy_soar`, `heavy_descent`, and `realtime_stock`; map only the cataloged duration values |
 | `https://www.tossinvest.com/indices/KGG01P` | Index info, price, chart, indicator/news widgets |
-| `https://www.tossinvest.com/indices/QGG01P` | Public KOSDAQ index price/chart, investor trend, numbered daily net-buy and daily-quote pages, and news; WebSocket support is not implied without a separate stream check |
+| `https://www.tossinvest.com/indices/QGG01P` | Public KOSDAQ index price/chart, investor trend, numbered daily net-buy and daily-quote pages, and news; a bounded 2026-08-13 public WebSocket check received one standard-index event |
 | `https://www.tossinvest.com/indices/COMP.NAI` | Public Nasdaq index value plus HTTP history/news/related-stock widgets |
 | `https://www.tossinvest.com/indices/SPX.CBI` | Public S&P 500 index value plus HTTP history/news/related-stock widgets |
 | `https://www.tossinvest.com/indices/RGI..VIX` | Public VIX index value plus HTTP history/news/related-stock widgets |
 | `https://www.tossinvest.com/indices/SOX.NAI` | Public Philadelphia Semiconductor index value plus HTTP widgets |
 | `https://www.tossinvest.com/indices/exchange-rate` | FX chart and exchange-rate widgets |
 | `https://www.tossinvest.com/indices/VWAP.KRW-BTC` | Crypto-like index info/price, `r-chart/crypto`, crypto prices, related news |
+| `https://www.tossinvest.com/indices/VWAP.KRW-ETH` | Public Ethereum crypto-like index price/chart, daily quotes, and live value |
+| `https://www.tossinvest.com/indices/VWAP.KRW-XRP` | Public XRP crypto-like index price/chart, daily quotes, and live value |
+| `https://www.tossinvest.com/indices/VWAP.KRW-SOL` | Public Solana crypto-like index price/chart, daily quotes, and live value |
 | `https://www.tossinvest.com/bonds/{guid}` | Bundle-observed bond detail and simple metadata; requires a current public page GUID and live response-shape recheck |
 | `https://www.tossinvest.com/indices/DJI.DJI` | Redirected to sign-in in the 2026-07-10 logged-out check; stop rather than probing a destination |
 | `https://www.tossinvest.com/indices/RFU.NQc1` | Redirected to sign-in in the 2026-07-10 logged-out check |
