@@ -48,7 +48,7 @@ _CRYPTO_CODE = re.compile(r"^VWAP\.[A-Z0-9._-]{2,40}$")
 _HEADER_ESCAPE = re.compile(r"\\([\\cnr])")
 
 _PUBLIC_KR_INDICES = frozenset({"KGG01P", "QGG01P"})
-_PUBLIC_US_INDICES: frozenset[str] = frozenset()
+_PUBLIC_US_INDICES = frozenset({"COMP.NAI", "SPX.CBI", "RGI..VIX", "SOX.NAI"})
 _PUBLIC_CRYPTO_CODES = frozenset({"VWAP.KRW-BTC", "VWAP.KRW-ETH", "VWAP.KRW-SOL", "VWAP.KRW-XRP"})
 
 _PAYLOAD_FIELDS = (
@@ -617,7 +617,7 @@ def main() -> int:
         "--us-index",
         action="append",
         default=[],
-        help="US index streaming is unconfirmed and currently disabled",
+        help="Supported US index: COMP.NAI, SPX.CBI, RGI..VIX, or SOX.NAI",
     )
     parser.add_argument(
         "--crypto",

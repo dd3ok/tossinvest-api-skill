@@ -83,16 +83,16 @@ class WebSocketPriceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "at most 100"):
             stream.build_subscriptions(kr_stocks=[f"A{i:06d}" for i in range(101)])
 
-    def test_build_subscriptions_rejects_unconfirmed_or_login_gated_indices(self):
-        for code in (
-            "COMP.NAI",
-            "SPX.CBI",
-            "RGI..VIX",
-            "SOX.NAI",
-            "DJI.DJI",
-            "RFU.NQc1",
-            "RFU.GCv1",
-        ):
+    def test_build_subscriptions_uses_exact_public_us_index_allowlist(self):
+        supported = ("COMP.NAI", "SPX.CBI", "RGI..VIX", "SOX.NAI")
+        subscriptions = stream.build_subscriptions(us_indices=list(supported))
+
+        self.assertEqual(
+            [(item.kind, item.code, item.destination) for item in subscriptions],
+            [("us-index", code, f"/topic/v1/us/stock/index/{code}") for code in supported],
+        )
+
+        for code in ("DJI.DJI", "RFU.NQc1", "RFU.GCv1", "UNKNOWN"):
             with self.subTest(code=code), self.assertRaisesRegex(ValueError, "login-gated"):
                 stream.build_subscriptions(us_indices=[code])
 

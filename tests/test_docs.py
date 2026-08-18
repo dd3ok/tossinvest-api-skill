@@ -265,7 +265,7 @@ class DocumentationPromptTests(unittest.TestCase):
             "- `scripts/websocket_prices.py`로 공개 국내·미국 주식 체결, 지수, 가상자산형 지수 이벤트",
             "- 서버·STOMP 연결·destination·`MESSAGE`·payload 필드는",
             "- 임시 게스트 연결값은 실행 중 메모리에서만 사용하며",
-            "- 실수신이 확인된 공개 국내 지수(`KGG01P`, `QGG01P`)만 허용",
+            "- 실수신이 확인된 공개 국내 지수(`KGG01P`, `QGG01P`)와 미국 지수(`COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI`)만 허용",
             "- 국내·미국 top100은 단일 WebSocket 랭킹 채널이 아니라 10초 주기 HTTP 랭킹 snapshot",
             "- 호가·예상체결·종목상태 채널은 공개 시장 데이터만 실험적으로 다루며",
             "- 검색·산업·투자자 동향·조건검색·뉴스의 핵심 목록은 HTTP로 조회하며",

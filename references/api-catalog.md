@@ -14,6 +14,7 @@ Additional route-manifest/bundle recheck: 2026-08-05 against `buildId=-owfs18fvE
 Additional public surface/API recheck: 2026-08-13 against `buildId=Sg-uF4vsHmKQC9cjQ6v9G` for all five stock-detail tabs, stock news/disclosure state, community post and lounge pages, recommended-feed v4 paging/sanitization, `/indices/QGG01P`, `/screener/[preset-id]`, numbered/cursor pagination, and 44 bounded read-only page endpoints. The old and current route manifests both contained 59 routes with no additions or removals.
 
 Additional bounded WebSocket recheck: 2026-08-13 for public KR/US stock, KR/US index, and `VWAP.KRW-*` channels; see [Unofficial WebSocket API Reference](websocket-api-reference.md) for exact event evidence and client allowlists.
+Additional bounded US-index WebSocket recheck: 2026-08-18 during regular US market hours for `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI`; each exact code delivered an event.
 Status labels added: 2026-04-20
 Observed from: public `tossinvest.com` pages in a non-authenticated browser session.
 Primary data host: `https://wts-info-api.tossinvest.com`

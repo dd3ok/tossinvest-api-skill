@@ -36,7 +36,7 @@
 - `scripts/websocket_prices.py`로 공개 국내·미국 주식 체결, 지수, 가상자산형 지수 이벤트를 제한된 시간·건수만큼 JSONL로 수신
 - 서버·STOMP 연결·destination·`MESSAGE`·payload 필드는 [비공식 WebSocket API 레퍼런스](references/websocket-api-reference.md)에 정리
 - 임시 게스트 연결값은 실행 중 메모리에서만 사용하며 CLI 인자·환경 파일·로그·출력·저장 파일에 남기지 않음
-- 실수신이 확인된 공개 국내 지수(`KGG01P`, `QGG01P`)만 허용하고, 이벤트가 확인되지 않은 미국 지수와 로그인 전환 지수에서는 즉시 중단함
+- 실수신이 확인된 공개 국내 지수(`KGG01P`, `QGG01P`)와 미국 지수(`COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI`)만 허용하고, 로그인 전환 또는 allowlist 밖 지수에서는 즉시 중단함
 - 호가·예상체결·종목상태 채널은 공개 시장 데이터만 실험적으로 다루며 로그인·주문·계좌 작업과 연결하지 않음
 - 국내·미국 top100은 단일 WebSocket 랭킹 채널이 아니라 10초 주기 HTTP 랭킹 snapshot과 최대 100개 종목별 체결 구독을 결합함
 - 검색·산업·투자자 동향·조건검색·뉴스의 핵심 목록은 HTTP로 조회하며, 화면에 보이는 종목 가격은 공용 체결 이벤트가 덧씌워질 수 있음; `scripts/quote.py`의 현재가·호가·체결 틱은 HTTP 조회
@@ -178,6 +178,7 @@ python3 scripts/feed.py --kind community-ranking --community-ranking profit --co
 .venv/bin/python scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
 .venv/bin/python scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
 .venv/bin/python scripts/websocket_prices.py --kr-index QGG01P --duration 10 --max-events 5
+.venv/bin/python scripts/websocket_prices.py --us-index COMP.NAI --duration 10 --max-events 5
 .venv/bin/python scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 10 --max-events 5
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
 python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
@@ -200,10 +201,10 @@ HTTP 조회 스크립트는 요청할 때 실행되고 응답을 받으면 종�
 
 | 항목 | 현재 동작 |
 | --- | --- |
-| 지원 스트림 | 국내·미국 주식 체결, 공개 KR 지수, 검증된 `VWAP.KRW-*` 가상자산형 지수 |
-| 공개 지수 allowlist | KR `KGG01P`, `QGG01P`; US 지수는 bounded 확인에서 이벤트가 없어 현재 비활성화 |
+| 지원 스트림 | 국내·미국 주식 체결, 공개 KR·US 지수, 검증된 `VWAP.KRW-*` 가상자산형 지수 |
+| 공개 지수 allowlist | KR `KGG01P`, `QGG01P`; US `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI` |
 | 가상자산형 지수 allowlist | `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, `VWAP.KRW-SOL` |
-| 즉시 차단 | 실수신이 확인되지 않은 미국 지수, 로그인 전환 지수, 임의 destination·서버 URL·인증값 입력 |
+| 즉시 차단 | 로그인 전환 지수, allowlist 밖 지수, 임의 destination·서버 URL·인증값 입력 |
 | 실행 상한 | 로컬 클라이언트 1개, 중복 제거된 구독 최대 100개, 실행 300초, 출력 1,000건 |
 | 부하 제한 | 구독 20개 / 400ms, STOMP 프레임 256KiB, WebSocket 수신 메시지 1MiB |
 | 메모리·출력 | 게스트 연결값은 메모리에서만 사용하고 제거하며, allowlist 필드만 JSONL로 출력; 첫 이벤트 즉시 flush 후 20건 또는 500ms 단위 flush |
