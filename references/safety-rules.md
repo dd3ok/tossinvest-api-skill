@@ -9,7 +9,7 @@
 - Do not run high-frequency polling, unbounded concurrent fan-out, large batch scraping, rate limit bypass, anti-bot bypass, or automated retries after access-control failures.
 - A single public top100 view may maintain at most 100 deduplicated product subscriptions on one shared connection. Do not run multiple top100 categories concurrently, duplicate destinations, or churn the entire set when only a code diff changed.
 - The bundled standalone client must keep its single-process lock, exact canonical destination validation, 20-subscription/400-ms pacing, 256-KiB STOMP frame limit, 1-MiB inbound message limit, bounded event count, and batched normalized output. Do not add a raw destination, server URL, token, or connection-header input.
-- Stream only the bounded-live public index allowlist (`KGG01P`, `QGG01P`). Keep `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI` disabled because their bounded checks delivered no event; treat `DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1` as login-gated and stop without subscribing.
+- Stream only the bounded-live public index allowlist: KR (`KGG01P`, `QGG01P`) and US (`COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI`). Treat `DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1` as login-gated and stop without subscribing.
 - Stream crypto VWAP only for the bounded-live allowlist (`VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, `VWAP.KRW-SOL`); reject arbitrary `VWAP.*` codes.
 - WebSocket reconnects must use bounded exponential backoff with jitter and a maximum retry count. Stop immediately on 403, 429, challenge, login redirect, policy rejection, or repeated abnormal close.
 - Keep event buffers bounded and emit only normalized allowlisted market fields. Never dump or persist raw frames or complete STOMP `CONNECT`/`MESSAGE` frames.

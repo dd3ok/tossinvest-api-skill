@@ -6,6 +6,8 @@ Additional sector-page live-overlay check: 2026-08-04.
 
 Additional bounded public-channel and page check: 2026-08-13.
 
+Additional bounded US-index channel check during regular market hours: 2026-08-18.
+
 Status: browser-observed, unofficial, unstable, and script-backed by a minimal bounded client.
 
 This document describes the read-only real-time interface in API-reference form. It is not a TossInvest-supported public API or a complete AsyncAPI contract. The optional `scripts/websocket_prices.py` client implements only the confirmed public trade/index/crypto subset with memory-only guest metadata and strict runtime limits.
@@ -127,12 +129,12 @@ STOMP treats destination strings as opaque. Their names do not prove delivery gu
 | `krStockTradeUpdates` | `/topic/v1/kr/stock/trade/{productCode}` | TossInvest KR product code | `TradeUpdatePayload` | `confirmed-public`; `A005930` was `bounded-live` | Supported for typed KR product codes |
 | `usStockTradeUpdates` | `/topic/v1/us/stock/trade/{productCode}` | TossInvest US product/source code | `TradeUpdatePayload` | `confirmed-public`; `US20100311002` was `bounded-live` | Supported for typed US product/source codes |
 | `krStockIndexUpdates` | `/topic/v1/kr/stock/index/{productCode}` | Exactly `KGG01P` or `QGG01P` | `IndexUpdatePayload` | Both codes were `bounded-live` | Supported for those two codes only |
-| `usStockIndexUpdates` | `/topic/v1/us/stock/index/{productCode}` | Observed public-page codes | `IndexUpdatePayload` | `observed-code` only | Disabled |
+| `usStockIndexUpdates` | `/topic/v1/us/stock/index/{productCode}` | Exactly `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, or `SOX.NAI` | `IndexUpdatePayload` | Every listed code was `bounded-live` | Supported for those four codes only |
 | `cryptoVwapUpdates` | `/topic/v1/crypto/vwap/{productCode}` | Exactly `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, or `VWAP.KRW-SOL` | `CryptoVwapUpdatePayload` | Every listed code was `bounded-live` | Supported for those four codes only |
 
 `confirmed-public` means usable by the logged-out page, not usable without guest connection metadata. In the 2026-08-13 bounded checks, each supported KR index and crypto code received one event; `A005930` and `US20100311002` had also each produced one event in bounded public checks. These single events establish neither ongoing availability nor delivery guarantees. Arbitrary `VWAP.*` codes are not supported.
 
-The deployed bundle contains US index consumers for `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI`, but each code received zero events in its no-retry 10-second check. Those results are inconclusive, so US index support remains disabled. The client also rejects login-gated `DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1`. A destination builder existing in deployed JavaScript is not by itself permission to subscribe.
+The 2026-08-13 US-index checks ran outside regular market hours and received zero events, so they remained inconclusive. During regular US market hours on 2026-08-18, `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI` each produced one event in an independent no-retry check capped at 10 seconds and one event. The client supports those exact four codes and still rejects login-gated `DJI.DJI`, `RFU.NQc1`, and `RFU.GCv1`. A destination builder existing in deployed JavaScript is not by itself permission to subscribe.
 
 Destination builders also contained optional values named `viewType`, `fallbackKrx`, and `investMode`. Their format and effect are implementation details, not supported parameters.
 
@@ -257,6 +259,8 @@ The following field/type inventories came from one event per named code in read-
 
 An earlier one-event bounded check for US stock `US20100311002` retained normalized output fields only: injected `kind` and `destination`, plus `base`, `baseKrw`, `changeType`, `close`, `closeKrw`, `code`, `cumulativeAmount`, `cumulativeAmountKrw`, `cumulativeVolume`, `currency`, `dt`, `session`, `tradeType`, `tradingStrength`, and `volume`. That list is not a raw top-level payload inventory.
 
+The 2026-08-18 one-event checks for US indices `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, and `SOX.NAI` also retained normalized output fields only. Every code produced injected `kind` and `destination`, plus `base`, `changeType`, `close`, `code`, `cumulativeAmount`, `cumulativeVolume`, `dt`, and `volume`. This common list is not a raw top-level payload inventory and does not make any field required.
+
 Every row is a single-event sample, not a complete schema. It establishes neither requiredness nor fields that may appear in other events, sessions, or future deployments.
 
 ### `BidOfferUpdatePayload`
@@ -333,7 +337,7 @@ A client that mirrors this page should:
 | `/stocks/{code}/news` | Header and shared live-price overlays | News and filings use HTTP paging. |
 | `/stocks/{code}/transaction-status` | Header and shared live-price overlays | Investor/program/credit/lending/short-selling/CFD tables use HTTP. |
 | `/stocks/{code}/community` | Header and shared live-price overlays | Posts, comments, and replies use HTTP cursor paging. |
-| `/indices/{index-code}` | Client-supported current-value streams are limited to KR indices `KGG01P`, `QGG01P` and crypto codes `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, `VWAP.KRW-SOL` | History, news, and related products use HTTP; no other index-route code is implied to be WebSocket-supported. |
+| `/indices/{index-code}` | Client-supported current-value streams are limited to KR indices `KGG01P`, `QGG01P`; US indices `COMP.NAI`, `SPX.CBI`, `RGI..VIX`, `SOX.NAI`; and crypto codes `VWAP.KRW-BTC`, `VWAP.KRW-ETH`, `VWAP.KRW-XRP`, `VWAP.KRW-SOL` | History, news, and related products use HTTP; no other index-route code is implied to be WebSocket-supported. |
 | `/indices/exchange-rate` | None verified | Exchange-rate widgets are HTTP-only. |
 | `/` live-chart top100 | Up to 100 per-product trade subscriptions update current price and change rate | Ranking membership and non-price columns use a 10-second HTTP snapshot. |
 | `/` general index and market cards | Deployed cards reuse standard-index or crypto current-value consumers for their selected code (`observed-code`) | Card membership and metadata use HTTP; only the exact client-supported code allowlists above may be streamed. |
@@ -356,12 +360,12 @@ found; stock rows reuse `/topic/v1/{market}/stock/trade/{productCode}`.
 
 ### Logged-out navigation check
 
-The following routes were opened directly from or alongside public home-page links on 2026-07-10, with the `QGG01P` page and bounded event rechecked on 2026-08-13. This is an access observation, not a promise that the same route will remain public.
+The following routes were opened directly from or alongside public home-page links on 2026-07-10, with the `QGG01P` page and bounded event rechecked on 2026-08-13 and the four public US-index channels rechecked during regular market hours on 2026-08-18. This is an access observation, not a promise that the same route will remain public.
 
 | Result | Routes | Real-time conclusion |
 | --- | --- | --- |
 | Public KR index pages | `/indices/KGG01P`, `/indices/QGG01P` | Both pages were public and both exact codes produced one bounded-live index event; both are client-supported. |
-| Public US index pages | `/indices/COMP.NAI`, `/indices/SPX.CBI`, `/indices/RGI..VIX`, `/indices/SOX.NAI` | Deployed consumers use index destinations, but every code produced zero events in its bounded 10-second check; the client keeps US indices disabled. |
+| Public US index pages | `/indices/COMP.NAI`, `/indices/SPX.CBI`, `/indices/RGI..VIX`, `/indices/SOX.NAI` | Every exact code produced one bounded-live index event during regular US market hours; all four are client-supported. |
 | Public crypto-like pages | `/indices/VWAP.KRW-BTC`, `/indices/VWAP.KRW-ETH`, `/indices/VWAP.KRW-XRP`, `/indices/VWAP.KRW-SOL` | All four logged-out pages rendered live value and volume data, and every exact code produced one bounded-live crypto VWAP event. |
 | Public but HTTP-only in this check | `/indices/exchange-rate` | No exchange-rate WebSocket consumer was verified. |
 | Redirected to sign-in | `/indices/DJI.DJI`, `/indices/RFU.NQc1`, `/indices/RFU.GCv1` | Stop at the redirect. Do not bootstrap or subscribe on behalf of a login-gated page. |
