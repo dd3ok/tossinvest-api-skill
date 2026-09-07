@@ -1,5 +1,10 @@
 # Response Notes
 
+Use this document to interpret returned fields and sanitized output. Request
+paths and parameters are maintained in the domain references linked from the
+[API catalog](api-catalog.md#choose-a-reference); CLI examples are in the
+[cookbook](script-cookbook.md#contents).
+
 Most checked endpoints returned JSON with a top-level `result` key. Do not assume this for every endpoint; verify the response shape before writing client code or documentation.
 
 ## Contents

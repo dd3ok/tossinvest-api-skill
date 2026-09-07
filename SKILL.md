@@ -42,22 +42,22 @@ TossInvest has a separate official Open API documented at `developers.tossinvest
 | User intent | Prefer | Reference |
 | --- | --- | --- |
 | Stock summary, metadata, overview | `scripts/stock_summary.py` | [Stock and price shapes](references/response-notes.md#stock-and-price-shapes) |
-| Display ticker or symbol resolution for later product-code calls | `scripts/stock_page.py --no-ai-detail --no-comments` | [Stock summary APIs](references/api-catalog.md#stock-summary-apis) |
-| Stock main-page composite with price, AI detail, public status helpers, and sanitized public comments | `scripts/stock_page.py` | [Public community and main-page APIs](references/api-catalog.md#public-community-and-main-page-apis) |
-| Current quote, order book, intraday ticks | `scripts/quote.py` | [Stock summary APIs](references/api-catalog.md#stock-summary-apis) |
-| KR/US candles, RSI, SMA, EMA, MACD, Bollinger Bands | `scripts/stock_chart.py` | [Stock and price shapes](references/response-notes.md#stock-and-price-shapes) |
-| Filings or company news | `scripts/filings.py`, `scripts/news.py` | [Filings and news APIs](references/api-catalog.md#filings-and-news-apis) |
-| Financial statements, estimates, valuation, dividend | `scripts/financials.py` | [Financial POST shapes](references/response-notes.md#financial-post-shapes) |
+| Display ticker or symbol resolution for later product-code calls | `scripts/stock_page.py --no-ai-detail --no-comments` | [Stock summary APIs](references/api-stock.md#stock-summary-apis) |
+| Stock main-page composite with price, AI detail, public status helpers, and sanitized public comments | `scripts/stock_page.py` | [Public community and main-page APIs](references/api-community.md#public-community-and-main-page-apis) |
+| Current quote, order book, intraday ticks | `scripts/quote.py` | [Stock summary APIs](references/api-stock.md#stock-summary-apis) |
+| KR/US candles, RSI, SMA, EMA, MACD, Bollinger Bands | `scripts/stock_chart.py` | [Stock candle contracts and identifiers](references/api-stock.md#chart-apis) |
+| Filings or company news | `scripts/filings.py`, `scripts/news.py` | [Filings and news APIs](references/api-stock.md#filings-and-news-apis) |
+| Financial statements, estimates, valuation, dividend | `scripts/financials.py` | [Analytics API contracts](references/api-stock.md#analytics-apis) |
 | Investor trading trend, broker ranking, public transaction-status credit/lending/short-selling/CFD tabs (not account credit/margin), pension fund | `scripts/trading_trend.py`, `scripts/pension_fund_trend.py` | [Financials and investor trend](references/script-cookbook.md#financials-and-investor-trend); [Transaction status shapes](references/response-notes.md#transaction-status-shapes) |
 | Market-wide search across products, news, industries, screeners, and indices | `scripts/market_search.py` | [Market search](references/script-cookbook.md#market-search) |
-| Current TICS industry ranking and `/sector/{tics-id}` detail, stock/ETF/news paging | `scripts/sector.py` | [Themes and TICS](references/script-cookbook.md#themes-and-tics); [Current sector behavior](references/api-catalog.md#current-industry-dashboard-and-sector-behavior) |
-| Legacy theme endpoint discovery and related-theme ranking; TICS IDs remain current | `scripts/theme.py` | [Dashboard and discovery APIs](references/api-catalog.md#dashboard-and-discovery-apis) |
-| Market indices, daily quote-table paging, FX charts, exchange-rate widgets, bond indicators, commodity indicators, crypto-like index pages | `scripts/indices.py` | [Index and market indicator APIs](references/api-catalog.md#index-and-market-indicator-apis) |
-| Public `/bonds/{guid}` detail or simple bond metadata | Re-verify the current public page; no bundled script yet | [Bond APIs](references/api-catalog.md#bond-apis) |
-| Market calendar, economic indicators, earnings dates, domestic/overseas calendar tabs | `scripts/calendar.py` | [Calendar APIs](references/api-catalog.md#calendar-apis) |
-| Home rankings, top100 by amount/volume/surge/decline, the public `투자위험 주식 숨기기` filter, AI summary signals | `scripts/dashboard_ranking.py` | [Dashboard and discovery APIs](references/api-catalog.md#dashboard-and-discovery-apis) |
-| Sanitized recommended feed posts and public community rankings, plus news discovery | `scripts/feed.py` | [Feed and news APIs](references/api-catalog.md#feed-and-news-apis) |
-| Sanitized public stock/lounge comments, replies, and community post permalinks | `scripts/community_comments.py` | [Public community shapes](references/response-notes.md#public-community-shapes) |
+| Current TICS industry ranking and `/sector/{tics-id}` detail, stock/ETF/news paging | `scripts/sector.py` | [Themes and TICS](references/script-cookbook.md#themes-and-tics); [Current sector behavior](references/api-market.md#current-industry-dashboard-and-sector-behavior) |
+| Legacy theme endpoint discovery and related-theme ranking; TICS IDs remain current | `scripts/theme.py` | [Dashboard and discovery APIs](references/api-market.md#dashboard-and-discovery-apis) |
+| Market indices, daily quote-table paging, FX charts, exchange-rate widgets, bond indicators, commodity indicators, crypto-like index pages | `scripts/indices.py` | [Index and market indicator APIs](references/api-market.md#index-and-market-indicator-apis) |
+| Public `/bonds/{guid}` detail or simple bond metadata | Re-verify the current public page; no bundled script yet | [Bond APIs](references/api-market.md#bond-apis) |
+| Market calendar, economic indicators, earnings dates, domestic/overseas calendar tabs | `scripts/calendar.py` | [Calendar APIs](references/api-market.md#calendar-apis) |
+| Home rankings, top100 by amount/volume/surge/decline, the public `투자위험 주식 숨기기` filter, AI summary signals | `scripts/dashboard_ranking.py` | [Home ranking values and filters](references/api-market.md#home-ranking-values-and-filters); [Dashboard endpoints](references/api-market.md#dashboard-and-discovery-apis) |
+| Sanitized recommended feed posts and public community rankings, plus news discovery | `scripts/feed.py` | [Feed and news APIs](references/api-community.md#feed-and-news-apis) |
+| Sanitized public stock/lounge comments, replies, and community post permalinks | `scripts/community_comments.py` | [Comment GUIDs, cursors and sanitization](references/api-community.md#public-community-and-main-page-apis) |
 | Screener counts, filter metadata, RSI filters, price/technical presets | `scripts/screener_count.py` | [Screener cookbook](references/script-cookbook.md#screener); [examples/filters](examples/filters) |
 | Page-level stock API smoke checks | `scripts/page_api_check.py` (KR only); `scripts/community_comments.py` separately for social pages | [Page API smoke checks](references/script-cookbook.md#page-api-smoke-checks) |
 | Bounded public KR/US stock trade, public index, or crypto VWAP stream | `scripts/websocket_prices.py` after optional dependency install | [Available logged-out channels](references/websocket-api-reference.md#available-logged-out-page-channels); [WebSocket cookbook](references/script-cookbook.md#real-time-websocket-streams) |
@@ -69,6 +69,11 @@ Route details:
 
 After choosing a routing-table row, use [references/script-cookbook.md](references/script-cookbook.md) for command recipes, caveats, and collector design pitfalls. Use [references/response-notes.md](references/response-notes.md) for response fields, endpoint compatibility notes, and sanitizer details.
 
+Read only the sections relevant to the request. API contracts live in the linked
+stock, market, or feed/community reference. For an unfamiliar endpoint's status,
+host rules, or page evidence, start with the
+[common API catalog](references/api-catalog.md#verification-status).
+
 ## Input And Output Contract
 
 - Distinguish a KR stock code (`A005930`), US display ticker (`NVDA`), TossInvest product/source code (`US20100311002`), numeric TICS ID (`79`), case-sensitive index code (`SPX.CBI`), and public bond GUID. Resolve a display symbol through the verified `code-or-symbol` route before a US chart or WebSocket call that requires a product/source code.
@@ -78,7 +83,7 @@ After choosing a routing-table row, use [references/script-cookbook.md](referenc
 ## Workflow
 
 1. For normal lookups, choose a bundled script from the routing table.
-2. For WebSocket questions or implementation, read [references/websocket-api-reference.md](references/websocket-api-reference.md). Describe the server, STOMP lifecycle, channel/destination, receive operation, message envelope, payload fields, and evidence status. A client may obtain the current logged-out browser guest bootstrap at runtime, but must keep it memory-only and never expose or persist it.
+2. For WebSocket questions or implementation, read the relevant sections of [references/websocket-api-reference.md](references/websocket-api-reference.md). For a snapshot-versus-stream question, use its [HTTP snapshot and stream semantics](references/websocket-api-reference.md#http-snapshot-and-stream-semantics). For API-reference or client implementation work, cover the server, STOMP lifecycle, channel/destination, receive operation, message envelope, payload fields, and evidence status. A client may obtain the current logged-out browser guest bootstrap at runtime, but must keep it memory-only and never expose or persist it.
 3. For missing or drifted endpoints, start from [Known Observed Pages](references/api-catalog.md#known-observed-pages), then follow [references/capture-workflow.md](references/capture-workflow.md).
 4. Exclude telemetry, personalization, login, account, and order calls. For WebSocket work, use only the anonymous public-page bootstrap required for a read-only session, consume it in memory, and discard it when the connection closes.
 5. Prefer `wts-info-api.tossinvest.com` read-only endpoints.
@@ -119,7 +124,7 @@ On HTTP 400/404, non-JSON content, missing `result`, changed response shape, or 
 
 If `/api/v3/stock-prices/details` returns a successful JSON response but omits the requested code or has no matching row, treat that as a target-level stale or endpoint-incompatible product code, not a transport outage. Record the failing target separately, cool it down before the next collector pass, and keep processing the remaining price targets.
 
-Do not infer replacement paths from old endpoint names. Update [references/api-catalog.md](references/api-catalog.md) with the checked date, source page, method, path, params/body, and response shape before updating scripts.
+Do not infer replacement paths from old endpoint names. Update the owning [stock](references/api-stock.md), [market](references/api-market.md), or [feed/community](references/api-community.md) section with the checked date, source page, method, path, params/body, and response shape before updating scripts. Keep shared status/host rules and observed-page evidence in [the common catalog](references/api-catalog.md).
 
 ## Prompt Examples
 
