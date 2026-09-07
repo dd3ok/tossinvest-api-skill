@@ -340,7 +340,7 @@ tossinvest-api-skill/
 | `agents/openai.yaml` | Codex/OpenAI 계열 도구에서 노출할 표시 메타데이터 |
 | `tests/` | 스크립트 헬퍼와 엔드포인트 경로 생성 로직을 검증하는 유지보수자·CI용 테스트 |
 | `SECURITY.md` | 민감한 엔드포인트, 개인정보, 자격 증명 처리 관련 제보 절차 |
-| `LICENSE`, `LICENSE.txt` | MIT 라이선스 본문 |
+| `LICENSE` | MIT 라이선스 본문 |
 
 유지보수자와 CI 검증은 Python 3.12 환경에서 실행합니다. 전체 테스트에서는 잠금된 WebSocket 의존성도 설치해 라이브러리 테스트를 실행합니다.
 
