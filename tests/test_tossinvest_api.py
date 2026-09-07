@@ -450,7 +450,11 @@ class TossInvestApiTests(unittest.TestCase):
         self.assertEqual(captured[0]["method"], "GET")
         self.assertIsNone(captured[0]["data"])
         self.assertNotIn("content-type", captured[0]["headers"])
-        self.assertIn("wts-cert-api.tossinvest.com/api/v4/comments", captured[0]["url"])
+        self.assertEqual(
+            captured[0]["url"],
+            api.CERT_BASE_URL + "/api/v4/comments?subjectType=STOCK"
+            "&subjectId=US20100311002&commentSortType=POPULAR",
+        )
 
     def test_calendar_request_body_serialization_matches_observed_routes(self):
         captured = []
@@ -500,25 +504,34 @@ class TossInvestApiTests(unittest.TestCase):
         self.assertNotIn("content-type", captured[1]["headers"])
 
     def test_redirects_stop_before_any_followup_request_and_close_response(self):
+        class UnreadableBody(io.BytesIO):
+            def read(self, *args):
+                raise AssertionError("Redirect bodies must not be read")
+
         locations = (
             api.BASE_URL + "/api/v2/stock-infos/A000660",
             api.BASE_URL + "/api/v1/login?token=synthetic-redirect-secret",
             "https://example.invalid/login?token=synthetic-redirect-secret",
             "http://wts-info-api.tossinvest.com/api/v2/stock-infos/A005930",
+            "https://[synthetic-redirect-secret]/",
+            "https://[::1",
+            "",
+            None,
         )
         for status in (301, 302, 303, 307, 308):
             for location in locations:
                 with self.subTest(status=status, location=location):
                     requests = []
                     headers = Message()
-                    headers["Location"] = location
+                    if location is not None:
+                        headers["Location"] = location
                     response = urllib.response.addinfourl(
-                        io.BytesIO(b"synthetic-error-body-secret"),
+                        UnreadableBody(b"synthetic-error-body-secret"),
                         headers,
                         api.BASE_URL + "/api/v2/stock-infos/A005930",
                         status,
                     )
-                    response.msg = "Found"
+                    response.msg = "synthetic-redirect-secret"
 
                     class FakeHTTPSHandler(urllib.request.HTTPSHandler):
                         def https_open(self, request):
@@ -528,13 +541,22 @@ class TossInvestApiTests(unittest.TestCase):
                     opener = urllib.request.build_opener(
                         api.no_redirect_handler(), FakeHTTPSHandler()
                     )
-                    with patch.object(api.urllib.request, "build_opener", return_value=opener):
-                        with self.assertRaisesRegex(RuntimeError, "redirect blocked") as raised:
-                            api.request_json("/api/v2/stock-infos/A005930")
+                    stderr = io.StringIO()
+                    with (
+                        patch.object(api.urllib.request, "build_opener", return_value=opener),
+                        patch.dict(api.os.environ, {"TOSSINVEST_DEBUG": "1"}),
+                        patch.object(api.sys, "stderr", stderr),
+                    ):
+                        result = api.run_cli(
+                            lambda: api.request_json("/api/v2/stock-infos/A005930")
+                        )
+                    self.assertEqual(result, 1)
                     self.assertEqual(len(requests), 1)
                     self.assertTrue(response.closed)
-                    self.assertNotIn("synthetic-redirect-secret", str(raised.exception))
-                    self.assertNotIn("synthetic-error-body-secret", str(raised.exception))
+                    self.assertIn(f"HTTP {status}", stderr.getvalue())
+                    self.assertIn("redirect blocked", stderr.getvalue())
+                    self.assertNotIn("synthetic-redirect-secret", stderr.getvalue())
+                    self.assertNotIn("synthetic-error-body-secret", stderr.getvalue())
 
     def test_http_errors_do_not_read_or_emit_response_bodies_and_close_them(self):
         class UnreadableBody(io.BytesIO):
@@ -625,6 +647,11 @@ class TossInvestApiTests(unittest.TestCase):
             api.BASE_URL + "/api/v1/login?ignored=",
             api.BASE_URL + "?ignored=",
             api.BASE_URL + "#ignored",
+            *(
+                base + suffix
+                for base in (api.BASE_URL, api.CERT_BASE_URL)
+                for suffix in ("?", "#", "?#")
+            ),
             "https://user:password@wts-info-api.tossinvest.com",
         )
         with patch.object(api.urllib.request, "build_opener") as opener:

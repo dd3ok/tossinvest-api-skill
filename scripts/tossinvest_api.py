@@ -124,10 +124,11 @@ def no_redirect_handler() -> Any:
     # Defer the base class lookup: urllib's email dependency may import this
     # directory's calendar.py while urllib.request is still initializing.
     class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
-        def redirect_request(
-            self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str
-        ) -> None:
-            return None
+        def http_error_302(self, req: Any, fp: Any, code: int, msg: str, headers: Any) -> None:
+            # Reject before urllib parses Location; callers close the HTTPError response.
+            raise urllib.error.HTTPError(req.full_url, code, "Redirect blocked", headers, fp)
+
+        http_error_301 = http_error_303 = http_error_307 = http_error_308 = http_error_302
 
     return NoRedirectHandler()
 
@@ -249,8 +250,8 @@ def validate_request_target(base_url: str, path: str) -> None:
     if (
         parsed_base.scheme != "https"
         or parsed_base.path
-        or parsed_base.query
-        or parsed_base.fragment
+        or "?" in base_url
+        or "#" in base_url
         or parsed_base.username is not None
         or parsed_base.password is not None
     ):
