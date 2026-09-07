@@ -337,7 +337,7 @@ def fetch_guest_key(timeout: int = CONNECT_TIMEOUT_SECONDS) -> str:
     try:
         opener = urllib.request.build_opener(api.no_redirect_handler())
         with opener.open(request, timeout=timeout) as response:
-            body = response.read(MAX_GUEST_RESPONSE_BYTES + 1)
+            body = api.read_response_bytes(response, limit=MAX_GUEST_RESPONSE_BYTES)
     except urllib.error.HTTPError as exc:
         status = exc.code
         exc.close()
