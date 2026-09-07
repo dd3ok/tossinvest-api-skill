@@ -22,6 +22,8 @@ from typing import Any
 BASE_URL = "https://wts-info-api.tossinvest.com"
 DEFAULT_TIMEOUT = 30
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
+# Local memory bound, not a server response-size limit.
+MAX_RESPONSE_BYTES = 16 * 1024 * 1024
 
 _ALLOWED_INFO_PREFIXES = ("/api/v1/", "/api/v2/", "/api/v3/", "/api/v4/")
 _CALENDAR_CERT_EXACT_PATHS = (
@@ -118,6 +120,18 @@ _DENIED_KEY_MARKERS = (
 _DENIED_EXACT_KEYS = {"ci"}
 
 
+def no_redirect_handler() -> Any:
+    # Defer the base class lookup: urllib's email dependency may import this
+    # directory's calendar.py while urllib.request is still initializing.
+    class NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+        def redirect_request(
+            self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str
+        ) -> None:
+            return None
+
+    return NoRedirectHandler()
+
+
 def normalize_product_code(code: str) -> str:
     value = code.strip().upper()
     if value.isdigit() and len(value) == 6:
@@ -170,16 +184,34 @@ def request_json(
         method=method,
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            content = resp.read().decode("utf-8")
+        opener = urllib.request.build_opener(no_redirect_handler())
+        with opener.open(req, timeout=timeout) as resp:
+            raw_content = resp.read(MAX_RESPONSE_BYTES + 1)
+            if len(raw_content) > MAX_RESPONSE_BYTES:
+                raise RuntimeError(
+                    f"TossInvest API response exceeded the local {MAX_RESPONSE_BYTES}-byte limit "
+                    f"for {method} {path}; stop and reverify the endpoint"
+                )
             try:
-                return json.loads(content)
-            except json.JSONDecodeError as exc:
+                payload = json.loads(raw_content.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                 raise RuntimeError(
                     f"TossInvest API returned non-JSON content for {method} {path}; reverify the endpoint"
                 ) from exc
+            if not isinstance(payload, dict):
+                raise RuntimeError(
+                    f"Unexpected TossInvest response for {method} {path}: "
+                    "top-level JSON must be an object; reverify the endpoint"
+                )
+            return payload
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(_http_error_message(exc, method, path)) from exc
+        try:
+            message = _http_error_message(exc, method, path)
+        finally:
+            exc.close()
+        # HTTPError.msg may echo an untrusted redirect location or other server
+        # details. Keep debug tracebacks from exposing that original exception.
+        raise RuntimeError(message) from None
     except (urllib.error.URLError, socket.timeout, TimeoutError) as exc:
         raise RuntimeError(
             f"TossInvest API request failed for {method} {path}: {exc}; reverify the endpoint"
@@ -187,14 +219,19 @@ def request_json(
 
 
 def result_or_raise(payload: dict[str, Any]) -> Any:
+    if not isinstance(payload, dict):
+        raise RuntimeError("Unexpected TossInvest response: top-level JSON must be an object")
     if "result" not in payload:
         raise RuntimeError("Unexpected TossInvest response: missing top-level result")
     return payload["result"]
 
 
 def _http_error_message(exc: urllib.error.HTTPError, method: str, path: str) -> str:
-    detail = "" if exc.fp is None else exc.read().decode("utf-8", errors="replace")
-    message = f"TossInvest API returned HTTP {exc.code} for {method} {path}: {detail}"
+    # Error pages can echo credentials or contain untrusted markup. Do not read
+    # or emit them; status and the validated request identify the failed lookup.
+    message = f"TossInvest API returned HTTP {exc.code} for {method} {path}"
+    if 300 <= exc.code < 400:
+        message += "; redirect blocked; stop and reverify the public endpoint"
     if exc.code in {403, 429}:
         message += (
             " stop automated retries; do not bypass rate limit or anti-bot checks; "
@@ -209,10 +246,21 @@ def get_result(path: str, **kwargs: Any) -> Any:
 
 def validate_request_target(base_url: str, path: str) -> None:
     parsed_base = urllib.parse.urlsplit(base_url)
+    if (
+        parsed_base.scheme != "https"
+        or parsed_base.path
+        or parsed_base.query
+        or parsed_base.fragment
+        or parsed_base.username is not None
+        or parsed_base.password is not None
+    ):
+        raise RuntimeError("Blocked TossInvest endpoint: base URL must be an HTTPS origin only")
     host = parsed_base.netloc.lower()
     parsed_path = urllib.parse.urlsplit(path)
     if parsed_path.scheme or parsed_path.netloc:
         raise RuntimeError("Blocked TossInvest endpoint: path must be relative")
+    if parsed_path.fragment:
+        raise RuntimeError("Blocked TossInvest endpoint: path must not contain a fragment")
     request_path = _validation_path(parsed_path.path)
     query_pairs = urllib.parse.parse_qsl(parsed_path.query, keep_blank_values=True)
     if parsed_path.query:

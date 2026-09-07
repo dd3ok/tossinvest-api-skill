@@ -4,6 +4,8 @@ import subprocess
 import sys
 import unittest
 import urllib.error
+import urllib.response
+from email.message import Message
 from pathlib import Path
 from unittest.mock import patch
 
@@ -14,6 +16,21 @@ import tossinvest_api as api
 
 
 class TossInvestApiTests(unittest.TestCase):
+    def test_urllib_first_import_with_script_calendar_shadow_does_not_cycle(self):
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                "-c",
+                "import urllib.request; import tossinvest_api; tossinvest_api.no_redirect_handler()",
+            ],
+            cwd=ROOT / "scripts",
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
     def test_normalize_product_code_adds_prefix_for_kr_numeric_codes(self):
         self.assertEqual(api.normalize_product_code("005930"), "A005930")
         self.assertEqual(api.normalize_product_code("a005930"), "A005930")
@@ -118,6 +135,7 @@ class TossInvestApiTests(unittest.TestCase):
         )
 
         message = api._http_error_message(exc, "GET", "/api/v2/stock-infos/A005930")
+        exc.close()
 
         self.assertIn("HTTP 429", message)
         self.assertIn("stop", message)
@@ -401,7 +419,7 @@ class TossInvestApiTests(unittest.TestCase):
             def __exit__(self, exc_type, exc, traceback):
                 return False
 
-            def read(self):
+            def read(self, limit):
                 return b'{"result":{"comments":[]}}'
 
         def fake_urlopen(request, timeout):
@@ -416,7 +434,8 @@ class TossInvestApiTests(unittest.TestCase):
             )
             return FakeResponse()
 
-        with patch.object(api.urllib.request, "urlopen", fake_urlopen):
+        with patch.object(api.urllib.request, "build_opener") as build_opener:
+            build_opener.return_value.open.side_effect = fake_urlopen
             payload = api.request_json(
                 (
                     "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
@@ -443,7 +462,7 @@ class TossInvestApiTests(unittest.TestCase):
             def __exit__(self, exc_type, exc, traceback):
                 return False
 
-            def read(self):
+            def read(self, limit):
                 return b'{"result":{"ok":true}}'
 
         def fake_urlopen(request, timeout):
@@ -458,7 +477,8 @@ class TossInvestApiTests(unittest.TestCase):
             )
             return FakeResponse()
 
-        with patch.object(api.urllib.request, "urlopen", fake_urlopen):
+        with patch.object(api.urllib.request, "build_opener") as build_opener:
+            build_opener.return_value.open.side_effect = fake_urlopen
             api.request_json(
                 "/api/v4/calendar/monthly/2026-05",
                 method="POST",
@@ -478,6 +498,143 @@ class TossInvestApiTests(unittest.TestCase):
         self.assertEqual(captured[1]["method"], "GET")
         self.assertIsNone(captured[1]["data"])
         self.assertNotIn("content-type", captured[1]["headers"])
+
+    def test_redirects_stop_before_any_followup_request_and_close_response(self):
+        locations = (
+            api.BASE_URL + "/api/v2/stock-infos/A000660",
+            api.BASE_URL + "/api/v1/login?token=synthetic-redirect-secret",
+            "https://example.invalid/login?token=synthetic-redirect-secret",
+            "http://wts-info-api.tossinvest.com/api/v2/stock-infos/A005930",
+        )
+        for status in (301, 302, 303, 307, 308):
+            for location in locations:
+                with self.subTest(status=status, location=location):
+                    requests = []
+                    headers = Message()
+                    headers["Location"] = location
+                    response = urllib.response.addinfourl(
+                        io.BytesIO(b"synthetic-error-body-secret"),
+                        headers,
+                        api.BASE_URL + "/api/v2/stock-infos/A005930",
+                        status,
+                    )
+                    response.msg = "Found"
+
+                    class FakeHTTPSHandler(urllib.request.HTTPSHandler):
+                        def https_open(self, request):
+                            requests.append(request.full_url)
+                            return response
+
+                    opener = urllib.request.build_opener(
+                        api.no_redirect_handler(), FakeHTTPSHandler()
+                    )
+                    with patch.object(api.urllib.request, "build_opener", return_value=opener):
+                        with self.assertRaisesRegex(RuntimeError, "redirect blocked") as raised:
+                            api.request_json("/api/v2/stock-infos/A005930")
+                    self.assertEqual(len(requests), 1)
+                    self.assertTrue(response.closed)
+                    self.assertNotIn("synthetic-redirect-secret", str(raised.exception))
+                    self.assertNotIn("synthetic-error-body-secret", str(raised.exception))
+
+    def test_http_errors_do_not_read_or_emit_response_bodies_and_close_them(self):
+        class UnreadableBody(io.BytesIO):
+            def read(self, *args):
+                raise AssertionError("HTTP error bodies must not be read")
+
+        for status in (400, 403, 404, 429, 500):
+            with self.subTest(status=status):
+                body = UnreadableBody(b"synthetic-private-marker")
+                error = urllib.error.HTTPError(
+                    api.BASE_URL, status, "synthetic-private-message", {}, body
+                )
+                with patch.object(api.urllib.request, "build_opener") as opener:
+                    opener.return_value.open.side_effect = error
+                    with self.assertRaisesRegex(RuntimeError, f"HTTP {status}") as raised:
+                        api.request_json("/api/v2/stock-infos/A005930")
+                self.assertTrue(body.closed)
+                self.assertNotIn("synthetic-private", str(raised.exception))
+                if status in (403, 429):
+                    self.assertIn("stop automated retries", str(raised.exception))
+
+    def test_debug_http_errors_keep_tracebacks_without_raw_server_details(self):
+        for status in (302, 400, 403, 429, 500):
+            with self.subTest(status=status):
+                body = io.BytesIO(b"synthetic-private-body")
+                error = urllib.error.HTTPError(
+                    api.BASE_URL + "?token=synthetic-private-url",
+                    status,
+                    "redirect to https://example.invalid/?token=synthetic-private-message",
+                    {"Location": "https://example.invalid/?token=synthetic-private-header"},
+                    body,
+                )
+                stderr = io.StringIO()
+                with patch.object(api.urllib.request, "build_opener") as opener:
+                    opener.return_value.open.side_effect = error
+                    with patch.dict(api.os.environ, {"TOSSINVEST_DEBUG": "1"}):
+                        with patch.object(api.sys, "stderr", stderr):
+                            result = api.run_cli(
+                                lambda: api.request_json("/api/v2/stock-infos/A005930")
+                            )
+                self.assertEqual(result, 1)
+                self.assertTrue(body.closed)
+                self.assertIn("Traceback", stderr.getvalue())
+                self.assertIn(f"HTTP {status}", stderr.getvalue())
+                self.assertIn("/api/v2/stock-infos/A005930", stderr.getvalue())
+                self.assertNotIn("synthetic-private", stderr.getvalue())
+
+    def test_json_read_is_bounded_and_closes_responses_at_size_boundary(self):
+        class RecordingBody(io.BytesIO):
+            def read(self, size=-1):
+                self.read_size = size
+                return super().read(size)
+
+        valid_json = b'{"result":{}}'
+        for extra, should_succeed in ((0, True), (1, False)):
+            with self.subTest(extra=extra):
+                response = RecordingBody(valid_json + b" " * extra)
+                with patch.object(api, "MAX_RESPONSE_BYTES", len(valid_json)):
+                    with patch.object(api.urllib.request, "build_opener") as opener:
+                        opener.return_value.open.return_value = response
+                        if should_succeed:
+                            self.assertEqual(
+                                api.request_json("/api/v2/stock-infos/A005930"), {"result": {}}
+                            )
+                        else:
+                            with self.assertRaisesRegex(RuntimeError, "exceeded the local"):
+                                api.request_json("/api/v2/stock-infos/A005930")
+                self.assertEqual(response.read_size, len(valid_json) + 1)
+                self.assertTrue(response.closed)
+
+    def test_non_object_and_invalid_json_are_drift_errors(self):
+        for raw in (b"null", b"[]", b"42", b'"result"', b"\xff", b"<html>login</html>"):
+            with self.subTest(raw=raw):
+                response = io.BytesIO(raw)
+                with patch.object(api.urllib.request, "build_opener") as opener:
+                    opener.return_value.open.return_value = response
+                    with self.assertRaisesRegex(RuntimeError, "reverify the endpoint"):
+                        api.request_json("/api/v2/stock-infos/A005930")
+                self.assertTrue(response.closed)
+        for payload in (None, [], "result"):
+            with self.subTest(payload=payload):
+                with self.assertRaisesRegex(RuntimeError, "top-level JSON must be an object"):
+                    api.result_or_raise(payload)
+
+    def test_non_origin_bases_cannot_change_the_validated_request_target(self):
+        invalid_bases = (
+            "http://wts-info-api.tossinvest.com",
+            api.BASE_URL + "/api/v1/login?ignored=",
+            api.BASE_URL + "?ignored=",
+            api.BASE_URL + "#ignored",
+            "https://user:password@wts-info-api.tossinvest.com",
+        )
+        with patch.object(api.urllib.request, "build_opener") as opener:
+            for base in invalid_bases:
+                with self.subTest(base=base):
+                    with self.assertRaisesRegex(RuntimeError, "HTTPS origin only"):
+                        api.request_json("/api/v2/stock-infos/A005930", base_url=base)
+            with self.assertRaisesRegex(RuntimeError, "fragment"):
+                api.request_json("/api/v2/stock-infos/A005930#ignored")
+        opener.assert_not_called()
 
     def test_request_json_rejects_sensitive_body_keys_before_network(self):
         with self.assertRaisesRegex(RuntimeError, "sensitive key accountNo"):

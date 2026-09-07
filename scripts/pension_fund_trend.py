@@ -17,6 +17,7 @@ from pathlib import Path
 import tossinvest_api as api
 
 DEFAULT_HISTORY_START = "2019-04-01"
+MAX_HISTORY_YEARS = 20
 
 
 def normalize_date(name: str, value: str) -> str:
@@ -61,6 +62,8 @@ def year_windows(start: str, end: str) -> list[tuple[str, str]]:
     start, end = normalize_date_range(start, end)
     start_date = date.fromisoformat(start)
     end_date = date.fromisoformat(end)
+    if end_date.year - start_date.year + 1 > MAX_HISTORY_YEARS:
+        raise ValueError(f"history must span at most {MAX_HISTORY_YEARS} calendar years")
 
     windows = []
     current_year = start_date.year

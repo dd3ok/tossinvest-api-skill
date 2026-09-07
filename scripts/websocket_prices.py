@@ -28,6 +28,7 @@ SOCKET_URL = f"wss://{SOCKET_HOST}/ws"
 SUBPROTOCOL = "v12.stomp"
 HEARTBEAT_MS = 5_000
 CONNECT_TIMEOUT_SECONDS = 10
+MAX_GUEST_RESPONSE_BYTES = 4_096
 RECEIVE_TIMEOUT_SECONDS = 1
 DISCONNECT_RECEIPT_TIMEOUT_SECONDS = 1
 MAX_SUBSCRIPTIONS = 100
@@ -334,14 +335,23 @@ def fetch_guest_key(timeout: int = CONNECT_TIMEOUT_SECONDS) -> str:
         method="GET",
     )
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            payload = json.loads(response.read(4_097).decode("utf-8"))
+        opener = urllib.request.build_opener(api.no_redirect_handler())
+        with opener.open(request, timeout=timeout) as response:
+            body = response.read(MAX_GUEST_RESPONSE_BYTES + 1)
     except urllib.error.HTTPError as exc:
+        status = exc.code
+        exc.close()
         raise RuntimeError(
-            f"TossInvest guest bootstrap returned HTTP {exc.code}; stop and reverify the public page"
-        ) from exc
-    except (urllib.error.URLError, TimeoutError) as exc:
-        raise RuntimeError("TossInvest guest bootstrap failed; reverify the public page") from exc
+            f"TossInvest guest bootstrap returned HTTP {status}; stop and reverify the public page"
+        ) from None
+    except Exception:
+        raise RuntimeError("TossInvest guest bootstrap failed; reverify the public page") from None
+    if len(body) > MAX_GUEST_RESPONSE_BYTES:
+        raise RuntimeError("TossInvest guest bootstrap exceeded 4096 bytes; stop and reverify")
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except (ValueError, UnicodeError):
+        raise RuntimeError("Unexpected TossInvest guest bootstrap response") from None
     key = payload.get("result") if isinstance(payload, dict) else None
     if not isinstance(key, str) or not key:
         raise RuntimeError("Unexpected TossInvest guest bootstrap response")
@@ -399,16 +409,27 @@ def _stream_prices_locked(
     guest_key = guest_key_fetcher()
     device_id = f"WTS-{uuid.uuid4().hex}"
     connection_id = str(uuid.uuid4())
+    socket = None
     try:
         socket = websocket_module.create_connection(
             SOCKET_URL,
             subprotocols=[SUBPROTOCOL],
             origin=PUBLIC_ORIGIN,
             timeout=CONNECT_TIMEOUT_SECONDS,
+            redirect_limit=0,
         )
-    except Exception as exc:
-        raise RuntimeError("TossInvest WebSocket connection failed; stop and reverify") from exc
-    socket.settimeout(RECEIVE_TIMEOUT_SECONDS)
+        # websocket-client 1.9.0 returns even a redirect response when its
+        # redirect budget is zero. Never send a guest CONNECT before upgrade.
+        if socket.getstatus() != 101:
+            raise RuntimeError("WebSocket upgrade was not accepted")
+        socket.settimeout(RECEIVE_TIMEOUT_SECONDS)
+    except Exception:
+        if socket is not None:
+            try:
+                socket.close()
+            except Exception:
+                pass
+        raise RuntimeError("TossInvest WebSocket connection failed; stop and reverify") from None
     parser = StompParser()
     subscription_by_destination = {item.destination: item for item in subscriptions}
     subscription_ids = {
@@ -433,9 +454,15 @@ def _stream_prices_locked(
                 "platform": "Web/wts",
             },
         )
-        socket.send(connect_frame)
-        connect_frame = guest_key = device_id = connection_id = ""
-        _wait_until_connected(socket, parser, websocket_module)
+        try:
+            socket.send(connect_frame)
+            _wait_until_connected(socket, parser, websocket_module)
+        except Exception:
+            # Transport errors may echo CONNECT or rejected handshake data.
+            # Keep them out of both normal output and TOSSINVEST_DEBUG traces.
+            raise RuntimeError("TossInvest STOMP connection failed; stop and reverify") from None
+        finally:
+            connect_frame = guest_key = device_id = connection_id = ""
         connected = True
         _send_subscriptions(socket, subscriptions, subscription_ids, subscribed_ids)
         last_outbound = time.monotonic()

@@ -8,6 +8,19 @@ Additional bounded public-channel and page check: 2026-08-13.
 
 Additional bounded US-index channel check during regular market hours: 2026-08-18.
 
+Additional bounded KR-stock recheck: 2026-09-07 09:11 KST, `A005930`, one
+connection, no retries, ten-second/one-event caps; one normalized event arrived.
+Only field names/types were retained. This does not refresh the live evidence
+date for US, index, or crypto channels.
+
+The client now rejects guest-bootstrap redirects and bodies over 4096 bytes,
+closes HTTP error responses, and hides their original reason/cause in debug
+output. The optional websocket-client 1.9.0 handshake uses `redirect_limit=0`
+and requires status 101 before sending the in-memory guest CONNECT. The explicit
+status check is necessary because that library can return a redirect response
+even with its redirect budget set to zero. Failed upgrade/STOMP establishment
+closes the socket and suppresses credential-bearing exception causes.
+
 Status: browser-observed, unofficial, unstable, and script-backed by a minimal bounded client.
 
 This document describes the read-only real-time interface in API-reference form. It is not a TossInvest-supported public API or a complete AsyncAPI contract. The optional `scripts/websocket_prices.py` client implements only the confirmed public trade/index/crypto subset with memory-only guest metadata and strict runtime limits.

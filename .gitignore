@@ -12,3 +12,6 @@ dist/
 *.egg-info/
 .coverage
 htmlcov/
+
+# Local API update strategy
+/UPDATE_STRATEGY.local.md

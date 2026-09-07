@@ -8,6 +8,7 @@ import re
 from typing import Any
 
 import community_comments
+import indices
 import tossinvest_api as api
 
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
@@ -51,7 +52,7 @@ def build_news_body(news_type: str, index_code: str | None) -> dict[str, Any]:
     if normalized_type == "INDEX":
         if index_code is None:
             raise ValueError("INDEX news requires --index-code")
-        body["indexCode"] = index_code.strip().upper()
+        body["indexCode"] = indices.normalize_index_code(index_code)
     return body
 
 

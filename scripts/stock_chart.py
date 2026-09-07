@@ -114,8 +114,8 @@ def add_bollinger_bands(
     candles: list[dict[str, Any]], *, period: int = 20, stddev: float = 2.0
 ) -> list[dict[str, Any]]:
     _validate_period(period, "period")
-    if stddev <= 0:
-        raise ValueError("stddev must be positive")
+    if not math.isfinite(stddev) or stddev <= 0:
+        raise ValueError("stddev must be finite and positive")
 
     middle = _calculate_chronological(candles, lambda closes: _calculate_sma(closes, period))
     upper = _calculate_chronological(
@@ -187,6 +187,27 @@ def fetch_chart(
     macd_signal: int,
 ) -> dict[str, Any]:
     count = api.require_int_range("count", count, minimum=1, maximum=MAX_CANDLE_COUNT)
+    for name, periods in (
+        ("rsi_period", [rsi_period] if rsi_period is not None else []),
+        ("sma_period", sma_periods),
+        ("ema_period", ema_periods),
+        ("bollinger_period", [bollinger_period] if bollinger_period is not None else []),
+    ):
+        for period in periods:
+            _validate_period(period, name)
+    if bollinger_period is not None and (
+        not math.isfinite(bollinger_stddev) or bollinger_stddev <= 0
+    ):
+        raise ValueError("stddev must be finite and positive")
+    if include_macd:
+        for name, period in (
+            ("fast_period", macd_fast),
+            ("slow_period", macd_slow),
+            ("signal_period", macd_signal),
+        ):
+            _validate_period(period, name)
+        if macd_fast >= macd_slow:
+            raise ValueError("fast_period must be smaller than slow_period")
     path = build_chart_path(
         code,
         securities_type,

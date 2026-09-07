@@ -13,6 +13,7 @@ Most checked endpoints returned JSON with a top-level `result` key. Do not assum
 - [Public Community Shapes](#public-community-shapes)
 - [Financial POST Shapes](#financial-post-shapes)
 - [Transaction Status Shapes](#transaction-status-shapes)
+- [Transport And Identifier Checks](#transport-and-identifier-checks-2026-09-07)
 
 ## Stock And Price Shapes
 
@@ -154,6 +155,19 @@ price change up/down, 20-day price change up, 5-day consecutive rise/fall,
 
 ## Public Community Shapes
 
+Rechecked 2026-09-07: stock comment `subjectId` is the stock metadata **`guid`**,
+not its `code`. The current browser caller passes that GUID. Resolve all stock
+inputs through `/api/v2/stock-infos/code-or-symbol/{input}` before the comment
+request; for example, `A005930` resolves to `KR7005930003`. The CLI's output
+`subjectId` is the actual GUID, so consumers must not interpret it as a product
+code. Missing or malformed GUID metadata is an error, with no product-code fallback.
+
+Comment and post-reply pagination rejects missing continuation IDs, repeated
+cursors, and cycles before issuing another request or returning an unusable
+continuation. When a local row limit cuts a page short, continue from the last
+emitted row's ID. If that row lacks an ID, fail instead of reusing an earlier ID.
+These checks preserve the existing 1–5 page and 100-row client caps.
+
 | Endpoint | Observed `result` shape |
 |---|---|
 | `wts-cert-api /api/v4/comments` | Object: `results[]`, `hasNext`, `key`, `totalCount`; use `lastCommentId={key}` for the next page |
@@ -231,3 +245,25 @@ Observed result keys:
 For the four MDS page families, continue with the returned
 `pagingParam.number` and `pagingParam.key`; `trading_trend.py --page/--key`
 preserves those applied inputs in its output.
+
+On 2026-09-07, the credit endpoint with `size=3` returned two rows on page 1
+and `lastPage=false` with a cursor; page 2 returned three rows with no date
+overlap. A short page alone is not an end condition. Follow server continuation
+metadata, preserve the stock/size/filter state, and stop on a repeated cursor.
+
+## Transport And Identifier Checks — 2026-09-07
+
+The shared HTTP client accepts an approved HTTPS origin only, rejects redirects,
+reads at most 16 MiB plus one detection byte, and requires an object JSON envelope;
+`get_result` also requires a `result` key. The 16 MiB bound is a local client limit. HTTP errors include
+the status and validated method/path; their response body and exception cause are
+not printed, including in debug mode, and the error response is closed.
+
+Index news and AI-detail builders preserve dotted index identifier case such as
+`RFU.GCv1`, using the same normalization as `indices.py`. This is identifier
+correctness, not evidence of anonymous access to a login-gated indicator or AI
+detail. Stock-code normalization remains separate.
+
+The current metadata sample also includes `singleStockEtp`,
+`optionOvertimeSupported`, and `nxtOpenDateRecent`. These are observed response
+fields, not newly guaranteed required fields or authorization for option trading.
