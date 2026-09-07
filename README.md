@@ -7,6 +7,8 @@
 > 로그인이나 계좌 인증 없이 공개 주식·시장 데이터를 Codex, Claude Code 같은 에이전트가 안전하게 다시 조회하도록 돕습니다.  
 > 공식 Open API, 증권사 거래 API, 투자 조언 도구가 아닙니다.
 
+[설치](#설치) · [빠른 실행](#스크립트-빠른-실행) · [상세 실행 예제](references/script-cookbook.md) · [API 목록](references/api-catalog.md) · [변경 이력](CHANGELOG.md)
+
 ## 공식 Open API와의 구분
 
 이 스킬은 `developers.tossinvest.com/docs`에서 제공하는 토스증권 공식 Open API 클라이언트가 아닙니다.  
@@ -203,8 +205,6 @@ python3 scripts/screener_count.py --nation kr --rsi oversold --include-results -
 
 미국 주식 차트는 TossInvest 상품/소스 코드가 필요합니다. `SPY`, `NVDA` 같은 표시 티커를 `c-chart` 상품 코드로 바로 넣으면 HTTP 400이 날 수 있습니다.
 
-실시간 값은 계속 바뀝니다. 아래 예시는 고정된 시장 데이터가 아니라 출력 형태를 보여주기 위한 예시입니다.
-
 ### WebSocket 클라이언트 운영 제한
 
 HTTP 조회 스크립트는 요청할 때 실행되고 응답을 받으면 종료하므로 별도의 상주 클라이언트나 추가 패키지가 필요하지 않습니다. 지속적으로 이벤트를 받는 `websocket_prices.py`만 `requirements-websocket.txt`의 선택 의존성을 사용합니다.
@@ -239,7 +239,9 @@ python3 -m pip check
 .venv/bin/python scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 15 --max-events 1
 ```
 
-주식 요약:
+### 주식 요약 출력 예시
+
+실시간 값은 계속 바뀝니다. 아래 주식 요약과 차트 예시는 고정된 시장 데이터가 아니라 출력 형태를 보여줍니다.
 
 ```bash
 python3 scripts/stock_summary.py --code A005930 --no-overview
@@ -264,7 +266,7 @@ python3 scripts/stock_summary.py --code A005930 --no-overview
 }
 ```
 
-차트와 로컬 보조지표:
+### 차트와 로컬 보조지표 출력 예시
 
 ```bash
 python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd

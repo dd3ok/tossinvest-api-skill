@@ -159,6 +159,24 @@ def build_path(path: str, params: dict[str, Any] | None = None) -> str:
     return f"{path}?{query}"
 
 
+def read_response_bytes(response: Any, *, limit: int) -> bytes:
+    """Bound the read and reject incomplete HTTP framing without exposing the body."""
+    # Keep HTTP imports lazy for the urllib/calendar shadowing import path.
+    import http.client
+
+    message = "Incomplete or invalid TossInvest HTTP response; stop and reverify the endpoint"
+    try:
+        raw = response.read(limit + 1)
+    except http.client.HTTPException:
+        raise RuntimeError(message) from None
+    # read(amt) permits early EOF with Content-Length. Chunked and close-delimited
+    # responses have length=None; oversized responses remain the caller's error.
+    remaining = getattr(response, "length", None)
+    if len(raw) <= limit and isinstance(remaining, int) and remaining > 0:
+        raise RuntimeError(message)
+    return raw
+
+
 def request_json(
     path: str,
     *,
@@ -187,7 +205,7 @@ def request_json(
     try:
         opener = urllib.request.build_opener(no_redirect_handler())
         with opener.open(req, timeout=timeout) as resp:
-            raw_content = resp.read(MAX_RESPONSE_BYTES + 1)
+            raw_content = read_response_bytes(resp, limit=MAX_RESPONSE_BYTES)
             if len(raw_content) > MAX_RESPONSE_BYTES:
                 raise RuntimeError(
                     f"TossInvest API response exceeded the local {MAX_RESPONSE_BYTES}-byte limit "

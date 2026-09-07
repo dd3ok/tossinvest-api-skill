@@ -602,6 +602,12 @@ event `date`.
 
 ## Dashboard And Screener Page Behavior
 
+Jump to [home rankings](#home-ranking-values-and-filters),
+[live price updates](#live-price-updates-and-page-observations),
+[RSI and sorting](#rsi-screener-and-sorting),
+[price presets](#price-condition-presets), or
+[technical presets](#technical-analysis-presets).
+
 Direct checks on 2026-04-20 for `scripts/theme.py --tag kr --include-all --tics-id 289 --include-details --company-ranking marketcap --company-ranking revenue --company-ranking operating-margin` returned `ranking`, `allThemes`, `details`, `related`, `news`, `fluctuations`, and all three requested company ranking groups.
 
 Observed `ticsRanking` values:
@@ -611,6 +617,8 @@ Observed `ticsRanking` values:
 | `1` | Market capitalization |
 | `3` | Revenue |
 | `4` | Operating margin |
+
+### Home Ranking Values And Filters
 
 Observed home live-chart values from `https://www.tossinvest.com/?market={market}&live-chart={id}&duration={duration}`:
 
@@ -664,6 +672,8 @@ returned 100 rows in both cases while rotating 29 products out of that live
 snapshot; ranking membership and exact counts change with the market.
 
 For the user-provided top100 URLs checked on 2026-04-20, `market=kr`/`us` maps to `tag=kr`/`us`. The `biggest_total_amount`, `biggest_total_volume`, `heavy_soar`, and `heavy_descent` combinations returned `products[]` with 100 rows for both markets in direct response checks.
+
+### Live Price Updates And Page Observations
 
 The 2026-07-10 logged-out bundle and page check confirmed that top100 is a
 hybrid rather than a dedicated ranking WebSocket channel:
@@ -720,6 +730,8 @@ signals helper:
 GET https://wts-info-api.tossinvest.com/api/v1/dashboard/wts/overview/signals?codes=A005930,A000660
 ```
 
+### RSI Screener And Sorting
+
 Observed RSI screener filter request shape:
 
 ```text
@@ -770,6 +782,8 @@ The checked sortable columns were `C_시가총액` / `시가총액`, `C_거래�
 `거래량`, and `C_애널리스트평점` / `애널리스트 분석`. Other sort columns should be
 captured from current browser traffic before use.
 
+### Price Condition Presets
+
 Observed price-condition screener filter IDs:
 
 | Preset area | Filter id | Condition ids | Types | Verified default value |
@@ -797,6 +811,8 @@ Example 52-week high filter:
   ]
 }
 ```
+
+### Technical Analysis Presets
 
 Observed technical-analysis screener filter IDs:
 
