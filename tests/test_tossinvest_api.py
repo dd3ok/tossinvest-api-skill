@@ -1,5 +1,7 @@
+import http.client
 import io
 import json
+import ssl
 import subprocess
 import sys
 import unittest
@@ -609,8 +611,13 @@ class TossInvestApiTests(unittest.TestCase):
             (urllib.error.URLError, "synthetic-private-reason"),
             (urllib.error.URLError, OSError("synthetic-private-nested-reason")),
             (TimeoutError, "synthetic-private-timeout"),
+            (ConnectionResetError, "synthetic-private-reset"),
+            (ssl.SSLError, "synthetic-private-tls"),
+            (OSError, "synthetic-private-io"),
+            (http.client.BadStatusLine, "synthetic-private-status-line"),
         ):
-            for phase in ("open", "read"):
+            phases = ("open",) if error_type is http.client.BadStatusLine else ("open", "read")
+            for phase in phases:
                 for debug in ("", "1"):
                     with self.subTest(error=error_type.__name__, phase=phase, debug=debug):
                         error = error_type(reason)

@@ -185,6 +185,9 @@ def request_json(
     base_url: str = BASE_URL,
     timeout: int = DEFAULT_TIMEOUT,
 ) -> dict[str, Any]:
+    # Keep protocol imports lazy for the urllib/calendar shadowing import path.
+    import http.client
+
     validate_request_target(base_url, path)
     if body is not None:
         validate_no_sensitive_keys(body)
@@ -231,7 +234,7 @@ def request_json(
         # HTTPError.msg may echo an untrusted redirect location or other server
         # details. Keep debug tracebacks from exposing that original exception.
         raise RuntimeError(message) from None
-    except (urllib.error.URLError, socket.timeout, TimeoutError):
+    except (OSError, http.client.HTTPException):
         raise RuntimeError(
             f"TossInvest API request failed for {method} {path}; reverify the endpoint"
         ) from None
