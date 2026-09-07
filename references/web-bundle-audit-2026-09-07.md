@@ -216,7 +216,7 @@ Four additional chunks were selected from the already observed current community
 
 ### Findings
 
-The current **rendered stock-community list receives `stockInfo.guid` as subjectId**, not `stockInfo.code` or the input URL symbol. The SEO caller independently passes metadata guid into the same comments hook. This is a concrete identifier-compatibility correction candidate for the existing client, pending parent-owned public live verification. The metadata resolver itself is outside this four-chunk set, so this evidence does not establish which endpoint provides guid or guarantee its presence for every product.
+The current **rendered stock-community list receives `stockInfo.guid` as subjectId**, not `stockInfo.code` or the input URL symbol. The SEO caller independently passes metadata guid into the same comments hook. Subsequent bounded public verification confirmed `A005930` resolving to `KR7005930003`, with advancing comment continuation and no overlap in the sampled first/next pages; the client correction is complete. See the [update audit](update-audit-2026-09-07.md#direct-public-requests) for that separate API evidence. The metadata resolver itself is outside this four-chunk set, so the bundle evidence alone does not establish which endpoint provides guid or guarantee its presence for every product.
 
 - Module `90094` maps popular to `POPULAR` and recent to `RECENT`; no changed sort enum was found.
 - Module `77727` calls descriptor `40785["/api/v4/comments"]` with query fields `subjectType`, `subjectId`, `commentSortType`, and `lastCommentId`.
