@@ -10,7 +10,7 @@ license: MIT
 
 Use this skill to inspect TossInvest web pages and run bundled read-only lookup scripts for public stock, market, index, bond-page, calendar, theme, financial, filing, news, ranking, investor-trend, screener, and public community questions. Do not combine it with tools that automate login, account access, or trading.
 
-Requires Python 3.10+ and network access.
+Use Python 3.12, the sole supported runtime, with network access.
 
 For current change evidence and verification limits, read the
 [2026-09-07 update audit](references/update-audit-2026-09-07.md). Stock comments

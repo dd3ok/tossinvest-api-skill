@@ -114,7 +114,11 @@ supported selector. No 403/429 was observed in these direct REST checks.
 
 ## Verification
 
-Local Windows verification, using the CI Python versions and pinned tools:
+Historical local Windows verification for the original PR #32 update, using
+the CI Python versions and pinned tools at that time. The subsequent support
+policy is Python 3.12 only; the recorded 3.10 results below do not imply ongoing
+3.10 support. Current CI installs the locked optional WebSocket dependency before
+the unit suite so its integration test runs on Python 3.12.
 
 | Check | Result |
 | --- | --- |
@@ -144,6 +148,25 @@ the duplicate request was removed.
 No new test contacts the live service. These rows describe local verification;
 GitHub CI and review outcomes are recorded in [PR #32](https://github.com/dd3ok/tossinvest-api-skill/pull/32).
 
+The two existing HTTP edge cases recorded in the [PR review](https://github.com/dd3ok/tossinvest-api-skill/pull/32#issuecomment-5563406316) were resolved in the HTTP follow-up.
+Base URL validation now rejects literal `?` and `#` delimiters, including empty
+query/fragment values; query parameters on the separately validated API path
+remain supported. The shared redirect handler rejects HTTP 301/302/303/307/308
+before parsing `Location`, then delegates response closure and sanitized reporting
+to the existing HTTP-error handlers. Offline regression checks cover both public
+REST and guest-bootstrap requests, including malformed IPv6 locations, no follow-up
+request, closed responses, and no raw server values in debug output. These checks
+do not add live API evidence.
+
+The Python 3.12-only policy was checked in a fresh local Python 3.12.13 environment
+with the CI tool versions and hash-locked websocket-client 1.9.0 installed:
+270 tests passed with no skips. Ruff, all 21 script help/compile checks, three
+JSON examples, the installed skill layout, and both skill validators passed.
+The CI configuration was parsed to verify its single 3.12 job and installation
+of the locked dependency before tests. These records describe local validation;
+the [CI workflow history](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml)
+provides the GitHub Actions result for each tested commit.
+
 ## Remaining Checks
 
 - Static inventories are complete for the local tables and current manifest, but this bounded run does not claim a live success for every endpoint, nation, instrument, sort, filter, date, and last page. Unlisted direct combinations remain unverified in this run.
@@ -152,4 +175,3 @@ GitHub CI and review outcomes are recorded in [PR #32](https://github.com/dd3ok/
 - Login-gated order-book/AI widgets, every account/order/authentication route, and official authenticated requests were not exercised. A public heading or code path alone does not authorize access.
 - Stock latest/recent pagination is a changing dataset; zero overlap in one bounded sample is not a permanent deduplication guarantee. Repeat-cursor guards prevent a known loop, not every possible server inconsistency.
 - Optional identifier fields, nullable values, and schema variations are observations, not a complete generated schema for undocumented web responses. Keep endpoint-specific shape checks when adding consumers.
-- Independent runtime review reproduced two HTTP edge cases on both the repository baseline and this update: a base URL ending in an empty `?` or `#` can pass validation while changing the actual request target; a malformed IPv6 redirect `Location` can fail inside urllib before the redirect rejection handler, exposing part of that value in the exception and leaving the response open. These are existing issues, not regressions introduced by this update. Preserve them as follow-up HTTP validation/cleanup work; details are in the [PR review record](https://github.com/dd3ok/tossinvest-api-skill/pull/32#issuecomment-5563406316).

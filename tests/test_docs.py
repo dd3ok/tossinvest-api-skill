@@ -203,7 +203,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("financials", description)
         self.assertNotIn("\ncompatibility:", frontmatter)
         body = text.split("---", 2)[2]
-        self.assertIn("Requires Python 3.10+ and network access.", body)
+        self.assertIn("Use Python 3.12, the sole supported runtime, with network access.", body)
 
     def test_skill_local_links_and_reference_anchors_exist(self):
         skill_path = ROOT / "SKILL.md"
@@ -930,7 +930,7 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_ci_release_smoke_covers_websocket_artifacts(self):
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         for expected in [
-            "pip download",
+            "pip install -r requirements-websocket.txt",
             'cp requirements-websocket.txt "$skill_dir"/',
             'test -f "$skill_dir/requirements-websocket.txt"',
             'test -f "$skill_dir/scripts/websocket_prices.py"',

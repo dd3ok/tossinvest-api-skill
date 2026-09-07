@@ -50,12 +50,14 @@
 `1.2.14` 문서, 공개 페이지·페이징, HTTP 방어와 회귀 검증을 반영했습니다.
 실제 확인 범위와 남은 항목은 [업데이트 점검 결과](references/update-audit-2026-09-07.md)를 참고하세요.
 
+이번 업데이트부터 Python 3.12.x만 지원·검증합니다. 기존 Python 3.10 지원은 종료합니다.
+
 `v1.0.0`부터 다음 저장소 표면을 안정된 공개 계약으로 취급합니다.
 
 - 스킬 이름 `tossinvest-web-api`와 `.agents/skills/tossinvest-web-api` 설치 경로
 - `SKILL.md`, `scripts/`, `references/`, `agents/`를 포함한 설치 레이아웃
 - 문서화된 CLI 명령과 옵션, 로그인·계좌·주문을 제외하는 안전 경계
-- Python 3.10과 3.12 CI 호환성, HTTP 표준 라이브러리 실행, WebSocket 선택 의존성 잠금 파일
+- Python 3.12 CI 호환성, HTTP 표준 라이브러리 실행, WebSocket 선택 의존성 잠금 파일
 
 이 버전 정책은 이 저장소가 제공하는 인터페이스에 적용됩니다. 토스증권 웹 API와 WebSocket 채널은 여전히 비공식·미문서화 인터페이스이며 예고 없이 경로, 응답 필드, 접근 가능 여부가 바뀔 수 있습니다. 외부 응답 필드와 데이터 가용성은 하위 호환성 계약에 포함하지 않으며, 관찰된 변경은 API 카탈로그의 상태 표기와 릴리스 노트에 기록합니다.
 
@@ -139,6 +141,8 @@ ln -sfn /path/to/tossinvest-api-skill .agents/skills/tossinvest-web-api
 
 에이전트 스킬로 설치하지 않고 Python 스크립트만 실행할 수도 있습니다. HTTP 스크립트는 Python 표준 라이브러리만 사용합니다. WebSocket 스크립트만 선택 의존성 하나가 필요합니다.
 
+아래 `python3` 명령은 Python 3.12 인터프리터로 실행하세요. Windows에서는 `py -3.12`를 사용할 수 있습니다.
+
 ```bash
 git clone https://github.com/dd3ok/tossinvest-api-skill.git
 cd tossinvest-api-skill
@@ -148,11 +152,11 @@ python3 scripts/stock_summary.py --code A005930 --no-overview
 WebSocket 수신을 사용할 때만 다음 의존성을 설치합니다. 프로젝트 전용 가상환경에 설치하면 전역 Python을 바꾸지 않고, 테스트 뒤 `.venv`만 삭제해 깨끗하게 제거할 수 있습니다.
 
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 .venv/bin/python -m pip install -r requirements-websocket.txt
 ```
 
-Windows PowerShell에서는 이후 `.venv/bin/python` 명령의 실행 파일을 모두 `.venv/Scripts/python.exe`로 바꿉니다. 1회 테스트가 끝나면 가상환경을 비활성화한 상태에서 `.venv` 디렉터리만 삭제하면 선택 의존성도 함께 제거됩니다.
+Windows PowerShell에서는 `py -3.12 -m venv .venv`로 생성하고, 이후 `.venv/bin/python` 명령의 실행 파일을 모두 `.venv/Scripts/python.exe`로 바꿉니다. 1회 테스트가 끝나면 가상환경을 비활성화한 상태에서 `.venv` 디렉터리만 삭제하면 선택 의존성도 함께 제거됩니다.
 
 스크립트별 옵션은 `--help`로 확인합니다.
 
@@ -336,9 +340,10 @@ tossinvest-api-skill/
 | `SECURITY.md` | 민감한 엔드포인트, 개인정보, 자격 증명 처리 관련 제보 절차 |
 | `LICENSE`, `LICENSE.txt` | MIT 라이선스 본문 |
 
-유지보수자와 CI 검증에는 다음 명령을 사용합니다.
+유지보수자와 CI 검증은 Python 3.12 환경에서 실행합니다. 전체 테스트에서는 잠금된 WebSocket 의존성도 설치해 라이브러리 테스트를 실행합니다.
 
 ```bash
+python3 -m pip install -r requirements-websocket.txt
 python3 -m unittest discover -s tests -v
 ```
 

@@ -7,6 +7,7 @@ import unittest
 import urllib.error
 import urllib.response
 from contextlib import redirect_stderr
+from email.message import Message
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -242,27 +243,30 @@ class WebSocketPriceTests(unittest.TestCase):
     def test_guest_bootstrap_rejects_redirects_without_following_or_leaking_reason(self):
         secret = "synthetic-guest-location-must-not-appear"
         for status in (301, 302, 303, 307, 308):
-            with self.subTest(status=status):
-                response = urllib.response.addinfourl(
-                    io.BytesIO(b""),
-                    {"Location": f"https://other.example/{secret}"},
-                    stream.GUEST_KEY_URL,
-                    status,
-                )
-                response.msg = secret
-                output = io.StringIO()
-                with (
-                    patch(
-                        "urllib.request.HTTPSHandler.https_open", return_value=response
-                    ) as opened,
-                    patch.dict(os.environ, {"TOSSINVEST_DEBUG": "1"}),
-                    redirect_stderr(output),
-                ):
-                    self.assertEqual(stream.api.run_cli(stream.fetch_guest_key), 1)
-                self.assertEqual(opened.call_count, 1)
-                self.assertTrue(response.closed)
-                self.assertIn(f"HTTP {status}", output.getvalue())
-                self.assertNotIn(secret, output.getvalue())
+            for location in (f"https://other.example/{secret}", f"https://[{secret}]/"):
+                with self.subTest(status=status, location=location):
+                    headers = Message()
+                    headers["Location"] = location
+                    response = urllib.response.addinfourl(
+                        io.BytesIO(b""),
+                        headers,
+                        stream.GUEST_KEY_URL,
+                        status,
+                    )
+                    response.msg = secret
+                    output = io.StringIO()
+                    with (
+                        patch(
+                            "urllib.request.HTTPSHandler.https_open", return_value=response
+                        ) as opened,
+                        patch.dict(os.environ, {"TOSSINVEST_DEBUG": "1"}),
+                        redirect_stderr(output),
+                    ):
+                        self.assertEqual(stream.api.run_cli(stream.fetch_guest_key), 1)
+                    self.assertEqual(opened.call_count, 1)
+                    self.assertTrue(response.closed)
+                    self.assertIn(f"HTTP {status}", output.getvalue())
+                    self.assertNotIn(secret, output.getvalue())
 
     def test_guest_bootstrap_enforces_limit_before_parsing_valid_json(self):
         payload = b'{"result":"memory-only-key"}'
