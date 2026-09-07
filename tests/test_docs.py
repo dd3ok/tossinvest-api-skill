@@ -252,7 +252,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("financials", description)
         self.assertNotIn("\ncompatibility:", frontmatter)
         body = text.split("---", 2)[2]
-        self.assertIn("Use Python 3.12, the sole supported runtime, with network access.", body)
+        self.assertIn("Use Python 3.14.7, the sole supported runtime, with network access.", body)
 
     def test_maintained_docs_local_links_and_reference_anchors_exist(self):
         checked_paths = [ROOT / "README.md", ROOT / "SKILL.md"]

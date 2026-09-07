@@ -43,7 +43,8 @@ skill from GitHub.
 
 ## Verification
 
-Run these commands from the repository root with Python 3.12 (`python3` below).
+Run these commands from the repository root with Python 3.14.7 (`python3` below).
+Confirm `python3 --version` reports `Python 3.14.7`.
 Install the locked optional WebSocket dependency so the full suite exercises its
 library integration test:
 
@@ -98,8 +99,9 @@ python3 "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
 - README defines the stable repository interface covered by semantic versioning
   and excludes unofficial upstream endpoints and response fields from that
   compatibility promise.
-- README and release notes identify Python 3.12 as the only supported runtime;
-  the release adopting this policy records the end of Python 3.10 support.
+- README and release notes identify Python 3.14.7 as the only supported runtime;
+  CI pins `3.14.7`, Ruff targets `py314`, and the release adopting this policy
+  records the end of Python 3.12 support.
 - `references/api-catalog.md` status labels remain conservative; keep its
   Verification Status table authoritative (`script-backed`, `observed`,
   `observed-drift`, `needs-recheck`, `excluded`, `public-social-sensitive`).

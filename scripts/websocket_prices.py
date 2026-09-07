@@ -350,7 +350,7 @@ def fetch_guest_key(timeout: int = CONNECT_TIMEOUT_SECONDS) -> str:
         raise RuntimeError("TossInvest guest bootstrap exceeded 4096 bytes; stop and reverify")
     try:
         payload = json.loads(body.decode("utf-8"))
-    except (ValueError, UnicodeError):
+    except ValueError, UnicodeError:
         raise RuntimeError("Unexpected TossInvest guest bootstrap response") from None
     key = payload.get("result") if isinstance(payload, dict) else None
     if not isinstance(key, str) or not key:

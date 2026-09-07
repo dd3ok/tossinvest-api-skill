@@ -1,6 +1,6 @@
 # Script Cookbook
 
-Use this cookbook when `SKILL.md` has selected the right script family but the task needs a more specific command. These recipes are read-only lookup examples; run `python3 scripts/<name>.py --help` for the complete current options. Run `python3` examples with the supported Python 3.12 interpreter.
+Use this cookbook when `SKILL.md` has selected the right script family but the task needs a more specific command. These recipes are read-only lookup examples; run `python3 scripts/<name>.py --help` for the complete current options. Run `python3` examples with the supported Python 3.14.7 interpreter.
 
 ## Contents
 
@@ -73,11 +73,13 @@ Prefer a project-local virtual environment so the global Python environment is
 unchanged and cleanup is just removal of `.venv`:
 
 ```bash
-python3.12 -m venv .venv
+python3.14 --version  # Must report Python 3.14.7
+python3.14 -m venv .venv
 .venv/bin/python -m pip install -r requirements-websocket.txt
 ```
 
-On Windows PowerShell, create the environment with `py -3.12 -m venv .venv`, then replace `.venv/bin/python` with
+On Windows PowerShell, first confirm `py -3.14 --version` reports `Python 3.14.7`,
+then create the environment with `py -3.14 -m venv .venv`, then replace `.venv/bin/python` with
 `.venv/Scripts/python.exe` in every following command. After a one-off test,
 deactivate the environment if needed and remove only the `.venv` directory to
 remove the optional dependency.

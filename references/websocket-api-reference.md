@@ -417,15 +417,17 @@ The bundled minimal client deliberately performs no automatic reconnect. It exit
 7. Report every TossInvest-specific claim as unstable and browser-internal. Do not present it as the official TossInvest Open API.
 
 Install and run the bounded client only when continuous updates are needed.
-Keep the optional dependency in a project-local Python 3.12 environment:
+Keep the optional dependency in a project-local Python 3.14.7 environment:
 
 ```text
-python3.12 -m venv .venv
+python3.14 --version  # Must report Python 3.14.7
+python3.14 -m venv .venv
 .venv/bin/python -m pip install -r requirements-websocket.txt
 .venv/bin/python scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
 ```
 
-On Windows PowerShell, create the environment with `py -3.12 -m venv .venv`, then replace `.venv/bin/python` with
+On Windows PowerShell, first confirm `py -3.14 --version` reports `Python 3.14.7`,
+then create the environment with `py -3.14 -m venv .venv`, then replace `.venv/bin/python` with
 `.venv/Scripts/python.exe`. After a one-off check, deactivate if needed and
 remove only `.venv`; the global Python environment remains unchanged.
 
