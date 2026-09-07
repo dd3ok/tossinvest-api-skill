@@ -1,4 +1,4 @@
-name: TossInvest API Skill CI
+name: CI
 
 on:
   pull_request:

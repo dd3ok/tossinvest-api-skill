@@ -1,6 +1,6 @@
 # 비공식 토스증권 API / TossInvest API Skill
 
-[![TossInvest API Skill CI](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml)
+[![CI](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml)
 [![최신 릴리스](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skill?sort=semver)](https://github.com/dd3ok/tossinvest-api-skill/releases/latest)
 
 > 토스증권 웹에 공개된 API를 바탕으로 만든 경량 에이전트 스킬입니다.  
