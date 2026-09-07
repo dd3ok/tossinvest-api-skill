@@ -48,7 +48,7 @@ jobs:
           workspace="$(mktemp -d)"
           skill_dir="$workspace/.agents/skills/tossinvest-web-api"
           mkdir -p "$skill_dir"
-          cp -R SKILL.md README.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
+          cp -R SKILL.md README.md CHANGELOG.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
           cp requirements-websocket.txt "$skill_dir"/
           test -f "$skill_dir/SKILL.md"
           test -f "$skill_dir/agents/openai.yaml"
