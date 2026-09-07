@@ -115,10 +115,10 @@ supported selector. No 403/429 was observed in these direct REST checks.
 ## Verification
 
 Historical local Windows verification for the original PR #32 update, using
-the CI Python versions and pinned tools at that time. The subsequent support
-policy is Python 3.12 only; the recorded 3.10 results below do not imply ongoing
-3.10 support. Current CI installs the locked optional WebSocket dependency before
-the unit suite so its integration test runs on Python 3.12.
+the CI Python versions and pinned tools at that time. These results do not imply
+ongoing support for those versions. The current runtime policy is Python 3.14.7;
+see the [changelog](../CHANGELOG.md) for the migration. CI installs the locked
+optional WebSocket dependency before the unit suite to run its integration test.
 
 | Check | Result |
 | --- | --- |
@@ -158,7 +158,7 @@ REST and guest-bootstrap requests, including malformed IPv6 locations, no follow
 request, closed responses, and no raw server values in debug output. These checks
 do not add live API evidence.
 
-The Python 3.12-only policy was checked in a fresh local Python 3.12.13 environment
+The earlier Python 3.12-only policy was checked in a fresh local Python 3.12.13 environment
 with the CI tool versions and hash-locked websocket-client 1.9.0 installed:
 270 tests passed with no skips. Ruff, all 21 script help/compile checks, three
 JSON examples, the installed skill layout, and both skill validators passed.

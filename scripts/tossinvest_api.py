@@ -234,7 +234,7 @@ def request_json(
         # HTTPError.msg may echo an untrusted redirect location or other server
         # details. Keep debug tracebacks from exposing that original exception.
         raise RuntimeError(message) from None
-    except (OSError, http.client.HTTPException):
+    except OSError, http.client.HTTPException:
         raise RuntimeError(
             f"TossInvest API request failed for {method} {path}; reverify the endpoint"
         ) from None
@@ -624,7 +624,7 @@ def _text_for_stream(text: str, stream: Any) -> str:
     try:
         text.encode(encoding)
         return text
-    except (LookupError, UnicodeEncodeError):
+    except LookupError, UnicodeEncodeError:
         pass
 
     escaped: list[str] = []
