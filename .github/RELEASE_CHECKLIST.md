@@ -65,7 +65,7 @@ Run the skill layout smoke test:
 workspace="$(mktemp -d)"
 skill_dir="$workspace/.agents/skills/tossinvest-web-api"
 mkdir -p "$skill_dir"
-cp -R SKILL.md README.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
+cp -R SKILL.md README.md CHANGELOG.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
 cp requirements-websocket.txt "$skill_dir"/
 test -f "$skill_dir/SKILL.md"
 test -f "$skill_dir/agents/openai.yaml"
@@ -79,6 +79,8 @@ python3 "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
 
 ## Documentation
 
+- `CHANGELOG.md` records user-visible changes under `Unreleased`; when tagging,
+  move the released entries to the actual version and release date.
 - README first screen explains what the skill does, what it does not do, and the
   canonical trigger.
 - README defines the stable repository interface covered by semantic versioning
