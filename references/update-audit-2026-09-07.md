@@ -102,7 +102,7 @@ supported selector. No 403/429 was observed in these direct REST checks.
 
 | Change | Impact / validation focus |
 | --- | --- |
-| Metadata GUID for stock comments | Existing `--code` inputs remain; output `subjectId` now reflects the actual GUID. No fallback to product code. One metadata lookup per invocation; no global identity cache. |
+| Metadata GUID for stock comments | Existing `--code` inputs remain; output `subjectId` now reflects the actual GUID. No fallback to product code. One metadata lookup per standalone invocation; the stock-page composite validates and reuses its existing metadata without a second lookup. No global identity cache. |
 | Cursor validation | Missing required continuation IDs, repeated cursor, multi-step cycle, or idless truncation fail explicitly; normal sanitization and bounded continuation remain. Invalid local inputs fail before metadata access. |
 | Shared REST transport | HTTPS origin only, no redirect, 16 MiB local cap, JSON object requirement, safe HTTP errors and closed error responses. `get_result` separately checks the envelope key. Every HTTP script shares this change. |
 | Import order | Redirect handler is created lazily; importing urllib first must work even with the repository's `calendar.py` on `sys.path`. Standalone CLI checks cover this regression. |
@@ -119,8 +119,8 @@ Local Windows verification, using the CI Python versions and pinned tools:
 | Check | Result |
 | --- | --- |
 | Baseline unit suite before changes | 241 passed on Python 3.14.6 |
-| Final unit suite, Python 3.12.13 with locked WebSocket dependency | 268 passed; no skips |
-| Final unit suite, Python 3.10.20 without optional dependency | 268 discovered, 267 passed and one optional-library test skipped; that test passed in the 3.12 environment |
+| Final unit suite, Python 3.12.13 with locked WebSocket dependency | 270 passed; no skips |
+| Final unit suite, Python 3.10.20 without optional dependency | 270 discovered, 269 passed and one optional-library test skipped; that test passed in the 3.12 environment |
 | Ruff 0.15.22 | Lint and format checks passed |
 | Standalone scripts | All 21 compiled and all 21 `--help` commands passed on both Python versions |
 | JSON filter examples | All three parsed successfully |
@@ -134,8 +134,15 @@ Local Windows verification, using the CI Python versions and pinned tools:
 Review found and corrected the initial cursor-truncation edge case, debug HTTP
 exception leakage, and urllib/calendar import cycle. Documentation checks also
 caught a missing contents entry and two omitted inventory rows; these were fixed.
-No new test contacts the live service. No GitHub CI run, release, commit, or push
-is implied by these local results.
+PR review additionally caught a duplicate metadata lookup in the stock-page
+composite after introducing GUID resolution. The composite now validates and
+reuses its existing metadata. Regression coverage verifies the complete request
+sequence, failure before further requests when the GUID is invalid, and the
+GUID-independent comments-disabled path. Independent follow-up review confirmed
+the duplicate request was removed.
+
+No new test contacts the live service. These rows describe local verification;
+GitHub CI and review outcomes are recorded in [PR #32](https://github.com/dd3ok/tossinvest-api-skill/pull/32).
 
 ## Remaining Checks
 

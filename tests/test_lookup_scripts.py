@@ -2060,21 +2060,23 @@ class StockPageScriptTests(unittest.TestCase):
         def fake_get_result(path, **kwargs):
             calls.append((path, kwargs))
             if path == "/api/v2/stock-infos/code-or-symbol/SOXL":
-                return {"code": "US20100311002", "name": "SOXL", "logoImageUrl": "logo.png"}
+                return {
+                    "code": "US20100311002",
+                    "guid": "US25459W4583",
+                    "name": "SOXL",
+                    "logoImageUrl": "logo.png",
+                }
             if path == "/api/v3/stock-prices/details?productCodes=US20100311002":
                 return [{"code": "US20100311002", "close": 240515}]
             if path.startswith("/api/v1/dashboard/wts/overview/ai-signals/detail"):
                 return {"reasoning": {"description": "AI reason"}, "terms": {}}
+            if path == (
+                "/api/v4/comments?subjectType=STOCK&subjectId=US25459W4583&commentSortType=POPULAR"
+            ):
+                return {"results": [{"commentId": "1"}], "hasNext": False}
             raise AssertionError(path)
 
-        with (
-            patch.object(stock_page.api, "get_result", fake_get_result),
-            patch.object(
-                stock_page.community_comments,
-                "fetch_stock_comments",
-                return_value={"comments": [{"commentId": 1}]},
-            ) as fetch_comments,
-        ):
+        with patch.object(stock_page.api, "get_result", fake_get_result):
             payload = stock_page.fetch_stock_page(
                 "SOXL",
                 include_ai_detail=True,
@@ -2089,14 +2091,64 @@ class StockPageScriptTests(unittest.TestCase):
         self.assertEqual(payload["info"]["logoImageUrl"], "logo.png")
         self.assertEqual(payload["price"], {"code": "US20100311002", "close": 240515})
         self.assertEqual(payload["aiSignalDetail"]["reasoning"]["description"], "AI reason")
-        self.assertEqual(payload["community"]["comments"], [{"commentId": 1}])
-        fetch_comments.assert_called_once_with(
-            "US20100311002",
-            sort="popular",
-            pages=1,
-            limit=5,
-            include_replies=False,
+        self.assertEqual(payload["community"]["subjectId"], "US25459W4583")
+        self.assertEqual(payload["community"]["comments"][0]["commentId"], "1")
+        self.assertEqual(
+            calls,
+            [
+                ("/api/v2/stock-infos/code-or-symbol/SOXL", {}),
+                ("/api/v3/stock-prices/details?productCodes=US20100311002", {}),
+                (
+                    "/api/v1/dashboard/wts/overview/ai-signals/detail"
+                    "?productCode=US20100311002&productType=STOCKS",
+                    {},
+                ),
+                (
+                    "/api/v4/comments?subjectType=STOCK"
+                    "&subjectId=US25459W4583&commentSortType=POPULAR",
+                    {"base_url": community_comments.CERT_BASE_URL},
+                ),
+            ],
         )
+
+    def test_stock_page_rejects_bad_metadata_guid_without_another_request(self):
+        for guid in (None, "", 123, "KR7005930003?unexpected=1", "LOUNGE_193394"):
+            with self.subTest(guid=guid):
+                with patch.object(
+                    stock_page.api,
+                    "get_result",
+                    return_value={"code": "A005930", "guid": guid},
+                ) as get_result:
+                    with self.assertRaisesRegex(RuntimeError, "GUID"):
+                        stock_page.fetch_stock_page(
+                            "005930",
+                            include_ai_detail=False,
+                            include_comments=True,
+                            comment_sort="popular",
+                            comment_limit=5,
+                            comment_pages=1,
+                            include_replies=False,
+                        )
+                get_result.assert_called_once_with("/api/v2/stock-infos/code-or-symbol/A005930")
+
+    def test_stock_page_without_comments_does_not_require_a_guid(self):
+        with patch.object(
+            stock_page.api,
+            "get_result",
+            side_effect=[{"code": "A005930"}, [{"code": "A005930", "close": 100}]],
+        ) as get_result:
+            payload = stock_page.fetch_stock_page(
+                "005930",
+                include_ai_detail=False,
+                include_comments=False,
+                comment_sort="popular",
+                comment_limit=5,
+                comment_pages=1,
+                include_replies=False,
+            )
+        self.assertNotIn("community", payload)
+        self.assertEqual(payload["price"]["close"], 100)
+        self.assertEqual(get_result.call_count, 2)
 
 
 class ScreenerCountScriptTests(unittest.TestCase):

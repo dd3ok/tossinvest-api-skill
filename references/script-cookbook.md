@@ -122,8 +122,9 @@ social/profile metadata from the source payload.
 
 As of 2026-09-07, stock comments first resolve the input's metadata `guid` and use
 that value as `subjectId`. This adds one metadata lookup to each standalone stock
-comment invocation, including cursor continuation; it also applies when called
-by `stock_page.py`. Keep `--code` as the original stock input and pass only the
+comment invocation, including cursor continuation. `stock_page.py` validates and
+reuses its already fetched metadata GUID, without a second lookup. Keep `--code`
+as the original stock input and pass only the
 returned cursor to `--last-comment-id`. A missing GUID or invalid continuation
 fails explicitly instead of returning a misleading empty or duplicated page.
 

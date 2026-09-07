@@ -120,10 +120,15 @@ def resolve_comment_subject_id(code_or_symbol: str) -> str:
     """Resolve every code or symbol to the GUID used by stock comment subjects."""
     value = validate_product_code(api.normalize_product_code(code_or_symbol))
     result = api.get_result(f"/api/v2/stock-infos/code-or-symbol/{value}")
-    if not isinstance(result, dict) or not isinstance(result.get("guid"), str):
+    return comment_subject_id_from_stock_info(result)
+
+
+def comment_subject_id_from_stock_info(info: Any) -> str:
+    """Extract the comment GUID from stock metadata without another request."""
+    if not isinstance(info, dict) or not isinstance(info.get("guid"), str):
         raise RuntimeError("Unexpected TossInvest response: stock info is missing a GUID")
     try:
-        return validate_stock_subject_id(result["guid"])
+        return validate_stock_subject_id(info["guid"])
     except ValueError as exc:
         raise RuntimeError(
             "Unexpected TossInvest response: stock info contains an invalid GUID"
@@ -234,9 +239,29 @@ def fetch_stock_comments(
     if last_comment_id is not None:
         validate_digit_id("last_comment_id", last_comment_id)
     subject_id = resolve_comment_subject_id(code)
+    return fetch_stock_subject_comments(
+        subject_id,
+        sort=sort,
+        pages=pages,
+        limit=limit,
+        include_replies=include_replies,
+        last_comment_id=last_comment_id,
+    )
+
+
+def fetch_stock_subject_comments(
+    subject_id: str,
+    *,
+    sort: str,
+    pages: int,
+    limit: int,
+    include_replies: bool,
+    last_comment_id: str | int | None = None,
+) -> dict[str, Any]:
+    """Fetch comments for an already resolved and validated stock GUID."""
     return _fetch_subject_comments(
         "STOCK",
-        subject_id,
+        validate_stock_subject_id(subject_id),
         sort=sort,
         pages=pages,
         limit=limit,

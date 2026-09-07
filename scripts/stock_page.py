@@ -60,6 +60,8 @@ def fetch_stock_page(
     include_trading_analysis: bool = False,
 ) -> dict[str, Any]:
     info = resolve_stock_info(code_or_symbol)
+    if include_comments:
+        comment_subject_id = community_comments.comment_subject_id_from_stock_info(info)
     product_code = api.normalize_product_code(str(info.get("code") or code_or_symbol))
     price_rows = api.get_result(
         api.build_path("/api/v3/stock-prices/details", {"productCodes": product_code})
@@ -76,8 +78,8 @@ def fetch_stock_page(
             build_ai_signal_detail_path(product_code, "stocks")
         )
     if include_comments:
-        payload["community"] = community_comments.fetch_stock_comments(
-            product_code,
+        payload["community"] = community_comments.fetch_stock_subject_comments(
+            comment_subject_id,
             sort=comment_sort,
             pages=comment_pages,
             limit=comment_limit,
