@@ -908,7 +908,7 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_ci_and_release_docs_use_singular_skill_wording(self):
         ci_text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-        self.assertIn("name: TossInvest API Skill CI", ci_text)
+        self.assertIn("name: CI", ci_text)
         self.assertNotIn("name: TossInvest API Skills CI", ci_text)
         self.assertIn("permissions:\n  contents: read", ci_text)
         self.assertIn('python -m pip install "ruff==0.15.22"', ci_text)
