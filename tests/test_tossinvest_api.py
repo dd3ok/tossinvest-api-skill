@@ -604,6 +604,44 @@ class TossInvestApiTests(unittest.TestCase):
                 self.assertIn("/api/v2/stock-infos/A005930", stderr.getvalue())
                 self.assertNotIn("synthetic-private", stderr.getvalue())
 
+    def test_transport_failures_hide_original_reasons_in_normal_and_debug_output(self):
+        for error_type, reason in (
+            (urllib.error.URLError, "synthetic-private-reason"),
+            (urllib.error.URLError, OSError("synthetic-private-nested-reason")),
+            (TimeoutError, "synthetic-private-timeout"),
+        ):
+            for phase in ("open", "read"):
+                for debug in ("", "1"):
+                    with self.subTest(error=error_type.__name__, phase=phase, debug=debug):
+                        error = error_type(reason)
+                        response = io.BytesIO(b"unused-body")
+                        stderr = io.StringIO()
+                        stdout = io.StringIO()
+                        with (
+                            patch.object(api.urllib.request, "build_opener") as opener,
+                            patch.object(response, "read", side_effect=error),
+                            patch.dict(api.os.environ, {"TOSSINVEST_DEBUG": debug}),
+                            patch.object(api.sys, "stderr", stderr),
+                            patch.object(api.sys, "stdout", stdout),
+                        ):
+                            if phase == "open":
+                                opener.return_value.open.side_effect = error
+                            else:
+                                opener.return_value.open.return_value = response
+                            result = api.run_cli(
+                                lambda: api.request_json("/api/v2/stock-infos/A005930")
+                            )
+                        self.assertEqual(result, 1)
+                        opener.return_value.open.assert_called_once()
+                        if phase == "read":
+                            self.assertTrue(response.closed)
+                        response.close()
+                        self.assertEqual(stdout.getvalue(), "")
+                        self.assertIn("GET /api/v2/stock-infos/A005930", stderr.getvalue())
+                        self.assertIn("reverify the endpoint", stderr.getvalue())
+                        self.assertEqual("Traceback" in stderr.getvalue(), debug == "1")
+                        self.assertNotIn("synthetic-private", stderr.getvalue())
+
     def test_json_read_is_bounded_and_closes_responses_at_size_boundary(self):
         class RecordingBody(io.BytesIO):
             def read(self, size=-1):

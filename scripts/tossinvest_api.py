@@ -231,10 +231,10 @@ def request_json(
         # HTTPError.msg may echo an untrusted redirect location or other server
         # details. Keep debug tracebacks from exposing that original exception.
         raise RuntimeError(message) from None
-    except (urllib.error.URLError, socket.timeout, TimeoutError) as exc:
+    except (urllib.error.URLError, socket.timeout, TimeoutError):
         raise RuntimeError(
-            f"TossInvest API request failed for {method} {path}: {exc}; reverify the endpoint"
-        ) from exc
+            f"TossInvest API request failed for {method} {path}; reverify the endpoint"
+        ) from None
 
 
 def result_or_raise(payload: dict[str, Any]) -> Any:
