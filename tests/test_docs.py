@@ -794,8 +794,9 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("관찰 상태를 구분해줘", text)
         self.assertIn("allow_implicit_invocation: true", text)
 
-        license_text = (ROOT / "LICENSE.txt").read_text(encoding="utf-8")
-        self.assertEqual(license_text, (ROOT / "LICENSE").read_text(encoding="utf-8"))
+        license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
+        self.assertTrue(license_text.startswith("MIT License\n"))
+        self.assertIn("Copyright (c) 2026 dd3ok", license_text)
 
     def test_ci_and_release_docs_use_singular_skill_wording(self):
         ci_text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
