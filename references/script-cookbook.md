@@ -49,7 +49,8 @@ python3 scripts/news.py --code A005930 --page 2 --order-by latest --size 20
 python3 scripts/news.py --code A005930 --page 2 --order-by relevant --size 5
 ```
 
-News and filings use numbered pages. Check `result.lastPage` before continuing.
+News and filings use numbered pages. In JSON output, check `news.lastPage` for
+`news.py` and `result.lastPage` for `filings.py`; stop when that value is `true`.
 For filings, `--key` accepts a paging key returned by the previous response;
 omit it when none is provided, and never invent a key.
 
