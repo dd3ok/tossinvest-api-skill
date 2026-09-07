@@ -124,7 +124,7 @@ On HTTP 400/404, non-JSON content, missing `result`, changed response shape, or 
 
 If `/api/v3/stock-prices/details` returns a successful JSON response but omits the requested code or has no matching row, treat that as a target-level stale or endpoint-incompatible product code, not a transport outage. Record the failing target separately, cool it down before the next collector pass, and keep processing the remaining price targets.
 
-Do not infer replacement paths from old endpoint names. Update [references/api-catalog.md](references/api-catalog.md) with the checked date, source page, method, path, params/body, and response shape before updating scripts.
+Do not infer replacement paths from old endpoint names. Update the owning [stock](references/api-stock.md), [market](references/api-market.md), or [feed/community](references/api-community.md) section with the checked date, source page, method, path, params/body, and response shape before updating scripts. Keep shared status/host rules and observed-page evidence in [the common catalog](references/api-catalog.md).
 
 ## Prompt Examples
 
