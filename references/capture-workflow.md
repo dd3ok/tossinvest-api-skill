@@ -2,6 +2,13 @@
 
 Use this workflow when adding or verifying TossInvest web API endpoints.
 
+Record request contracts in the owning [stock](api-stock.md),
+[market](api-market.md), or [feed/community](api-community.md) reference.
+Keep shared status and host rules in [the catalog](api-catalog.md#verification-status),
+commands in the cookbook, and output interpretation in response notes.
+Preserve old catalog section anchors when moving material; update current task
+links to the final section. A document move does not refresh its evidence date.
+
 1. Open the target `tossinvest.com` page in a real browser, Playwright, or CDP-connected browser.
 2. Record network requests after initial page load.
 3. Scroll the page to trigger lazy-loaded sections.

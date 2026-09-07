@@ -2,14 +2,61 @@ import hashlib
 import re
 import unittest
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
+API_DOMAIN_PATHS = tuple(
+    ROOT / "references" / f"api-{domain}.md" for domain in ("stock", "market", "community")
+)
 
 
 def markdown_heading_slug(value: str) -> str:
     value = value.strip().lower()
     value = re.sub(r"[^\w\- ]", "", value)
     return re.sub(r"\s+", "-", value)
+
+
+def markdown_prose(text: str) -> str:
+    """Ignore fenced examples when checking this repository's Markdown links."""
+    lines = []
+    fence = None
+    for line in text.splitlines():
+        marker = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line)
+        if fence is not None:
+            if marker and marker[1][0] == fence[0] and len(marker[1]) >= len(fence):
+                if not marker[2].strip():
+                    fence = None
+            continue
+        if marker:
+            fence = marker[1]
+        else:
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def markdown_heading_anchors(text: str) -> set[str]:
+    anchors = set()
+    for match in re.finditer(r"^ {0,3}#{1,6}\s+(.+?)\s*$", markdown_prose(text), re.MULTILINE):
+        title = re.sub(r"\s+#+\s*$", "", match[1])
+        slug = markdown_heading_slug(title)
+        anchor = slug
+        suffix = 0
+        while anchor in anchors:
+            suffix += 1
+            anchor = f"{slug}-{suffix}"
+        anchors.add(anchor)
+    return anchors
+
+
+def markdown_link_targets(text: str) -> list[str]:
+    # Maintained docs use inline links, including optional angle-bracket targets.
+    return [
+        match[1] or match[2]
+        for match in re.finditer(
+            r'!?\[[^\]\n]*\]\((?:<([^>\n]+)>|([^\s)]+))(?:\s+"[^"]*")?\)',
+            markdown_prose(text),
+        )
+    ]
 
 
 class DocumentationPromptTests(unittest.TestCase):
@@ -74,6 +121,7 @@ class DocumentationPromptTests(unittest.TestCase):
             ROOT / "references" / "safety-rules.md",
             ROOT / "references" / "official-openapi-boundary.md",
             ROOT / "references" / "api-catalog.md",
+            *API_DOMAIN_PATHS,
             ROOT / "SECURITY.md",
         ]
         for path in checked_paths:
@@ -123,6 +171,7 @@ class DocumentationPromptTests(unittest.TestCase):
             ROOT / "SECURITY.md",
             ROOT / "agents" / "openai.yaml",
             ROOT / "references" / "api-catalog.md",
+            *API_DOMAIN_PATHS,
             ROOT / "references" / "capture-workflow.md",
             ROOT / "references" / "eval-prompts.md",
             ROOT / "references" / "official-openapi-boundary.md",
@@ -205,27 +254,25 @@ class DocumentationPromptTests(unittest.TestCase):
         body = text.split("---", 2)[2]
         self.assertIn("Use Python 3.12, the sole supported runtime, with network access.", body)
 
-    def test_skill_local_links_and_reference_anchors_exist(self):
-        skill_path = ROOT / "SKILL.md"
-        skill = skill_path.read_text(encoding="utf-8")
-
-        for target in re.findall(r"\[[^\]]+\]\(([^)]+)\)", skill):
-            if target.startswith(("http://", "https://", "#")):
-                continue
-            path_text, _, fragment = target.partition("#")
-            linked_path = skill_path.parent / path_text
-            with self.subTest(target=target):
-                self.assertTrue(linked_path.exists(), f"Missing local link target: {target}")
-                if fragment and linked_path.is_file():
-                    headings = {
-                        markdown_heading_slug(match.group(1))
-                        for match in re.finditer(
-                            r"^#{1,6}\s+(.+?)\s*$",
-                            linked_path.read_text(encoding="utf-8"),
-                            re.MULTILINE,
+    def test_maintained_docs_local_links_and_reference_anchors_exist(self):
+        checked_paths = [ROOT / "README.md", ROOT / "SKILL.md"]
+        checked_paths.extend(sorted((ROOT / "references").glob("*.md")))
+        for source in checked_paths:
+            for target in markdown_link_targets(source.read_text(encoding="utf-8")):
+                parsed = urlsplit(target)
+                if parsed.scheme or parsed.netloc:
+                    continue
+                linked_path = source.parent / unquote(parsed.path) if parsed.path else source
+                with self.subTest(source=source.relative_to(ROOT), target=target):
+                    self.assertTrue(linked_path.exists(), f"Missing local link target: {target}")
+                    if parsed.fragment:
+                        self.assertTrue(linked_path.is_file(), "Fragments require a file target")
+                        self.assertEqual(linked_path.suffix.lower(), ".md")
+                        self.assertIn(
+                            unquote(parsed.fragment),
+                            markdown_heading_anchors(linked_path.read_text(encoding="utf-8")),
+                            f"Missing Markdown anchor: {target}",
                         )
-                    }
-                    self.assertIn(fragment, headings, f"Missing Markdown anchor: {target}")
 
         for reference in (ROOT / "references").glob("*.md"):
             lines = reference.read_text(encoding="utf-8").splitlines()
@@ -233,9 +280,55 @@ class DocumentationPromptTests(unittest.TestCase):
                 with self.subTest(reference=reference.name):
                     self.assertIn("## Contents", lines)
 
+    def test_catalog_legacy_domain_anchors_relocate_to_matching_sections(self):
+        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        legacy_headings = (
+            "Stock Summary APIs",
+            "Chart APIs",
+            "Index And Market Indicator APIs",
+            "Bond APIs",
+            "Analytics APIs",
+            "Filings And News APIs",
+            "Transaction Status APIs",
+            "Dashboard And Discovery APIs",
+            "Current Industry Dashboard And Sector Behavior",
+            "Calendar APIs",
+            "Dashboard And Screener Page Behavior",
+            "Home Ranking Values And Filters",
+            "Live Price Updates And Page Observations",
+            "RSI Screener And Sorting",
+            "Price Condition Presets",
+            "Technical Analysis Presets",
+            "Feed And News APIs",
+            "Screener APIs",
+            "Public Community And Main-Page APIs",
+        )
+        for heading in legacy_headings:
+            with self.subTest(heading=heading):
+                section = re.search(
+                    rf"^#{{2,3}} {re.escape(heading)}\n(.*?)(?=^#{{2,3}} |\Z)",
+                    catalog,
+                    re.MULTILINE | re.DOTALL,
+                )
+                self.assertIsNotNone(section, "Missing legacy catalog heading")
+                matching_targets = [
+                    target
+                    for target in markdown_link_targets(section[1])
+                    if urlsplit(target).fragment == markdown_heading_slug(heading)
+                    and (ROOT / "references" / urlsplit(target).path) in API_DOMAIN_PATHS
+                ]
+                self.assertTrue(matching_targets, "Legacy anchor must link to its domain section")
+                for target in matching_targets:
+                    linked = ROOT / "references" / urlsplit(target).path
+                    self.assertIn(
+                        urlsplit(target).fragment,
+                        markdown_heading_anchors(linked.read_text(encoding="utf-8")),
+                    )
+
     def test_reference_contents_cover_every_h2_section(self):
         for path in [
             ROOT / "references" / "api-catalog.md",
+            *API_DOMAIN_PATHS,
             ROOT / "references" / "response-notes.md",
         ]:
             text = path.read_text(encoding="utf-8")
@@ -479,6 +572,9 @@ class DocumentationPromptTests(unittest.TestCase):
                 self.assertIn("references/script-cookbook.md", row)
         for reference in [
             "references/api-catalog.md",
+            "references/api-stock.md",
+            "references/api-market.md",
+            "references/api-community.md",
             "references/capture-workflow.md",
             "references/response-notes.md",
             "references/safety-rules.md",
@@ -530,7 +626,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("examples/filters", section)
 
     def test_calendar_catalog_and_cookbook_cover_detail_and_index_subset(self):
-        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        catalog = (ROOT / "references" / "api-market.md").read_text(encoding="utf-8")
         cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
         self.assertIn("/api/v1/calendar/economic-indicators/{ric}", catalog)
         self.assertIn("/api/v1/nova-calendar/ai/analysis/indicators", catalog)
@@ -540,7 +636,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("scripts/calendar.py --year-month 2026-06 --kind index-events", cookbook)
 
     def test_news_docs_cover_paging_and_ordering(self):
-        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        catalog = (ROOT / "references" / "api-stock.md").read_text(encoding="utf-8")
         cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
         self.assertIn("number", catalog)
         self.assertIn("orderBy=latest", catalog)
@@ -549,7 +645,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("scripts/news.py --code A005930 --page 2 --order-by relevant", cookbook)
 
     def test_catalog_records_observed_excluded_drift_endpoints(self):
-        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        catalog = (ROOT / "references" / "api-community.md").read_text(encoding="utf-8")
         for expected in [
             "/api/v3/dashboard/wts/overview/indicator",
             "/api/v4/dashboard/wts/overview/indicator",
@@ -565,7 +661,10 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_public_web_visible_community_and_main_page_are_routed(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        catalog = "\n".join(
+            (ROOT / "references" / name).read_text(encoding="utf-8")
+            for name in ("api-community.md", "api-market.md", "api-catalog.md")
+        )
         notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")
         cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
         evals = (ROOT / "references" / "eval-prompts.md").read_text(encoding="utf-8")
@@ -616,7 +715,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("label the current claim `needs-recheck`", boundary)
 
     def test_index_page_recheck_docs_cover_current_public_widgets(self):
-        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        catalog = (ROOT / "references" / "api-market.md").read_text(encoding="utf-8")
         notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")
         cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -647,15 +746,19 @@ class DocumentationPromptTests(unittest.TestCase):
             "realtime_stock",
         ]:
             self.assertIn(live_chart, catalog)
-        self.assertIn("/indices/QGG01P", catalog)
+        observed_pages = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        self.assertIn("/indices/QGG01P", observed_pages)
         for crypto_code in ("BTC", "ETH", "XRP", "SOL"):
-            self.assertIn(f"/indices/VWAP.KRW-{crypto_code}", catalog)
+            self.assertIn(f"/indices/VWAP.KRW-{crypto_code}", observed_pages)
         self.assertIn("FX 1y/day:1", evals)
         self.assertIn("--range 1w --step min:10 --include-crypto-prices", evals)
 
     def test_public_search_sector_lounge_and_ranking_gaps_are_script_backed(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        catalog = "\n".join(
+            (ROOT / "references" / name).read_text(encoding="utf-8")
+            for name in ("api-market.md", "api-community.md")
+        )
         notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")
         cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -695,15 +798,17 @@ class DocumentationPromptTests(unittest.TestCase):
             with self.subTest(surface=text[:20]):
                 self.assertIn("calendar", text)
                 self.assertIn("public community", text)
-        self.assertIn("Observed drift, excluded, and sensitive public-social endpoints", catalog)
-        self.assertNotIn("Observed 2026-06-01 drift and excluded endpoints", catalog)
+        community = (ROOT / "references" / "api-community.md").read_text(encoding="utf-8")
+        self.assertIn("Observed drift, excluded, and sensitive public-social endpoints", community)
+        self.assertNotIn("Observed 2026-06-01 drift and excluded endpoints", community)
 
     def test_route_manifest_recheck_keeps_new_surfaces_bounded(self):
         catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        market = (ROOT / "references" / "api-market.md").read_text(encoding="utf-8")
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("## Bond APIs", catalog)
-        self.assertIn("/api/v1/bond-infos", catalog)
-        self.assertIn("/api/v1/bond-infos/simple", catalog)
+        self.assertIn("## Bond APIs", market)
+        self.assertIn("/api/v1/bond-infos", market)
+        self.assertIn("/api/v1/bond-infos/simple", market)
         self.assertIn("/bonds/{guid}", catalog)
         self.assertIn("### Route-manifest scope review", catalog)
         self.assertIn("/cheetah", catalog)
@@ -712,6 +817,8 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_latest_public_pages_tabs_and_paging_are_cataloged(self):
         catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        stock = (ROOT / "references" / "api-stock.md").read_text(encoding="utf-8")
+        community = (ROOT / "references" / "api-community.md").read_text(encoding="utf-8")
         cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
         notes = (ROOT / "references" / "response-notes.md").read_text(encoding="utf-8")
 
@@ -722,11 +829,12 @@ class DocumentationPromptTests(unittest.TestCase):
             "/community/lounges/LOUNGE_193394",
             "/community/posts/{post-id}",
             "/screener/4",
-            "/api/v1/boards/popular-follower",
-            "HTTP 404",
         ]:
             with self.subTest(expected=expected):
                 self.assertIn(expected, catalog)
+
+        self.assertIn("/api/v1/boards/popular-follower", community)
+        self.assertIn("HTTP 404", community)
 
         self.assertIn("scripts/filings.py --code A005930 --page 2", cookbook)
         self.assertIn("--type lending-trading --page 2 --key", cookbook)
@@ -745,7 +853,7 @@ class DocumentationPromptTests(unittest.TestCase):
             "Business/holding composition",
             "Dividend yield history",
         ]:
-            row = next(line for line in catalog.splitlines() if line.startswith(f"| {purpose} |"))
+            row = next(line for line in stock.splitlines() if line.startswith(f"| {purpose} |"))
             with self.subTest(purpose=purpose):
                 self.assertIn("`script-backed`", row)
 
@@ -873,7 +981,7 @@ class DocumentationPromptTests(unittest.TestCase):
         checked_paths = [
             ROOT / "SKILL.md",
             ROOT / "references" / "script-cookbook.md",
-            ROOT / "references" / "api-catalog.md",
+            ROOT / "references" / "api-stock.md",
         ]
         for path in checked_paths:
             with self.subTest(path=path.relative_to(ROOT)):
@@ -884,7 +992,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertIn("US20100311002", readme)
         self.assertIn("표시 티커", readme)
         self.assertNotIn("Display ticker/표시 티커", readme)
-        api_catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        api_catalog = (ROOT / "references" / "api-stock.md").read_text(encoding="utf-8")
         self.assertIn("SPY", api_catalog)
         self.assertIn("HTTP 400", api_catalog)
 
@@ -909,7 +1017,7 @@ class DocumentationPromptTests(unittest.TestCase):
         checked_paths = [
             ROOT / "SKILL.md",
             ROOT / "README.md",
-            ROOT / "references" / "api-catalog.md",
+            ROOT / "references" / "api-market.md",
             ROOT / "references" / "script-cookbook.md",
             ROOT / "references" / "eval-prompts.md",
         ]
@@ -918,7 +1026,7 @@ class DocumentationPromptTests(unittest.TestCase):
                 text = path.read_text(encoding="utf-8")
                 self.assertIn("투자위험 주식 숨기기", text)
 
-        catalog = (ROOT / "references" / "api-catalog.md").read_text(encoding="utf-8")
+        catalog = (ROOT / "references" / "api-market.md").read_text(encoding="utf-8")
         for filter_id in [
             "KRX_MANAGEMENT_STOCK",
             "MARKET_CAP_GREATER_THAN_50M",

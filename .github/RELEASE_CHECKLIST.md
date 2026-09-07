@@ -67,9 +67,14 @@ skill_dir="$workspace/.agents/skills/tossinvest-web-api"
 mkdir -p "$skill_dir"
 cp -R SKILL.md README.md CHANGELOG.md LICENSE SECURITY.md agents examples references scripts "$skill_dir"/
 cp requirements-websocket.txt "$skill_dir"/
+mkdir -p "$skill_dir/.github"
+cp .github/RELEASE_CHECKLIST.md "$skill_dir/.github/"
 test -f "$skill_dir/SKILL.md"
 test -f "$skill_dir/agents/openai.yaml"
 test -f "$skill_dir/references/api-catalog.md"
+test -f "$skill_dir/references/api-stock.md"
+test -f "$skill_dir/references/api-market.md"
+test -f "$skill_dir/references/api-community.md"
 test -f "$skill_dir/references/websocket-api-reference.md"
 test -f "$skill_dir/requirements-websocket.txt"
 test -f "$skill_dir/scripts/websocket_prices.py"
@@ -78,6 +83,13 @@ python3 "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
 ```
 
 ## Documentation
+
+- API contracts are maintained in `references/api-stock.md`, `api-market.md`,
+  and `api-community.md`; the common catalog retains shared rules and old
+  section links. Update the owning domain once and verify links from `SKILL.md`,
+  the cookbook, and response notes. Preserve old catalog anchors when moving sections.
+- Check document routes in the installed copy as well as the repository:
+  examples, API parameters, response notes, and required safety context remain reachable.
 
 - `CHANGELOG.md` records user-visible changes under `Unreleased`; when tagging,
   move the released entries to the actual version and release date.

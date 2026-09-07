@@ -7,7 +7,21 @@
 > 로그인이나 계좌 인증 없이 공개 주식·시장 데이터를 Codex, Claude Code 같은 에이전트가 안전하게 다시 조회하도록 돕습니다.  
 > 공식 Open API, 증권사 거래 API, 투자 조언 도구가 아닙니다.
 
-[설치](#설치) · [빠른 실행](#스크립트-빠른-실행) · [상세 실행 예제](references/script-cookbook.md) · [API 목록](references/api-catalog.md) · [변경 이력](CHANGELOG.md)
+[설치](#설치) · [빠른 실행](#스크립트-빠른-실행) · [문서 안내](#문서-안내) · [상세 실행 예제](references/script-cookbook.md) · [API 목록](references/api-catalog.md#choose-a-reference) · [변경 이력](CHANGELOG.md)
+
+## 문서 안내
+
+| 찾는 내용 | 문서 |
+| --- | --- |
+| 실행할 명령과 옵션 조합 | [실행 예제](references/script-cookbook.md#contents) |
+| 종목 시세·차트·재무·종목 뉴스·공시·투자자 동향 | [종목 API](references/api-stock.md) |
+| 지수·환율·채권·캘린더·랭킹·검색·섹터·스크리너 | [시장 API](references/api-market.md) |
+| 뉴스 탐색·피드·댓글·답글·댓글을 포함한 종목 통합 조회 | [피드·커뮤니티 API](references/api-community.md) |
+| 응답 필드·커서·출력 정제 | [응답 설명](references/response-notes.md#contents) |
+| API 확인 상태·호스트·제외 범위·관찰 페이지 | [공통 API 카탈로그](references/api-catalog.md#verification-status) |
+
+실시간 스트림은 [WebSocket 문서](references/websocket-api-reference.md),
+공식 OAuth API와의 차이는 [공식 API 구분 문서](references/official-openapi-boundary.md)를 참고하세요.
 
 ## 공식 Open API와의 구분
 
