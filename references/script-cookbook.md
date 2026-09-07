@@ -120,6 +120,17 @@ product code or display symbol. These scripts emit sanitized comment fields
 only; do not expose profile ids, avatar URLs, follow/bookmark flags, or other
 social/profile metadata from the source payload.
 
+As of 2026-09-07, stock comments first resolve the input's metadata `guid` and use
+that value as `subjectId`. This adds one metadata lookup to each standalone stock
+comment invocation, including cursor continuation; it also applies when called
+by `stock_page.py`. Keep `--code` as the original stock input and pass only the
+returned cursor to `--last-comment-id`. A missing GUID or invalid continuation
+fails explicitly instead of returning a misleading empty or duplicated page.
+
+Check the current logged-out page before enabling optional AI detail or quote
+widgets. The September audit saw a login prompt on the stock order-book panel
+and the index AI-detail panel; their presence is not anonymous-access evidence.
+
 ```bash
 python3 scripts/stock_page.py --code SOXL --comment-limit 5
 python3 scripts/stock_page.py --code US20100311002 --comment-pages 2 --comment-limit 10 --include-replies
@@ -351,6 +362,10 @@ python3 scripts/screener_count.py --nation kr --filters-file examples/filters/ne
 allowlisted filters so metadata request fanout stays bounded.
 
 ## Pension Fund Trend
+
+History ranges are limited to 20 calendar years, counting partial boundary
+years, before any request. Yearly mode therefore makes at most 20 sequential
+calls. This is a local client cap, not a claim about server history retention.
 
 ```bash
 python3 scripts/pension_fund_trend.py --code A005930 --year 2026 --summary-only

@@ -13,7 +13,6 @@ CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 
 COMMENT_SORTS = {"popular": "POPULAR", "recent": "RECENT"}
 _PRODUCT_CODE_RE = re.compile(r"^[A-Z0-9._-]{2,48}$")
-_STOCK_PRODUCT_CODE_RE = re.compile(r"^(A\d{6}|US\d{11})$")
 _LOUNGE_ID_RE = re.compile(r"^LOUNGE_\d{1,30}$")
 _DIGIT_ID_RE = re.compile(r"^[0-9]{1,30}$")
 _PHONE_RE = re.compile(
@@ -25,12 +24,12 @@ _MENTION_PROFILE_RE = re.compile(r"(\#\[[^\]\r\n]{1,80}\])\([0-9]{1,30}\)")
 
 
 def build_stock_comments_path(
-    code: str,
+    subject_id: str,
     sort: str,
     last_comment_id: str | int | None,
 ) -> str:
-    product_code = validate_product_code(api.normalize_product_code(code))
-    return build_subject_comments_path("STOCK", product_code, sort, last_comment_id)
+    """Build a comment path using an already resolved stock metadata GUID."""
+    return build_subject_comments_path("STOCK", subject_id, sort, last_comment_id)
 
 
 def build_lounge_comments_path(
@@ -54,7 +53,7 @@ def build_subject_comments_path(
 ) -> str:
     normalized_subject_type = subject_type.strip().upper()
     if normalized_subject_type == "STOCK":
-        normalized_subject_id = validate_product_code(subject_id)
+        normalized_subject_id = validate_stock_subject_id(subject_id)
     elif normalized_subject_type == "LOUNGE":
         normalized_subject_id = validate_lounge_id(subject_id)
     else:
@@ -107,14 +106,28 @@ def validate_lounge_id(lounge_id: str) -> str:
     return value
 
 
-def resolve_comment_subject_code(code_or_symbol: str) -> str:
+def validate_stock_subject_id(subject_id: str) -> str:
+    if (
+        not isinstance(subject_id, str)
+        or not _PRODUCT_CODE_RE.fullmatch(subject_id)
+        or subject_id.startswith("LOUNGE_")
+    ):
+        raise ValueError("stock subject ID must be a valid public stock metadata GUID")
+    return subject_id
+
+
+def resolve_comment_subject_id(code_or_symbol: str) -> str:
+    """Resolve every code or symbol to the GUID used by stock comment subjects."""
     value = validate_product_code(api.normalize_product_code(code_or_symbol))
-    if _STOCK_PRODUCT_CODE_RE.fullmatch(value):
-        return value
     result = api.get_result(f"/api/v2/stock-infos/code-or-symbol/{value}")
-    if not isinstance(result, dict) or not result.get("code"):
-        raise RuntimeError("Unexpected TossInvest response: stock info is missing product code")
-    return validate_product_code(str(result["code"]))
+    if not isinstance(result, dict) or not isinstance(result.get("guid"), str):
+        raise RuntimeError("Unexpected TossInvest response: stock info is missing a GUID")
+    try:
+        return validate_stock_subject_id(result["guid"])
+    except ValueError as exc:
+        raise RuntimeError(
+            "Unexpected TossInvest response: stock info contains an invalid GUID"
+        ) from exc
 
 
 def validate_digit_id(name: str, value: str | int) -> str:
@@ -214,10 +227,16 @@ def fetch_stock_comments(
     include_replies: bool,
     last_comment_id: str | int | None = None,
 ) -> dict[str, Any]:
-    product_code = resolve_comment_subject_code(code)
+    # Reject invalid local paging inputs before the metadata lookup as well.
+    api.require_int_range("pages", pages, minimum=1, maximum=5)
+    api.require_int_range("limit", limit, minimum=1, maximum=100)
+    _require_sort(sort)
+    if last_comment_id is not None:
+        validate_digit_id("last_comment_id", last_comment_id)
+    subject_id = resolve_comment_subject_id(code)
     return _fetch_subject_comments(
         "STOCK",
-        product_code,
+        subject_id,
         sort=sort,
         pages=pages,
         limit=limit,
@@ -265,10 +284,10 @@ def _fetch_subject_comments(
         else None
     )
     cursor = applied_last_comment_id
+    seen_cursors = {cursor} if cursor is not None else set()
     has_next = False
     pages_fetched = 0
     next_key: Any = None
-    last_emitted_comment_id: str | None = None
 
     for _ in range(pages):
         result = api.get_result(
@@ -284,6 +303,7 @@ def _fetch_subject_comments(
             raise RuntimeError("Unexpected TossInvest response: comments results is not a list")
         pages_fetched += 1
         truncated_mid_page = False
+        last_emitted_comment_id: str | None = None
         for row_index, row in enumerate(rows):
             if not isinstance(row, dict):
                 raise RuntimeError(
@@ -294,8 +314,9 @@ def _fetch_subject_comments(
                 sanitized["replies"] = fetch_comment_replies(sanitized["commentId"])
             comments.append(sanitized)
             comment_id = sanitized.get("commentId")
-            if comment_id is not None:
-                last_emitted_comment_id = validate_digit_id("comment_id", comment_id)
+            last_emitted_comment_id = (
+                validate_digit_id("comment_id", comment_id) if comment_id is not None else None
+            )
             if len(comments) >= limit:
                 truncated_mid_page = row_index < len(rows) - 1
                 break
@@ -305,6 +326,12 @@ def _fetch_subject_comments(
             next_key = last_emitted_comment_id
         if next_key is not None:
             next_key = validate_digit_id("last_comment_id", next_key)
+        if (server_has_next or truncated_mid_page) and next_key is None:
+            raise RuntimeError("Unexpected TossInvest response: comment cursor is missing")
+        if next_key is not None:
+            if next_key in seen_cursors:
+                raise RuntimeError("Unexpected TossInvest response: comment cursor did not advance")
+            seen_cursors.add(next_key)
         has_next = bool(next_key is not None and (server_has_next or truncated_mid_page))
         if len(comments) >= limit or not has_next:
             break
@@ -337,6 +364,7 @@ def fetch_community_post(
         validate_digit_id("last_reply_id", last_reply_id) if last_reply_id is not None else None
     )
     cursor = applied_last_reply_id
+    seen_cursors = {cursor} if cursor is not None else set()
     next_key: str | None = None
     has_next = False
     pages_fetched = 0
@@ -379,8 +407,9 @@ def fetch_community_post(
             sanitized = sanitize_post_comment(row)
             replies.append(sanitized)
             reply_id = sanitized.get("commentId")
-            if reply_id is not None:
-                last_emitted_reply_id = validate_digit_id("reply_id", reply_id)
+            last_emitted_reply_id = (
+                validate_digit_id("reply_id", reply_id) if reply_id is not None else None
+            )
             if len(replies) >= limit:
                 truncated_mid_page = row_index < len(rows) - 1
                 break
@@ -392,10 +421,16 @@ def fetch_community_post(
             next_key = last_emitted_reply_id
         else:
             next_key = None
-        if server_has_next and next_key is None:
+        if (server_has_next or truncated_mid_page) and next_key is None:
             raise RuntimeError(
                 "Unexpected TossInvest response: community post reply cursor is missing"
             )
+        if next_key is not None:
+            if next_key in seen_cursors:
+                raise RuntimeError(
+                    "Unexpected TossInvest response: community post reply cursor did not advance"
+                )
+            seen_cursors.add(next_key)
         has_next = bool(next_key is not None and (server_has_next or truncated_mid_page))
         if len(replies) >= limit or not has_next:
             break

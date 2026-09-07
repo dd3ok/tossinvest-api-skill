@@ -1,10 +1,15 @@
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
+import urllib.error
+import urllib.response
+from contextlib import redirect_stderr
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -25,6 +30,9 @@ class FakeSocket:
 
     def settimeout(self, timeout):
         self.timeout = timeout
+
+    def getstatus(self):
+        return 101
 
     def send(self, message):
         self.sent.append(message)
@@ -227,9 +235,162 @@ class WebSocketPriceTests(unittest.TestCase):
                 return b'{"result":"memory-only-key"}'
 
         response = Response()
-        with patch("urllib.request.urlopen", return_value=response):
+        with patch("urllib.request.OpenerDirector.open", return_value=response):
             self.assertEqual(stream.fetch_guest_key(), "memory-only-key")
         self.assertEqual(response.limit, 4_097)
+
+    def test_guest_bootstrap_rejects_redirects_without_following_or_leaking_reason(self):
+        secret = "synthetic-guest-location-must-not-appear"
+        for status in (301, 302, 303, 307, 308):
+            with self.subTest(status=status):
+                response = urllib.response.addinfourl(
+                    io.BytesIO(b""),
+                    {"Location": f"https://other.example/{secret}"},
+                    stream.GUEST_KEY_URL,
+                    status,
+                )
+                response.msg = secret
+                output = io.StringIO()
+                with (
+                    patch(
+                        "urllib.request.HTTPSHandler.https_open", return_value=response
+                    ) as opened,
+                    patch.dict(os.environ, {"TOSSINVEST_DEBUG": "1"}),
+                    redirect_stderr(output),
+                ):
+                    self.assertEqual(stream.api.run_cli(stream.fetch_guest_key), 1)
+                self.assertEqual(opened.call_count, 1)
+                self.assertTrue(response.closed)
+                self.assertIn(f"HTTP {status}", output.getvalue())
+                self.assertNotIn(secret, output.getvalue())
+
+    def test_guest_bootstrap_enforces_limit_before_parsing_valid_json(self):
+        payload = b'{"result":"memory-only-key"}'
+        for length, accepted in ((4_096, True), (4_097, False)):
+            with self.subTest(length=length):
+                response = io.BytesIO(payload.ljust(length, b" "))
+                with patch("urllib.request.OpenerDirector.open", return_value=response):
+                    if accepted:
+                        self.assertEqual(stream.fetch_guest_key(), "memory-only-key")
+                    else:
+                        with self.assertRaisesRegex(RuntimeError, "exceeded 4096 bytes"):
+                            stream.fetch_guest_key()
+                self.assertTrue(response.closed)
+
+    def test_guest_bootstrap_closes_http_errors_and_suppresses_transport_causes(self):
+        secret = "synthetic-transport-reason-must-not-appear"
+        body = io.BytesIO(secret.encode())
+        errors = [
+            urllib.error.HTTPError(stream.GUEST_KEY_URL, 403, secret, {}, body),
+            urllib.error.URLError(secret),
+            TimeoutError(secret),
+        ]
+        for error in errors:
+            with self.subTest(error_type=type(error).__name__):
+                output = io.StringIO()
+                with (
+                    patch("urllib.request.OpenerDirector.open", side_effect=error),
+                    patch.dict(os.environ, {"TOSSINVEST_DEBUG": "1"}),
+                    redirect_stderr(output),
+                ):
+                    self.assertEqual(stream.api.run_cli(stream.fetch_guest_key), 1)
+                self.assertNotIn(secret, output.getvalue())
+                self.assertIn("guest bootstrap", output.getvalue())
+        self.assertTrue(body.closed)
+
+    def test_guest_bootstrap_rejects_invalid_payload_without_echoing_it(self):
+        secret = "synthetic-invalid-guest-response"
+        for payload in (secret.encode(), secret.encode() + b"\xff", b'{"result":null}'):
+            with self.subTest(payload_type=payload[-1:]):
+                output = io.StringIO()
+                with (
+                    patch("urllib.request.OpenerDirector.open", return_value=io.BytesIO(payload)),
+                    patch.dict(os.environ, {"TOSSINVEST_DEBUG": "1"}),
+                    redirect_stderr(output),
+                ):
+                    self.assertEqual(stream.api.run_cli(stream.fetch_guest_key), 1)
+                self.assertNotIn(secret, output.getvalue())
+                self.assertIn("Unexpected TossInvest guest bootstrap response", output.getvalue())
+
+    def test_websocket_rejects_non_upgrade_before_sending_guest_connect(self):
+        socket = FakeSocket([])
+        module = FakeWebSocketModule(socket)
+        with patch.object(socket, "getstatus", return_value=302):
+            with self.assertRaisesRegex(RuntimeError, "WebSocket connection failed"):
+                stream.stream_prices(
+                    stream.build_subscriptions(kr_stocks=["A005930"]),
+                    duration=1,
+                    max_events=1,
+                    emit=lambda event: None,
+                    guest_key_fetcher=lambda: "synthetic-guest-key",
+                    websocket_module=module,
+                )
+        self.assertEqual(module.options["redirect_limit"], 0)
+        self.assertEqual(socket.sent, [])
+        self.assertTrue(socket.closed)
+
+    def test_websocket_handshake_failures_hide_guest_values_in_debug_tracebacks(self):
+        secret = "synthetic-handshake-secret-must-not-appear"
+        for failure in ("create_connection", "send", "recv"):
+            with self.subTest(failure=failure):
+                socket = FakeSocket([])
+                module = FakeWebSocketModule(socket)
+                target = module if failure == "create_connection" else socket
+                output = io.StringIO()
+                with (
+                    patch.object(target, failure, side_effect=RuntimeError(secret)),
+                    patch.dict(os.environ, {"TOSSINVEST_DEBUG": "1"}),
+                    redirect_stderr(output),
+                ):
+                    result = stream.api.run_cli(
+                        lambda: stream.stream_prices(
+                            stream.build_subscriptions(kr_stocks=["A005930"]),
+                            duration=1,
+                            max_events=1,
+                            emit=lambda event: None,
+                            guest_key_fetcher=lambda: secret,
+                            websocket_module=module,
+                        )
+                    )
+                self.assertEqual(result, 1)
+                self.assertNotIn(secret, output.getvalue())
+                self.assertIn("connection failed", output.getvalue())
+                if failure != "create_connection":
+                    self.assertTrue(socket.closed)
+
+    def test_pinned_websocket_client_redirect_is_rejected_without_second_connection(self):
+        try:
+            import websocket
+            import websocket._core as core
+        except ModuleNotFoundError:
+            self.skipTest("optional websocket-client is not installed")
+        if websocket.__version__ != "1.9.0":
+            self.skipTest("test requires the pinned websocket-client 1.9.0")
+        transport = Mock()
+        response = SimpleNamespace(
+            status=302, headers={"location": "wss://other.example/ws"}, subprotocol=None
+        )
+        with (
+            patch.object(
+                core, "connect", return_value=(transport, ("host", 443, "/ws", True))
+            ) as opened,
+            patch.object(core, "handshake", return_value=response),
+            patch.object(core.WebSocket, "send") as send,
+            patch.object(core.WebSocket, "close") as close,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "WebSocket connection failed"):
+                stream.stream_prices(
+                    stream.build_subscriptions(kr_stocks=["A005930"]),
+                    duration=1,
+                    max_events=1,
+                    emit=lambda event: None,
+                    guest_key_fetcher=lambda: "synthetic-guest-key",
+                    websocket_module=websocket,
+                )
+        self.assertEqual(opened.call_count, 1)
+        self.assertEqual(opened.call_args.args[0], stream.SOCKET_URL)
+        send.assert_not_called()
+        close.assert_called_once()
 
     def test_stream_prices_connects_subscribes_normalizes_and_closes(self):
         destination = "/topic/v1/kr/stock/trade/A005930"
@@ -263,6 +424,7 @@ class WebSocketPriceTests(unittest.TestCase):
                 "subprotocols": [stream.SUBPROTOCOL],
                 "origin": stream.PUBLIC_ORIGIN,
                 "timeout": stream.CONNECT_TIMEOUT_SECONDS,
+                "redirect_limit": 0,
             },
         )
         connect_frame = next(message for message in socket.sent if message.startswith("CONNECT\n"))

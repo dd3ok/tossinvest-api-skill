@@ -61,6 +61,41 @@ class QuoteScriptTests(unittest.TestCase):
 
 
 class StockChartScriptTests(unittest.TestCase):
+    def test_invalid_indicators_fail_before_network(self):
+        params = dict(
+            securities_type="kr-s",
+            range_value="day:1",
+            count=3,
+            session="all",
+            invest_mode="krx",
+            use_adjusted_rate=True,
+            from_datetime=None,
+            currency=None,
+            rsi_period=None,
+            sma_periods=[],
+            ema_periods=[],
+            bollinger_period=None,
+            bollinger_stddev=2.0,
+            include_macd=False,
+            macd_fast=12,
+            macd_slow=26,
+            macd_signal=9,
+        )
+        for changes in (
+            {"rsi_period": 0},
+            {"sma_periods": [-1]},
+            {"ema_periods": [0]},
+            {"bollinger_period": 0},
+            {"bollinger_period": 2, "bollinger_stddev": float("nan")},
+            {"include_macd": True, "macd_fast": 26},
+            {"include_macd": True, "macd_signal": 0},
+        ):
+            with self.subTest(changes=changes):
+                with patch.object(stock_chart.api, "get_result") as get_result:
+                    with self.assertRaises(ValueError):
+                        stock_chart.fetch_chart("A005930", **{**params, **changes})
+                get_result.assert_not_called()
+
     def test_build_chart_path_uses_c_chart_with_range_and_query(self):
         self.assertEqual(
             stock_chart.build_chart_path("005930", "kr-s", "day:1", 61, "all", "krx", True),
@@ -309,7 +344,7 @@ class SectorScriptTests(unittest.TestCase):
             indicator_code="SPX.CBI",
         )
         self.assertEqual(get_result.call_count, 6)
-        self.assertEqual(payload["_meta"]["catalogCheckedAt"], "2026-08-04")
+        self.assertEqual(payload["_meta"]["catalogCheckedAt"], "2026-09-07")
         self.assertEqual(payload["_meta"]["transport"], "rest_snapshot")
         self.assertEqual(payload["_meta"]["pagination"]["stocks"]["pageSize"], 10)
         self.assertEqual(payload["_meta"]["pagination"]["news"]["pageSize"], 5)
@@ -351,6 +386,17 @@ class SectorScriptTests(unittest.TestCase):
 
 
 class PensionFundTrendScriptTests(unittest.TestCase):
+    def test_history_rejects_excessive_windows_before_network(self):
+        for yearly in (True, False):
+            with self.subTest(yearly=yearly):
+                with patch.object(pension_fund_trend.api, "request_json") as request_json:
+                    with self.assertRaisesRegex(ValueError, "at most 20 calendar years"):
+                        pension_fund_trend.fetch_history(
+                            "A005930", "0001-01-01", "2026-09-07", yearly
+                        )
+                request_json.assert_not_called()
+        self.assertEqual(len(pension_fund_trend.year_windows("2007-01-01", "2026-12-31")), 20)
+
     def test_year_windows_validate_dates_and_order(self):
         self.assertEqual(
             pension_fund_trend.year_windows("2025-12-31", "2026-01-02"),
@@ -1219,6 +1265,11 @@ class DashboardRankingScriptTests(unittest.TestCase):
 
 
 class FeedScriptTests(unittest.TestCase):
+    def test_index_news_preserves_case_sensitive_identifier_in_request(self):
+        with patch.object(feed.api, "get_result", return_value=[]) as get_result:
+            feed.fetch_dashboard_news("index", " RFU.GCv1 ")
+        self.assertEqual(get_result.call_args.kwargs["body"]["indexCode"], "RFU.GCv1")
+
     def test_build_recommended_alias_uses_current_public_cert_route(self):
         self.assertEqual(
             feed.build_feed_path("recommended", None),
@@ -1328,24 +1379,206 @@ class FeedScriptTests(unittest.TestCase):
 
 
 class CommunityCommentsScriptTests(unittest.TestCase):
+    def test_stock_inputs_always_resolve_metadata_guid_for_comment_subject(self):
+        cases = (
+            ("A005930", "A005930", "KR7005930003"),
+            ("005930", "A005930", "KR7005930003"),
+            (" a005930 ", "A005930", "KR7005930003"),
+            ("nvda", "NVDA", "US0000000001"),
+            ("US19990122001", "US19990122001", "US0000000001"),
+        )
+        for supplied, resolved_input, guid in cases:
+            with self.subTest(supplied=supplied):
+                metadata = {"code": resolved_input, "guid": guid, "symbol": "unused-symbol"}
+                with patch.object(
+                    community_comments.api,
+                    "get_result",
+                    side_effect=[metadata, {"results": [], "hasNext": False}],
+                ) as get_result:
+                    payload = community_comments.fetch_stock_comments(
+                        supplied, sort="recent", pages=1, limit=5, include_replies=False
+                    )
+                self.assertEqual(payload["subjectId"], guid)
+                self.assertEqual(payload["subjectType"], "STOCK")
+                self.assertEqual(get_result.call_count, 2)
+                self.assertEqual(
+                    get_result.call_args_list[0].args,
+                    (f"/api/v2/stock-infos/code-or-symbol/{resolved_input}",),
+                )
+                self.assertEqual(get_result.call_args_list[0].kwargs, {})
+                self.assertEqual(
+                    get_result.call_args_list[1].args,
+                    (
+                        f"/api/v4/comments?subjectType=STOCK&subjectId={guid}&commentSortType=RECENT",
+                    ),
+                )
+                self.assertEqual(
+                    get_result.call_args_list[1].kwargs,
+                    {"base_url": community_comments.CERT_BASE_URL},
+                )
+
+    def test_stock_metadata_without_valid_guid_stops_before_comment_request(self):
+        invalid_metadata = (
+            None,
+            [],
+            {"code": "A005930", "symbol": "005930"},
+            {"code": "A005930", "guid": None},
+            {"code": "A005930", "guid": 123},
+            {"code": "A005930", "guid": {}},
+            {"code": "A005930", "guid": ""},
+            {"code": "A005930", "guid": " KR7005930003 "},
+            {"code": "A005930", "guid": "KR7005930003?accountNo=private"},
+            {"code": "A005930", "guid": "LOUNGE_193394"},
+        )
+        for metadata in invalid_metadata:
+            with self.subTest(metadata=metadata):
+                with patch.object(
+                    community_comments.api, "get_result", return_value=metadata
+                ) as get_result:
+                    with self.assertRaisesRegex(RuntimeError, "GUID"):
+                        community_comments.fetch_stock_comments(
+                            "A005930", sort="recent", pages=1, limit=5, include_replies=False
+                        )
+                self.assertEqual(get_result.call_count, 1)
+
+    def test_stock_comments_validate_local_paging_before_metadata_lookup(self):
+        for invalid in (
+            {"pages": 0},
+            {"limit": 0},
+            {"sort": "following"},
+            {"last_comment_id": "abc"},
+        ):
+            with self.subTest(invalid=invalid):
+                options = {"sort": "recent", "pages": 1, "limit": 5, "include_replies": False}
+                options.update(invalid)
+                with patch.object(community_comments.api, "get_result") as get_result:
+                    with self.assertRaises(ValueError):
+                        community_comments.fetch_stock_comments("A005930", **options)
+                get_result.assert_not_called()
+
+    def test_stock_subject_builder_preserves_resolved_guid_without_symbol_conversion(self):
+        self.assertIn(
+            "subjectId=KR7005930003",
+            community_comments.build_stock_comments_path("KR7005930003", "recent", None),
+        )
+        for invalid in (None, "", "KR7005930003/extra", "LOUNGE_193394", "K" * 49):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(ValueError, "stock metadata GUID"):
+                    community_comments.build_stock_comments_path(invalid, "recent", None)
+
+    def test_truncation_does_not_reuse_id_from_before_an_idless_row(self):
+        rows = [{"commentId": 103}, {"message": "missing id"}, {"commentId": 101}]
+        for kind in ("comments", "post"):
+            with self.subTest(kind=kind):
+                result = (
+                    {"results": rows, "hasNext": False}
+                    if kind == "comments"
+                    else {
+                        "comment": {"commentId": 100},
+                        "replies": {"body": rows, "hasNext": False},
+                    }
+                )
+                with patch.object(community_comments.api, "get_result", return_value=result):
+                    with self.assertRaisesRegex(RuntimeError, "cursor is missing"):
+                        if kind == "comments":
+                            community_comments._fetch_subject_comments(
+                                "STOCK",
+                                "KR7005930003",
+                                sort="recent",
+                                pages=1,
+                                limit=2,
+                                include_replies=False,
+                            )
+                        else:
+                            community_comments.fetch_community_post(100, pages=1, limit=2)
+
+    def test_comments_stop_on_repeated_cursor_before_requesting_it_again(self):
+        for start in (None, "9"):
+            with self.subTest(start=start):
+                with patch.object(
+                    community_comments.api,
+                    "get_result",
+                    return_value={"results": [{"commentId": 9}], "hasNext": True, "key": "9"},
+                ) as get_result:
+                    with self.assertRaisesRegex(RuntimeError, "cursor did not advance"):
+                        community_comments._fetch_subject_comments(
+                            "STOCK",
+                            "KR7005930003",
+                            sort="recent",
+                            pages=5,
+                            limit=100,
+                            include_replies=False,
+                            last_comment_id=start,
+                        )
+                self.assertEqual(get_result.call_count, 2 if start is None else 1)
+
+    def test_comments_require_continuation_even_at_requested_page_limit(self):
+        with patch.object(
+            community_comments.api,
+            "get_result",
+            return_value={"results": [], "hasNext": True},
+        ) as get_result:
+            with self.assertRaisesRegex(RuntimeError, "cursor is missing"):
+                community_comments.fetch_lounge_comments(
+                    "LOUNGE_193394",
+                    sort="recent",
+                    pages=1,
+                    limit=10,
+                    include_replies=False,
+                )
+        self.assertEqual(get_result.call_count, 1)
+
+    def test_comments_reject_cursor_cycles(self):
+        with patch.object(
+            community_comments.api,
+            "get_result",
+            side_effect=[
+                {"results": [{"commentId": key}], "hasNext": True, "key": key}
+                for key in ("9", "8", "9")
+            ],
+        ) as get_result:
+            with self.assertRaisesRegex(RuntimeError, "cursor did not advance"):
+                community_comments._fetch_subject_comments(
+                    "STOCK",
+                    "KR7005930003",
+                    sort="recent",
+                    pages=5,
+                    limit=100,
+                    include_replies=False,
+                )
+        self.assertEqual(get_result.call_count, 3)
+
+    def test_post_replies_stop_on_repeated_cursor(self):
+        with patch.object(
+            community_comments.api,
+            "get_result",
+            return_value={
+                "comment": {"commentId": 100},
+                "replies": {"body": [{"commentId": 9}], "hasNext": True},
+            },
+        ) as get_result:
+            with self.assertRaisesRegex(RuntimeError, "cursor did not advance"):
+                community_comments.fetch_community_post(100, pages=5, limit=100)
+        self.assertEqual(get_result.call_count, 2)
+
     def test_build_stock_comments_path_uses_public_stock_query(self):
         self.assertEqual(
-            community_comments.build_stock_comments_path("US20100311002", "popular", None),
-            ("/api/v4/comments?subjectType=STOCK&subjectId=US20100311002&commentSortType=POPULAR"),
+            community_comments.build_stock_comments_path("US0000000001", "popular", None),
+            ("/api/v4/comments?subjectType=STOCK&subjectId=US0000000001&commentSortType=POPULAR"),
         )
         self.assertEqual(
-            community_comments.build_stock_comments_path("US20100311002", "recent", 287893608),
+            community_comments.build_stock_comments_path("US0000000001", "recent", 287893608),
             (
-                "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                "/api/v4/comments?subjectType=STOCK&subjectId=US0000000001"
                 "&commentSortType=RECENT&lastCommentId=287893608"
             ),
         )
 
     def test_build_stock_comments_path_rejects_unverified_inputs(self):
         with self.assertRaisesRegex(ValueError, "sort must be one of"):
-            community_comments.build_stock_comments_path("US20100311002", "following", None)
+            community_comments.build_stock_comments_path("US0000000001", "following", None)
         with self.assertRaisesRegex(ValueError, "last_comment_id must contain digits"):
-            community_comments.build_stock_comments_path("US20100311002", "popular", "abc")
+            community_comments.build_stock_comments_path("US0000000001", "popular", "abc")
 
     def test_build_lounge_comments_path_uses_bounded_public_query(self):
         self.assertEqual(
@@ -1383,7 +1616,7 @@ class CommunityCommentsScriptTests(unittest.TestCase):
                 "shortDescription": "profile text",
             },
             "message": {"title": "title", "message": "call me 010-1234-5678"},
-            "board": {"subjectType": "STOCK", "subjectId": "US20100311002", "topic": "SOXL"},
+            "board": {"subjectType": "STOCK", "subjectId": "US0000000001", "topic": "SOXL"},
             "statistic": {
                 "likeCount": 3,
                 "replyCount": 1,
@@ -1496,8 +1729,9 @@ class CommunityCommentsScriptTests(unittest.TestCase):
             return responses.pop(0)
 
         with patch.object(community_comments.api, "get_result", fake_get_result):
-            payload = community_comments.fetch_stock_comments(
-                "US20100311002",
+            payload = community_comments._fetch_subject_comments(
+                "STOCK",
+                "US0000000001",
                 sort="popular",
                 pages=2,
                 limit=10,
@@ -1515,8 +1749,9 @@ class CommunityCommentsScriptTests(unittest.TestCase):
             return {"results": [], "hasNext": False, "key": None}
 
         with patch.object(community_comments.api, "get_result", fake_get_result):
-            payload = community_comments.fetch_stock_comments(
-                "A005930",
+            payload = community_comments._fetch_subject_comments(
+                "STOCK",
+                "KR7005930003",
                 sort="popular",
                 pages=1,
                 limit=5,
@@ -1532,9 +1767,9 @@ class CommunityCommentsScriptTests(unittest.TestCase):
         def fake_get_result(path, **kwargs):
             calls.append((path, kwargs))
             if path == "/api/v2/stock-infos/code-or-symbol/NVDA":
-                return {"code": "US19990122001", "symbol": "NVDA"}
+                return {"code": "US19990122001", "symbol": "NVDA", "guid": "US0000000001"}
             if path == (
-                "/api/v4/comments?subjectType=STOCK&subjectId=US19990122001&commentSortType=POPULAR"
+                "/api/v4/comments?subjectType=STOCK&subjectId=US0000000001&commentSortType=POPULAR"
             ):
                 return {
                     "results": [{"commentId": 1, "author": {"nickname": "nvidia holder"}}],
@@ -1552,7 +1787,7 @@ class CommunityCommentsScriptTests(unittest.TestCase):
                 include_replies=False,
             )
 
-        self.assertEqual(payload["subjectId"], "US19990122001")
+        self.assertEqual(payload["subjectId"], "US0000000001")
         self.assertEqual(payload["comments"][0]["authorNickname"], "nvidia holder")
         self.assertEqual(calls[1][1]["base_url"], community_comments.CERT_BASE_URL)
 
@@ -1561,7 +1796,7 @@ class CommunityCommentsScriptTests(unittest.TestCase):
             self.assertEqual(
                 path,
                 (
-                    "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002"
+                    "/api/v4/comments?subjectType=STOCK&subjectId=US0000000001"
                     "&commentSortType=POPULAR"
                 ),
             )
@@ -1576,8 +1811,9 @@ class CommunityCommentsScriptTests(unittest.TestCase):
             }
 
         with patch.object(community_comments.api, "get_result", fake_get_result):
-            payload = community_comments.fetch_stock_comments(
-                "US20100311002",
+            payload = community_comments._fetch_subject_comments(
+                "STOCK",
+                "US0000000001",
                 sort="popular",
                 pages=1,
                 limit=1,
@@ -1600,8 +1836,9 @@ class CommunityCommentsScriptTests(unittest.TestCase):
                 "key": None,
             },
         ):
-            payload = community_comments.fetch_stock_comments(
-                "US20100311002",
+            payload = community_comments._fetch_subject_comments(
+                "STOCK",
+                "US0000000001",
                 sort="popular",
                 pages=1,
                 limit=1,
@@ -1745,7 +1982,7 @@ class CommunityCommentsScriptTests(unittest.TestCase):
 
     def test_fetch_stock_comments_can_attach_sanitized_replies(self):
         responses = {
-            "/api/v4/comments?subjectType=STOCK&subjectId=US20100311002&commentSortType=POPULAR": {
+            "/api/v4/comments?subjectType=STOCK&subjectId=US0000000001&commentSortType=POPULAR": {
                 "results": [{"commentId": 1, "author": {"nickname": "parent"}}],
                 "hasNext": False,
                 "key": None,
@@ -1766,8 +2003,9 @@ class CommunityCommentsScriptTests(unittest.TestCase):
             return responses[path]
 
         with patch.object(community_comments.api, "get_result", fake_get_result):
-            payload = community_comments.fetch_stock_comments(
-                "US20100311002",
+            payload = community_comments._fetch_subject_comments(
+                "STOCK",
+                "US0000000001",
                 sort="popular",
                 pages=1,
                 limit=10,
@@ -1783,6 +2021,16 @@ class CommunityCommentsScriptTests(unittest.TestCase):
 
 
 class StockPageScriptTests(unittest.TestCase):
+    def test_ai_signal_index_preserves_case_without_changing_stock_normalization(self):
+        self.assertIn(
+            "productCode=RFU.GCv1&productType=INDEX",
+            stock_page.build_ai_signal_detail_path(" RFU.GCv1 ", "index"),
+        )
+        self.assertIn(
+            "productCode=A005930&productType=STOCKS",
+            stock_page.build_ai_signal_detail_path("005930", "stocks"),
+        )
+
     def test_build_ai_signal_detail_path_for_stock(self):
         self.assertEqual(
             stock_page.build_ai_signal_detail_path("US20100311002", "stocks"),

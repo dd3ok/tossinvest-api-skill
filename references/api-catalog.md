@@ -1,5 +1,13 @@
 # TossInvest Web API Catalog
 
+Latest bounded update: **2026-09-07**, web build `7r39ou7dRVa7AiAbxAXNF`.
+See the [update audit](update-audit-2026-09-07.md) for direct request coverage,
+UI states, changed contracts, and remaining unverified cases; the dated checks
+below remain historical evidence rather than a blanket current verification.
+Stock comments now resolve `code-or-symbol` metadata and use its **`guid`** as
+`subjectId`. The [bundle audit](web-bundle-audit-2026-09-07.md) records 63 route
+templates, independent sector paging, and the current community caller.
+
 Base observation date: 2026-04-16
 Additional bundle/API check: 2026-04-20 against `buildId=SUN83tZwsh5murULLiDPr`
 Additional page check: 2026-04-20 for `/stocks/A005930/order`, home ranking variants, `/indices/KGG01P`, `/feed/recommended`, and `/feed/news`
@@ -946,7 +954,7 @@ lounges, or public post permalinks; stock mode resolves display symbols through
 | Purpose | Status | Method | Path | Params and notes |
 |---|---|---:|---|---|
 | Stock page composite | `script-backed` | mixed | `scripts/stock_page.py` | Uses `code-or-symbol`, price details, AI detail, optional red flags/trading status/trading analysis, and sanitized comments |
-| Public stock comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=STOCK`, `subjectId={productCode}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; script input may be a product code or display symbol and accepts a prior cursor through `--last-comment-id` |
+| Public stock comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=STOCK`, `subjectId={stockInfo.guid}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; resolve every product code or display symbol through `code-or-symbol` first. Confirmed 2026-09-07: `A005930` must use `KR7005930003`; sending the product code returned an empty result despite visible comments. Accept a prior cursor through `--last-comment-id`. |
 | Public lounge comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=LOUNGE`, `subjectId=LOUNGE_{digits}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; same sanitizer, start-cursor option, and page limits as stock comments |
 | Public comment replies | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/comments/{commentId}/replies` | Sanitized reply rows; v1 replies also observed but v2 is preferred |
 | Public community post permalink and replies | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/comments/{postId}/replies` | Result has `topic`, `comment`, and `replies.body`; optional numeric `lastReplyId` continues replies; `community_comments.py --post-id --last-reply-id` sanitizes both the post and reply rows |

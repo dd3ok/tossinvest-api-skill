@@ -7,6 +7,7 @@ import argparse
 from typing import Any
 
 import community_comments
+import indices
 import tossinvest_api as api
 
 AI_PRODUCT_TYPES = {"stocks": "STOCKS", "index": "INDEX", "currency": "CURRENCY"}
@@ -14,9 +15,14 @@ AI_PRODUCT_TYPES = {"stocks": "STOCKS", "index": "INDEX", "currency": "CURRENCY"
 
 def build_ai_signal_detail_path(code: str, product_type: str) -> str:
     normalized_type = _require_ai_product_type(product_type)
+    product_code = (
+        indices.normalize_index_code(code)
+        if normalized_type == "INDEX"
+        else api.normalize_product_code(code)
+    )
     return api.build_path(
         "/api/v1/dashboard/wts/overview/ai-signals/detail",
-        {"productCode": api.normalize_product_code(code), "productType": normalized_type},
+        {"productCode": product_code, "productType": normalized_type},
     )
 
 
