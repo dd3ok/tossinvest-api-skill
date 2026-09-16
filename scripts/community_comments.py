@@ -12,6 +12,7 @@ import tossinvest_api as api
 CERT_BASE_URL = "https://wts-cert-api.tossinvest.com"
 
 COMMENT_SORTS = {"popular": "POPULAR", "recent": "RECENT"}
+REPLY_SORTS = {"popular": "POPULAR", "newest": "NEWEST", "oldest": "OLDEST"}
 _PRODUCT_CODE_RE = re.compile(r"^[A-Z0-9._-]{2,48}$")
 _LOUNGE_ID_RE = re.compile(r"^LOUNGE_\d{1,30}$")
 _DIGIT_ID_RE = re.compile(r"^[0-9]{1,30}$")
@@ -69,8 +70,46 @@ def build_subject_comments_path(
     return api.build_path("/api/v4/comments", params)
 
 
-def build_comment_replies_path(comment_id: str | int) -> str:
-    return f"/api/v2/comments/{validate_digit_id('comment_id', comment_id)}/replies"
+def build_comment_replies_path(
+    comment_id: str | int,
+    *,
+    sort: str | None = None,
+    last_comment_id: str | int | None = None,
+    last_like_count: int | None = None,
+) -> str:
+    cursor_id, cursor_likes = _validate_reply_cursor(last_comment_id, last_like_count)
+    return api.build_path(
+        f"/api/v2/comments/{validate_digit_id('comment_id', comment_id)}/replies",
+        {
+            "replySortType": _require_reply_sort(sort) if sort is not None else None,
+            "lastCommentId": cursor_id,
+            "lastLikeCount": cursor_likes,
+        },
+    )
+
+
+def _require_reply_sort(sort: str) -> str:
+    key = sort.strip().lower()
+    if key not in REPLY_SORTS:
+        raise ValueError(f"reply-sort must be one of: {', '.join(sorted(REPLY_SORTS))}")
+    return REPLY_SORTS[key]
+
+
+def _validate_reply_cursor(
+    last_comment_id: str | int | None, last_like_count: int | None
+) -> tuple[str | None, int | None]:
+    if (last_comment_id is None) != (last_like_count is None):
+        raise ValueError("reply cursor requires both last_comment_id and last_like_count")
+    if last_comment_id is None:
+        return None, None
+    cursor_id = validate_digit_id("last_comment_id", last_comment_id)
+    if (
+        not isinstance(last_like_count, int)
+        or isinstance(last_like_count, bool)
+        or not _DIGIT_ID_RE.fullmatch(str(last_like_count))
+    ):
+        raise ValueError("last_like_count must be a nonnegative integer of at most 30 digits")
+    return cursor_id, last_like_count
 
 
 def build_community_post_path(
@@ -336,7 +375,11 @@ def _fetch_subject_comments(
                 )
             sanitized = sanitize_comment(row)
             if include_replies and sanitized.get("commentId") is not None:
-                sanitized["replies"] = fetch_comment_replies(sanitized["commentId"])
+                reply_page = fetch_comment_replies_page(sanitized["commentId"])
+                sanitized["replies"] = reply_page["replies"]
+                sanitized["replyPagination"] = {
+                    key: value for key, value in reply_page.items() if key != "replies"
+                }
             comments.append(sanitized)
             comment_id = sanitized.get("commentId")
             last_emitted_comment_id = (
@@ -476,13 +519,111 @@ def fetch_community_post(
     }
 
 
+def fetch_comment_replies_page(
+    comment_id: str | int,
+    *,
+    sort: str | None = "popular",
+    pages: int = 1,
+    limit: int = 100,
+    last_comment_id: str | int | None = None,
+    last_like_count: int | None = None,
+) -> dict[str, Any]:
+    normalized_comment_id = validate_digit_id("comment_id", comment_id)
+    reply_sort = _require_reply_sort(sort) if sort is not None else None
+    pages = api.require_int_range("pages", pages, minimum=1, maximum=5)
+    limit = api.require_int_range("limit", limit, minimum=1, maximum=100)
+    initial_id, initial_likes = _validate_reply_cursor(last_comment_id, last_like_count)
+    cursor_id, cursor_likes = initial_id, initial_likes
+    seen_cursors = {cursor_id} if cursor_id is not None else set()
+    seen_replies: set[str] = {initial_id} if initial_id is not None else set()
+    replies: list[dict[str, Any]] = []
+    pages_fetched = 0
+    has_next = False
+    next_id: str | None = None
+    next_likes: int | None = None
+    total_count: int | None = None
+
+    for _ in range(pages):
+        result = api.get_result(
+            build_comment_replies_path(
+                normalized_comment_id,
+                sort=sort,
+                last_comment_id=cursor_id,
+                last_like_count=cursor_likes,
+            ),
+            base_url=CERT_BASE_URL,
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("Unexpected TossInvest response: replies result is not a dictionary")
+        rows = result.get("results", result.get("replies"))
+        if not isinstance(rows, list):
+            raise RuntimeError(
+                "Unexpected TossInvest response: replies result does not contain a list"
+            )
+        server_has_next = result.get("hasNext", False)
+        if not isinstance(server_has_next, bool):
+            raise RuntimeError("Unexpected TossInvest response: reply hasNext is not a boolean")
+        total_count = _integer_or_none(result.get("totalCount"))
+        pages_fetched += 1
+        truncated_mid_page = False
+        last_row: dict[str, Any] | None = None
+        for row_index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                raise RuntimeError("Unexpected TossInvest response: reply row is not a dictionary")
+            last_row = row
+            sanitized = sanitize_comment(row)
+            reply_id = sanitized.get("commentId")
+            dedupe_id = str(reply_id) if reply_id is not None else None
+            if dedupe_id is not None and dedupe_id in seen_replies:
+                continue
+            if dedupe_id is not None:
+                seen_replies.add(dedupe_id)
+            replies.append(sanitized)
+            if len(replies) >= limit:
+                truncated_mid_page = row_index < len(rows) - 1
+                break
+
+        has_next = server_has_next or truncated_mid_page
+        next_id, next_likes = None, None
+        if has_next:
+            raw_id = (
+                last_row.get("commentId") if truncated_mid_page and last_row else result.get("key")
+            )
+            raw_likes = (
+                _dict_or_empty(last_row.get("statistic")).get("likeCount") if last_row else None
+            )
+            if raw_id is None or raw_likes is None:
+                raise RuntimeError("Unexpected TossInvest response: reply cursor is missing")
+            try:
+                next_id, next_likes = _validate_reply_cursor(raw_id, raw_likes)
+            except ValueError as exc:
+                raise RuntimeError(
+                    "Unexpected TossInvest response: reply cursor is invalid"
+                ) from exc
+            if next_id in seen_cursors:
+                raise RuntimeError("Unexpected TossInvest response: reply cursor did not advance")
+            seen_cursors.add(next_id)
+        if len(replies) >= limit or not has_next:
+            break
+        cursor_id, cursor_likes = next_id, next_likes
+
+    return {
+        "commentId": normalized_comment_id,
+        "replySort": reply_sort,
+        "lastCommentId": initial_id,
+        "lastLikeCount": initial_likes,
+        "pagesFetched": pages_fetched,
+        "hasNext": has_next,
+        "nextLastCommentId": next_id,
+        "nextLastLikeCount": next_likes,
+        "totalCount": total_count,
+        "replies": replies,
+    }
+
+
 def fetch_comment_replies(comment_id: str | int) -> list[dict[str, Any]]:
-    result = api.get_result(build_comment_replies_path(comment_id), base_url=CERT_BASE_URL)
-    if isinstance(result, dict) and isinstance(result.get("results"), list):
-        return [sanitize_comment(row) for row in result["results"] if isinstance(row, dict)]
-    if isinstance(result, dict) and isinstance(result.get("replies"), list):
-        return [sanitize_comment(row) for row in result["replies"] if isinstance(row, dict)]
-    raise RuntimeError("Unexpected TossInvest response: replies result does not contain a list")
+    """Compatibility wrapper returning only one sanitized reply page."""
+    return fetch_comment_replies_page(comment_id, sort=None)["replies"]
 
 
 def _dict_or_empty(value: Any) -> dict[str, Any]:
@@ -551,6 +692,9 @@ def main() -> int:
     subject_group.add_argument("--code", help="TossInvest stock product code")
     subject_group.add_argument("--lounge-id", help="Public lounge id, e.g. LOUNGE_193394")
     subject_group.add_argument("--post-id", help="Public community post id from a permalink")
+    subject_group.add_argument(
+        "--comment-id", help="Public parent comment id for sorted v2 replies"
+    )
     parser.add_argument("--sort", choices=sorted(COMMENT_SORTS), default="popular")
     parser.add_argument("--pages", type=int, default=1, help="Maximum comment pages to fetch")
     parser.add_argument("--limit", type=int, default=10, help="Maximum sanitized comments to emit")
@@ -563,13 +707,46 @@ def main() -> int:
         help="Post cursor from a previous nextLastReplyId",
     )
     parser.add_argument(
+        "--reply-sort", choices=sorted(REPLY_SORTS), help="V2 reply sort; default popular"
+    )
+    parser.add_argument("--reply-last-comment-id", help="V2 reply cursor from nextLastCommentId")
+    parser.add_argument(
+        "--reply-last-like-count",
+        type=int,
+        help="V2 reply cursor from nextLastLikeCount; pair with its ID",
+    )
+    parser.add_argument(
         "--include-replies", action="store_true", help="Fetch replies for returned comments"
     )
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
 
-    if args.post_id:
+    if not args.comment_id and any(
+        value is not None
+        for value in (args.reply_sort, args.reply_last_comment_id, args.reply_last_like_count)
+    ):
+        raise ValueError("--reply-sort and --reply-last-* require --comment-id")
+    if args.comment_id:
+        if args.sort != "popular":
+            raise ValueError("--comment-id uses --reply-sort instead of --sort")
+        if (
+            args.last_comment_id is not None
+            or args.last_reply_id is not None
+            or args.include_replies
+        ):
+            raise ValueError(
+                "--comment-id uses --reply-last-* cursors and does not use --include-replies"
+            )
+        payload = fetch_comment_replies_page(
+            args.comment_id,
+            sort=args.reply_sort or "popular",
+            pages=args.pages,
+            limit=args.limit,
+            last_comment_id=args.reply_last_comment_id,
+            last_like_count=args.reply_last_like_count,
+        )
+    elif args.post_id:
         if args.last_comment_id is not None:
             raise ValueError("--last-comment-id cannot be used with --post-id")
         payload = fetch_community_post(

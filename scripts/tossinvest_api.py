@@ -147,6 +147,46 @@ def to_company_code(code: str) -> str:
     return value
 
 
+def validate_company_code(company_code: str) -> str:
+    """Validate a public company identifier without changing its case."""
+    if not isinstance(company_code, str):
+        raise ValueError("company-code must be a public identifier string")
+    value = company_code.strip()
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", value):
+        raise ValueError("company-code must be a 1-64 character public identifier")
+    return value
+
+
+def company_code_path_segment(company_code: str) -> str:
+    """Encode a company ID; retain the existing numeric KR stock-code shorthand."""
+    value = validate_company_code(company_code)
+    if re.fullmatch(r"[Aa][0-9]{6}", value):
+        value = value[1:]
+    return urllib.parse.quote(value, safe="")
+
+
+def resolve_company_code(code: str, *, company_code: str | None = None) -> str:
+    """Resolve every product or symbol through authoritative public stock metadata."""
+    if not isinstance(code, str):
+        raise ValueError("code must be a public product code or display symbol")
+    normalized_code = normalize_product_code(code)
+    if not re.fullmatch(r"[A-Z0-9][A-Z0-9._-]{0,47}", normalized_code):
+        raise ValueError("code must be a public product code or display symbol")
+    if company_code is not None:
+        return validate_company_code(company_code)
+    info = get_result(
+        "/api/v2/stock-infos/code-or-symbol/" + urllib.parse.quote(normalized_code, safe="")
+    )
+    if not isinstance(info, dict):
+        raise RuntimeError("Unexpected TossInvest response: stock metadata is not an object")
+    try:
+        return validate_company_code(info.get("companyCode"))
+    except ValueError:
+        raise RuntimeError(
+            "Unexpected TossInvest response: stock metadata has no valid companyCode"
+        ) from None
+
+
 def build_path(path: str, params: dict[str, Any] | None = None) -> str:
     if not params:
         return path
@@ -484,6 +524,27 @@ def _validate_public_cert_query(request_path: str, pairs: list[tuple[str, str]])
             )
         if "lastReplyId" in params and not re.fullmatch(_DIGIT_ID_PATTERN, params["lastReplyId"]):
             raise RuntimeError("Blocked TossInvest endpoint: lastReplyId must contain digits")
+        return
+
+    if _PUBLIC_CERT_COMMENT_REPLIES_PATTERNS[1].fullmatch(request_path):
+        params = _single_query_params(pairs)
+        if set(params) - {"replySortType", "lastCommentId", "lastLikeCount"}:
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: unexpected query parameters for public v2 replies"
+            )
+        if "replySortType" in params and params["replySortType"] not in {
+            "POPULAR",
+            "NEWEST",
+            "OLDEST",
+        }:
+            raise RuntimeError("Blocked TossInvest endpoint: unsupported replySortType")
+        if ("lastCommentId" in params) != ("lastLikeCount" in params):
+            raise RuntimeError(
+                "Blocked TossInvest endpoint: v2 reply cursor requires lastCommentId and lastLikeCount"
+            )
+        for name in ("lastCommentId", "lastLikeCount"):
+            if name in params and not re.fullmatch(_DIGIT_ID_PATTERN, params[name]):
+                raise RuntimeError(f"Blocked TossInvest endpoint: {name} must contain digits")
         return
 
     if pairs:

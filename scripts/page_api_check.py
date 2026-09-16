@@ -63,13 +63,16 @@ def build_check_plan(
     filing_size: int,
     tick_count: int,
     candle_count: int,
+    company_code: str | None = None,
 ) -> list[EndpointCheck]:
     product_code = api.normalize_product_code(code)
     if not _KR_PRODUCT_CODE_RE.fullmatch(product_code):
         raise ValueError("page API smoke checks require a KR product code such as A005930")
     context = CheckContext(
         product_code=product_code,
-        company_code=api.to_company_code(product_code),
+        company_code=api.company_code_path_segment(
+            company_code if company_code is not None else api.to_company_code(product_code)
+        ),
         start=start,
         end=end,
         news_size=news_size,
@@ -353,7 +356,11 @@ def _transaction_status_checks(context: CheckContext) -> list[EndpointCheck]:
     checks.extend(
         EndpointCheck(
             "transaction-status",
-            "credit info" if mds_type == "credit" else mds_type.replace("-", " "),
+            {
+                "credit": "legacy combined credit info",
+                "margin-loan": "credit financing",
+                "securities-landing": "credit stock lending",
+            }.get(mds_type, mds_type.replace("-", " ")),
             "GET",
             trading_trend.build_mds_info_path(context.product_code, mds_type, 5),
         )
@@ -431,19 +438,26 @@ def main() -> int:
     args = parser.parse_args()
 
     pages = _parse_pages(args.pages)
-    plan = build_check_plan(
-        args.code,
-        pages,
-        start=args.start,
-        end=args.end,
-        news_size=api.require_int_range("news-size", args.news_size, minimum=1, maximum=50),
-        filing_size=api.require_int_range("filing-size", args.filing_size, minimum=1, maximum=50),
-        tick_count=api.require_int_range("ticks", args.ticks, minimum=1, maximum=100),
-        candle_count=api.require_int_range("candles", args.candles, minimum=1, maximum=200),
-    )
+    options = {
+        "start": args.start,
+        "end": args.end,
+        "news_size": api.require_int_range("news-size", args.news_size, minimum=1, maximum=50),
+        "filing_size": api.require_int_range(
+            "filing-size", args.filing_size, minimum=1, maximum=50
+        ),
+        "tick_count": api.require_int_range("ticks", args.ticks, minimum=1, maximum=100),
+        "candle_count": api.require_int_range("candles", args.candles, minimum=1, maximum=200),
+    }
+    # Validate the requested scope and bounds before the optional metadata read.
+    plan = build_check_plan(args.code, pages, **options)
+    company_code = None
+    if any(page in {"news", "analytics"} for page in pages):
+        company_code = api.resolve_company_code(args.code)
+        plan = build_check_plan(args.code, pages, company_code=company_code, **options)
     payload = {
         "code": api.normalize_product_code(args.code),
         "pages": pages,
+        "companyCode": company_code,
         "checks": run_checks(plan),
     }
     api.emit_output(api.render_json(payload), args.output)

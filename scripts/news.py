@@ -16,17 +16,32 @@ def build_company_news_path(
     size: int,
     page: int = 1,
     order_by: str | None = None,
+    key: str | None = None,
 ) -> str:
     page = api.require_int_range("page", page, minimum=1, maximum=1000)
     normalized_order_by = validate_order_by(order_by)
     return api.build_path(
-        f"/api/v2/news/companies/{api.to_company_code(code)}",
+        f"/api/v2/news/companies/{api.company_code_path_segment(code)}",
         {
             "size": size,
             "number": page if page > 1 else None,
             "orderBy": normalized_order_by,
+            "key": validate_paging_key(key),
         },
     )
+
+
+def validate_paging_key(key: str | None) -> str | None:
+    if key is None:
+        return None
+    if (
+        not isinstance(key, str)
+        or not key.strip()
+        or len(key) > 512
+        or any(ord(character) < 32 or ord(character) == 127 for character in key)
+    ):
+        raise ValueError("key must be 1-512 characters without control characters")
+    return key
 
 
 def validate_order_by(order_by: str | None) -> str | None:
@@ -50,16 +65,24 @@ def fetch_news(
     *,
     page: int = 1,
     order_by: str | None = None,
+    key: str | None = None,
+    company_code: str | None = None,
 ) -> dict[str, Any]:
     size = api.require_int_range("size", size, minimum=1, maximum=100)
     page = api.require_int_range("page", page, minimum=1, maximum=1000)
+    order_by = validate_order_by(order_by)
+    key = validate_paging_key(key)
+    resolved_company_code = api.resolve_company_code(code, company_code=company_code)
     payload: dict[str, Any] = {
         "code": api.normalize_product_code(code),
-        "companyCode": api.to_company_code(code),
+        "companyCode": resolved_company_code,
         "page": page,
         "size": size,
         "orderBy": validate_order_by(order_by),
-        "news": api.get_result(build_company_news_path(code, size, page, order_by)),
+        "key": validate_paging_key(key),
+        "news": api.get_result(
+            build_company_news_path(resolved_company_code, size, page, order_by, key)
+        ),
     }
     if news_id is not None:
         payload["detail"] = api.get_result(build_news_detail_path(news_id))
@@ -79,8 +102,13 @@ def main() -> int:
         description="Fetch TossInvest company news for a stock/company code."
     )
     parser.add_argument("--code", default="A005930", help="TossInvest product code")
+    parser.add_argument(
+        "--company-code",
+        help="Use an already observed company ID for --code without metadata lookup",
+    )
     parser.add_argument("--size", type=int, default=10, help="Rows to request")
     parser.add_argument("--page", type=int, default=1, help="Company-news page number")
+    parser.add_argument("--key", help="Opaque paging key returned by the previous response")
     parser.add_argument(
         "--order-by",
         choices=sorted(ORDER_BY_VALUES),
@@ -91,7 +119,15 @@ def main() -> int:
     parser.add_argument("--output", help="Write output to a file")
     args = parser.parse_args()
 
-    payload = fetch_news(args.code, args.size, args.news_id, page=args.page, order_by=args.order_by)
+    payload = fetch_news(
+        args.code,
+        args.size,
+        args.news_id,
+        page=args.page,
+        order_by=args.order_by,
+        key=args.key,
+        company_code=args.company_code,
+    )
     text = (
         api.render_csv(rows_from_payload(payload))
         if args.format == "csv"

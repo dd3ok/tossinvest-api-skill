@@ -1,12 +1,12 @@
 # TossInvest Web API Catalog
 
-Latest bounded update: **2026-09-07**, web build `7r39ou7dRVa7AiAbxAXNF`.
-See the [update audit](update-audit-2026-09-07.md) for direct request coverage,
-UI states, changed contracts, and remaining unverified cases; the dated checks
-below remain historical evidence rather than a blanket current verification.
-Stock comments now resolve `code-or-symbol` metadata and use its **`guid`** as
-`subjectId`. The [bundle audit](web-bundle-audit-2026-09-07.md) records 63 route
-templates, independent sector paging, and the current community caller.
+Latest bounded update: **2026-09-16**, web build `FNTsN5Z21hJmsl3Sh71hB`.
+The [public-page audit](public-pages-audit-2026-09-16.md) accounts for all **62**
+route templates and separates browser, static-source and direct-API evidence.
+It records representative tabs, links and continuations, implemented fixes and
+unverified/gated states; it is not a claim that every product/filter combination works.
+Stock comments use metadata **`guid`** as `subjectId`; news and filings use metadata
+**`companyCode`**. Earlier dated checks below remain historical evidence.
 
 Base observation date: 2026-04-16
 Additional bundle/API check: 2026-04-20 against `buildId=SUN83tZwsh5murULLiDPr`
@@ -105,11 +105,15 @@ endpoints are safe to call.
 | Identifier | Example | Meaning |
 |---|---|---|
 | `productCode` | `A005930`, `A000660` | TossInvest stock/product code used by stock detail APIs |
-| `companyCode` | `005930`, `000660` | Company code used by some `/companies/` APIs |
+| `companyCode` | `005930`, `NAS00208X-E0`, `EFKSP0162Z0` | Metadata company identifier used by company news and filings; distinct from product code |
 | `codes` | `A005930,A000660` | Comma-separated product code list |
 | `indexCode` | `KGG01P`, `QGG01P`, `RGI..VIX`, `VWAP.KRW-BTC` | Index, FX, commodity, futures, bond, or crypto-like market code used by `/indices/{code}` pages |
 
-Use `productCode` for stock pages and prices. Strip the leading `A` only where the observed endpoint uses `companyCode`.
+Use `productCode` for stock pages and prices. For company news and filings, resolve
+`companyCode` through `code-or-symbol` metadata, including numeric KR inputs: ETF
+company IDs cannot be inferred by stripping `A`. Financial endpoints documented
+with `{productCode}` still require that product identifier despite `/companies/`
+in their paths. Follow each endpoint's identifier contract.
 
 ## Stock Summary APIs
 
@@ -234,7 +238,7 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/?focusedProductCode=US20100311002` | US stock main-page metadata, price details, public AI detail, sanitized community comments |
 | `https://www.tossinvest.com/stocks/A005930` | Redirects to the public `/order` tab; top tabs link to `/order`, `/analytics`, `/news`, `/transaction-status`, and `/community` |
 | `https://www.tossinvest.com/stocks/US20100311002/community` | Public stock comments, comment replies, related board, recommended profiles |
-| `https://www.tossinvest.com/stocks/A005930/analytics` | Analytics, financials, dividends, analyst data; visible statement tabs are income statement, balance sheet, and cash-flow statement, but their request bodies require a fresh capture before adding a selector |
+| `https://www.tossinvest.com/stocks/A005930/analytics` | Analytics, financials, dividends, analyst data; records selectors for income/balance/cash-flow and quarter/year are source-verified and bounded-live checked on 2026-09-16; see the stock reference |
 | `https://www.tossinvest.com/stocks/A005930/news?menu=news` | Company news; the visible latest/relevance sort is client state on this URL |
 | `https://www.tossinvest.com/stocks/A005930/news?menu=disclosure` | Company filings/disclosures |
 | `https://www.tossinvest.com/stocks/A005930/transaction-status` | Broker ranking, investor trend, program trading, credit, lending trading, short-selling trend, and CFD; current sub-tabs keep the URL unchanged |
@@ -267,17 +271,19 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/community/posts/{post-id}` | Public community post permalink and sanitized replies with `lastReplyId` paging |
 | `https://www.tossinvest.com/feed/recommended` | Recommended community/feed posts from the v4 cert route; sanitize post/profile fields and continue only with `nextLastRecommendId` |
 | `https://www.tossinvest.com/feed/news` | Dashboard news categories and news detail |
+| `https://www.tossinvest.com/news` | Redirects to `/feed/news`; browser-confirmed 2026-09-16; source preserves the existing `asPath` query |
 
 ### Route-manifest scope review
 
-The 2026-08-13 deployed route manifest (`buildId=Sg-uF4vsHmKQC9cjQ6v9G`)
-contains the same 59 routes as the 2026-08-05 manifest. Route presence alone is
-not evidence of a usable public API, so the audit kept the following boundaries:
+The 2026-09-16 manifest contains 62 routes: the prior September 7 set minus
+`/investors25`, with no additions. The [complete disposition table](public-pages-audit-2026-09-16.md)
+accounts for public, alias, framework, excluded, member-gated and unresolved routes.
+Route presence alone is not evidence of a usable public API.
 
 | Route | Audit result | Catalog decision |
 |---|---|---|
 | `/bonds/[guid]` | Public page bundle contains the two read-only bond-info calls above | `observed`; recheck with a visible GUID before scripting |
-| `/news` | Logged-out direct navigation rendered no bounded data surface | `needs-recheck`; prefer the verified `/feed/news` flow |
+| `/news` | Current source redirects to `/feed${asPath}`; direct browser navigation reaches `/feed/news` | Alias of the existing public news flow |
 | `/cheetah`, `/cheetah/[code]` | Logged-out pages were blank; only `/api/v1/reasoning-news/count` was visible in the checked bundle | `needs-recheck`; no script or broader endpoint claim |
 | `/stocks/[code]/option` | Route module rendered no public content and loaded order-adjacent feature metadata | `excluded` until a logged-out public market-data surface is verified |
 | `/community/posts/[post-id]` | Logged-out permalink rendered a bounded post plus v1 reply cursor | `public-social-sensitive` / `script-backed` through the sanitizer |
@@ -286,6 +292,7 @@ not evidence of a usable public API, so the audit kept the following boundaries:
 | `/ai-campaign` | Marketing surface | `excluded` |
 | `/asap` | Account/provision terms surface | `excluded` |
 | `/open-api/*` | Official Open API onboarding/documentation flow | Separate scope; use `official-openapi-boundary.md` |
+| `/live-event/[event-id]`, `/live-event/[event-id]/[tab]` | Current shared layout gates content on `isMember` before analysis/transcript/IR tabs | `excluded` from anonymous API coverage; do not call colocated event APIs |
 
 Cross-checking other plausible gaps did not justify inventing new endpoint
 families. Display ticker resolution is already script-backed through
@@ -293,7 +300,6 @@ families. Display ticker resolution is already script-backed through
 detail has the observed `/api/v2/stock-infos/{productCode}/investment` route;
 and the home live chart, recommended feed lists, sector pages, calendar,
 community post permalinks, lounges, and screener preset pages are already
-cataloged. A public AI earnings-call transcript/translation surface remains
-`needs-recheck` because this audit did not establish a bounded logged-out route
-and response shape for it. Do not infer endpoints from product announcements or
-search results.
+cataloged. The current earnings-call layout has an explicit member gate;
+transcript/translation APIs remain excluded from this anonymous client. Do not
+infer public access from product announcements, search results or bundle presence.

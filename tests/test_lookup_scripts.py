@@ -185,6 +185,37 @@ class StockChartScriptTests(unittest.TestCase):
 
 
 class FilingsScriptTests(unittest.TestCase):
+    def test_filings_uses_etf_metadata_company_code_with_paging(self):
+        page = {"body": [], "pagingParam": {"number": 3, "key": None}, "lastPage": True}
+        with patch.object(
+            filings.api, "get_result", side_effect=[{"companyCode": "EFKSP0162Z0"}, page]
+        ) as get_result:
+            payload = filings.fetch_filings("A0162Z0", 2, 2, "returned:key")
+        self.assertEqual(
+            [call.args[0] for call in get_result.call_args_list],
+            [
+                "/api/v2/stock-infos/code-or-symbol/A0162Z0",
+                "/api/v1/stock-detail/companies/EFKSP0162Z0/filings?number=2&size=2&key=returned%3Akey",
+            ],
+        )
+        self.assertEqual(payload["code"], "A0162Z0")
+        self.assertEqual(payload["companyCode"], "EFKSP0162Z0")
+        self.assertIs(payload["result"], page)
+
+    def test_filings_explicit_company_override_needs_no_metadata_call(self):
+        with patch.object(filings.api, "get_result", return_value={"body": []}) as get_result:
+            payload = filings.fetch_filings("A0162Z0", 1, 2, None, company_code="EFKSP0162Z0")
+        get_result.assert_called_once_with(
+            "/api/v1/stock-detail/companies/EFKSP0162Z0/filings?number=1&size=2"
+        )
+        self.assertEqual(payload["companyCode"], "EFKSP0162Z0")
+
+    def test_filings_invalid_page_does_not_perform_metadata_lookup(self):
+        with patch.object(filings.api, "get_result") as get_result:
+            with self.assertRaises(ValueError):
+                filings.fetch_filings("A0162Z0", 0, 2, None)
+        get_result.assert_not_called()
+
     def test_build_filings_path_uses_company_code(self):
         self.assertEqual(
             filings.build_filings_path("A005930", 1, 3, None),
@@ -1265,6 +1296,24 @@ class DashboardRankingScriptTests(unittest.TestCase):
 
 
 class FeedScriptTests(unittest.TestCase):
+    def test_empty_feed_does_not_continue_even_when_server_supplies_key(self):
+        sanitized = feed.sanitize_recommended_feed_result(
+            {"feeds": [], "key": {"lastRecommendId": "next:10"}}
+        )
+        self.assertFalse(sanitized["hasNext"])
+        self.assertIsNone(sanitized["nextLastRecommendId"])
+
+    def test_filtered_feed_rows_do_not_prematurely_end_server_continuation(self):
+        sanitized = feed.sanitize_recommended_feed_result(
+            {
+                "feeds": [{"type": "NON_COMMENT"}],
+                "key": {"lastRecommendId": "next:10"},
+            }
+        )
+        self.assertEqual(sanitized["feeds"], [])
+        self.assertTrue(sanitized["hasNext"])
+        self.assertEqual(sanitized["nextLastRecommendId"], "next:10")
+
     def test_index_news_preserves_case_sensitive_identifier_in_request(self):
         with patch.object(feed.api, "get_result", return_value=[]) as get_result:
             feed.fetch_dashboard_news("index", " RFU.GCv1 ")
@@ -1987,7 +2036,7 @@ class CommunityCommentsScriptTests(unittest.TestCase):
                 "hasNext": False,
                 "key": None,
             },
-            "/api/v2/comments/1/replies": {
+            "/api/v2/comments/1/replies?replySortType=POPULAR": {
                 "results": [
                     {
                         "commentId": 2,
@@ -2018,6 +2067,230 @@ class CommunityCommentsScriptTests(unittest.TestCase):
             "[redacted-email]",
         )
         self.assertNotIn("child-profile", repr(payload))
+        self.assertEqual(payload["comments"][0]["replyPagination"]["replySort"], "POPULAR")
+        self.assertIs(payload["comments"][0]["replyPagination"]["hasNext"], False)
+
+    def test_v2_reply_page_keeps_paired_cursor_and_sanitizes_rows(self):
+        result = {
+            "results": [
+                {
+                    "commentId": 12,
+                    "author": {"nickname": "public", "userProfileId": "private-profile"},
+                    "message": {"message": "hello public@example.com"},
+                    "statistic": {"likeCount": 0, "isMyProfile": True},
+                    "execution": {"accountId": "private-account"},
+                }
+            ],
+            "key": 12,
+            "hasNext": True,
+            "totalCount": 4,
+        }
+        with patch.object(community_comments.api, "get_result", return_value=result) as get_result:
+            payload = community_comments.fetch_comment_replies_page(11)
+        get_result.assert_called_once_with(
+            "/api/v2/comments/11/replies?replySortType=POPULAR",
+            base_url=community_comments.CERT_BASE_URL,
+        )
+        self.assertEqual(payload["nextLastCommentId"], "12")
+        self.assertEqual(payload["nextLastLikeCount"], 0)
+        self.assertEqual(payload["totalCount"], 4)
+        self.assertTrue(payload["hasNext"])
+        self.assertEqual(payload["replies"][0]["message"]["message"], "hello [redacted-email]")
+        self.assertNotIn("private-profile", repr(payload))
+        self.assertNotIn("private-account", repr(payload))
+        self.assertNotIn("isMyProfile", repr(payload))
+
+    def test_v2_reply_pages_forward_both_cursor_parts_and_deduplicate_ids(self):
+        responses = [
+            {
+                "results": [
+                    {"commentId": 12, "statistic": {"likeCount": 1}},
+                    {"commentId": 13, "statistic": {"likeCount": 0}},
+                ],
+                "key": 13,
+                "hasNext": True,
+            },
+            {
+                "results": [
+                    {"commentId": "13", "statistic": {"likeCount": 0}},
+                    {"commentId": 14, "statistic": {"likeCount": 0}},
+                ],
+                "key": 14,
+                "hasNext": False,
+            },
+        ]
+        with patch.object(
+            community_comments.api, "get_result", side_effect=responses
+        ) as get_result:
+            payload = community_comments.fetch_comment_replies_page(11, sort="newest", pages=2)
+        self.assertEqual(
+            get_result.call_args_list[1].args[0],
+            "/api/v2/comments/11/replies?replySortType=NEWEST&lastCommentId=13&lastLikeCount=0",
+        )
+        self.assertEqual([row["commentId"] for row in payload["replies"]], [12, 13, 14])
+        self.assertEqual(payload["pagesFetched"], 2)
+        self.assertEqual(payload["replySort"], "NEWEST")
+        self.assertFalse(payload["hasNext"])
+        self.assertIsNone(payload["nextLastCommentId"])
+        self.assertIsNone(payload["nextLastLikeCount"])
+
+    def test_v2_reply_explicit_resume_skips_boundary_with_limit_one(self):
+        result = {
+            "results": [
+                {"commentId": 12, "statistic": {"likeCount": 0}},
+                {"commentId": "12", "statistic": {"likeCount": 0}},
+                {"commentId": 13, "statistic": {"likeCount": 0}},
+            ],
+            "key": 13,
+            "hasNext": False,
+        }
+        with patch.object(community_comments.api, "get_result", return_value=result):
+            payload = community_comments.fetch_comment_replies_page(
+                11, sort="oldest", limit=1, last_comment_id=12, last_like_count=0
+            )
+        self.assertEqual([row["commentId"] for row in payload["replies"]], [13])
+        self.assertFalse(payload["hasNext"])
+        self.assertIsNone(payload["nextLastCommentId"])
+        self.assertIsNone(payload["nextLastLikeCount"])
+
+    def test_v2_reply_explicit_resume_deduplicates_boundary_and_keeps_next_cursor(self):
+        result = {
+            "results": [
+                {"commentId": "12", "statistic": {"likeCount": 5}},
+                {"commentId": 13, "statistic": {"likeCount": 4}},
+                {"commentId": 14, "statistic": {"likeCount": 2}},
+            ],
+            "key": 14,
+            "hasNext": True,
+        }
+        with patch.object(community_comments.api, "get_result", return_value=result):
+            payload = community_comments.fetch_comment_replies_page(
+                11, sort="popular", last_comment_id=12, last_like_count=5
+            )
+        self.assertEqual([row["commentId"] for row in payload["replies"]], [13, 14])
+        self.assertTrue(payload["hasNext"])
+        self.assertEqual(payload["nextLastCommentId"], "14")
+        self.assertEqual(payload["nextLastLikeCount"], 2)
+
+    def test_v2_reply_limit_resumes_from_emitted_row_not_server_page_end(self):
+        result = {
+            "results": [
+                {"commentId": 12, "statistic": {"likeCount": 4}},
+                {"commentId": 13, "statistic": {"likeCount": 0}},
+            ],
+            "key": 13,
+            "hasNext": False,
+        }
+        with patch.object(community_comments.api, "get_result", return_value=result):
+            payload = community_comments.fetch_comment_replies_page(
+                11, sort="oldest", limit=1, last_comment_id=10, last_like_count=0
+            )
+        self.assertEqual(payload["lastCommentId"], "10")
+        self.assertEqual(payload["lastLikeCount"], 0)
+        self.assertEqual(payload["nextLastCommentId"], "12")
+        self.assertEqual(payload["nextLastLikeCount"], 4)
+        self.assertTrue(payload["hasNext"])
+        self.assertEqual(len(payload["replies"]), 1)
+
+    def test_v2_reply_continuation_rejects_missing_or_invalid_cursor_fields(self):
+        for result in (
+            {"results": [], "hasNext": True, "key": 12},
+            {"results": [{"commentId": 12}], "hasNext": True, "key": 12},
+            {"results": [{"statistic": {"likeCount": 0}}], "hasNext": True},
+            {"results": [{"statistic": {"likeCount": -1}}], "hasNext": True, "key": 12},
+            {"results": [{"statistic": {"likeCount": True}}], "hasNext": True, "key": 12},
+        ):
+            with self.subTest(result=result):
+                with patch.object(
+                    community_comments.api, "get_result", return_value=result
+                ) as get_result:
+                    with self.assertRaisesRegex(RuntimeError, "reply cursor is (missing|invalid)"):
+                        community_comments.fetch_comment_replies_page(11, pages=2)
+                self.assertEqual(get_result.call_count, 1)
+
+    def test_v2_reply_continuation_rejects_nonadvancing_id_even_if_likes_change(self):
+        result = {"results": [{"statistic": {"likeCount": 1}}], "hasNext": True, "key": 12}
+        with patch.object(community_comments.api, "get_result", return_value=result) as get_result:
+            with self.assertRaisesRegex(RuntimeError, "reply cursor did not advance"):
+                community_comments.fetch_comment_replies_page(
+                    11, pages=2, last_comment_id=12, last_like_count=0
+                )
+        self.assertEqual(get_result.call_count, 1)
+
+    def test_v2_reply_continuation_rejects_cycles(self):
+        responses = [
+            {
+                "results": [{"commentId": key, "statistic": {"likeCount": 0}}],
+                "hasNext": True,
+                "key": key,
+            }
+            for key in (12, 13, 12)
+        ]
+        with patch.object(
+            community_comments.api, "get_result", side_effect=responses
+        ) as get_result:
+            with self.assertRaisesRegex(RuntimeError, "reply cursor did not advance"):
+                community_comments.fetch_comment_replies_page(11, pages=5)
+        self.assertEqual(get_result.call_count, 3)
+
+    def test_v2_reply_input_validation_happens_before_network(self):
+        for kwargs in (
+            {"sort": "recent"},
+            {"last_comment_id": 12},
+            {"last_like_count": 0},
+            {"last_comment_id": "１２", "last_like_count": 0},
+            {"last_comment_id": 12, "last_like_count": True},
+            {"last_comment_id": 12, "last_like_count": -1},
+            {"pages": 6},
+            {"limit": 101},
+        ):
+            with self.subTest(kwargs=kwargs):
+                with patch.object(community_comments.api, "get_result") as get_result:
+                    with self.assertRaises(ValueError):
+                        community_comments.fetch_comment_replies_page(11, **kwargs)
+                get_result.assert_not_called()
+
+    def test_v2_reply_cli_routes_reply_specific_sort_and_cursor(self):
+        argv = [
+            "community_comments.py",
+            "--comment-id",
+            "11",
+            "--reply-sort",
+            "oldest",
+            "--reply-last-comment-id",
+            "12",
+            "--reply-last-like-count",
+            "0",
+            "--pages",
+            "2",
+        ]
+        with patch.object(sys, "argv", argv):
+            with patch.object(
+                community_comments, "fetch_comment_replies_page", return_value={}
+            ) as fetch:
+                with patch.object(community_comments.api, "emit_output"):
+                    self.assertEqual(community_comments.main(), 0)
+        fetch.assert_called_once_with(
+            "11", sort="oldest", pages=2, limit=10, last_comment_id="12", last_like_count=0
+        )
+
+    def test_v2_reply_cli_rejects_cursor_flags_on_other_subjects(self):
+        with patch.object(
+            sys, "argv", ["community_comments.py", "--code", "A005930", "--reply-sort", "popular"]
+        ):
+            with patch.object(community_comments.api, "get_result") as get_result:
+                with self.assertRaisesRegex(ValueError, "require --comment-id"):
+                    community_comments.main()
+            get_result.assert_not_called()
+
+    def test_v2_reply_cli_rejects_main_comment_sort_instead_of_ignoring_it(self):
+        with patch.object(
+            sys, "argv", ["community_comments.py", "--comment-id", "11", "--sort", "recent"]
+        ):
+            with patch.object(community_comments.api, "get_result") as get_result:
+                with self.assertRaisesRegex(ValueError, "uses --reply-sort instead of --sort"):
+                    community_comments.main()
+            get_result.assert_not_called()
 
 
 class StockPageScriptTests(unittest.TestCase):
@@ -2360,6 +2633,189 @@ class ScreenerCountScriptTests(unittest.TestCase):
 
 
 class MarketSearchScriptTests(unittest.TestCase):
+    def test_related_search_uses_observed_typed_section_options(self):
+        cases = [
+            (
+                "related-topic",
+                {"product_code": "a005930"},
+                "RELATED_TOPIC",
+                {"productCode": "A005930"},
+            ),
+            ("company-tics", {"company_code": "005930"}, "COMPANY_TICS", {"companyCode": "005930"}),
+            ("tics-product", {"tics_id": "169"}, "TICS_PRODUCT", {"ticsId": 169}),
+            (
+                "index-description",
+                {"index_code": "RFU.GCv1"},
+                "MARKET_INDEX_DESCRIPTION",
+                {"code": "RFU.GCv1"},
+            ),
+        ]
+        for kind, target, section_type, option in cases:
+            with self.subTest(kind=kind):
+                self.assertEqual(
+                    market_search.build_related_search_body(" 반도체 ", kind, **target),
+                    {"query": "반도체", "sections": [{"type": section_type, "option": option}]},
+                )
+
+    def test_related_search_rejects_mismatched_or_invalid_targets_before_network(self):
+        cases = [
+            ("related-topic", {}),
+            ("related-topic", {"company_code": "005930"}),
+            ("related-topic", {"product_code": "A005930", "company_code": "005930"}),
+            ("related-topic", {"product_code": "A005930/extra"}),
+            ("company-tics", {"company_code": ""}),
+            ("tics-product", {"tics_id": "１２３"}),
+            ("tics-product", {"tics_id": "1" * 31}),
+            ("index-description", {"index_code": "KGG01P?account=true"}),
+            ("private", {"product_code": "A005930"}),
+        ]
+        for kind, target in cases:
+            with self.subTest(kind=kind, target=target):
+                with patch.object(market_search.api, "get_result") as get_result:
+                    with self.assertRaises(ValueError):
+                        market_search.fetch_related_search("삼성전자", kind, 3, **target)
+                    get_result.assert_not_called()
+        with patch.object(market_search.api, "get_result") as get_result:
+            with self.assertRaises(ValueError):
+                market_search.fetch_related_search("반도체", "tics-product", 0, tics_id="169")
+            get_result.assert_not_called()
+
+    def test_related_search_filters_nested_values_and_reports_local_truncation(self):
+        result = [
+            {
+                "type": "COMPANY_TICS",
+                "data": {
+                    "id": 553,
+                    "title": "종합반도체",
+                    "profile": {"accountId": "private"},
+                    "items": [
+                        {
+                            "productCode": "A092220",
+                            "productName": "KEC",
+                            "companyName": "KEC",
+                            "logoImageUrl": "private-avatar",
+                            "base": {"krw": 2750, "usd": None, "accountId": "private"},
+                            "close": {"krw": 2980, "usd": {"secret": "private"}},
+                        },
+                        {"productCode": "A0197W0", "productName": "second"},
+                    ],
+                    "subSections": ["PRIVATE"],
+                },
+            },
+            {"type": "PRIVATE", "data": {"items": [{"secret": "private"}]}},
+        ]
+        self.assertEqual(
+            market_search.sanitize_related_results(result, "COMPANY_TICS", 1),
+            [
+                {
+                    "type": "COMPANY_TICS",
+                    "id": 553,
+                    "title": "종합반도체",
+                    "receivedItems": 2,
+                    "emittedItems": 1,
+                    "truncated": True,
+                    "items": [
+                        {
+                            "productCode": "A092220",
+                            "productName": "KEC",
+                            "companyName": "KEC",
+                            "base": {"krw": 2750, "usd": None},
+                            "close": {"krw": 2980},
+                        }
+                    ],
+                }
+            ],
+        )
+
+    def test_related_index_description_preserves_public_text_and_request(self):
+        response = [
+            {
+                "type": "MARKET_INDEX_DESCRIPTION",
+                "data": {
+                    "items": [
+                        {
+                            "code": "KGG01P",
+                            "description": "코스피 지수 설명",
+                            "url": "https://unused",
+                        }
+                    ]
+                },
+            }
+        ]
+        with patch.object(market_search.api, "get_result", return_value=response) as get_result:
+            result = market_search.fetch_related_search(
+                "코스피", "index-description", 3, index_code="KGG01P"
+            )
+        get_result.assert_called_once_with(
+            "/api/v3/search-all/wts-auto-complete",
+            method="POST",
+            body={
+                "query": "코스피",
+                "sections": [{"type": "MARKET_INDEX_DESCRIPTION", "option": {"code": "KGG01P"}}],
+            },
+        )
+        self.assertEqual(result["target"], {"code": "KGG01P"})
+        self.assertEqual(
+            result["sections"][0]["items"], [{"code": "KGG01P", "description": "코스피 지수 설명"}]
+        )
+        self.assertFalse(result["sections"][0]["truncated"])
+
+    def test_main_search_retains_only_bounded_plain_subsection_query(self):
+        values = ["삼성전자", {"private": "value"}, "x" * 101, "abc\nsecret"]
+        rows = [{"productCode": "A005930", "subSectionQuery": value} for value in values]
+        result = [{"type": "PRODUCT", "data": {"items": rows}}]
+        items = market_search.sanitize_search_results(result, 10)[0]["items"]
+        self.assertEqual(items[0]["subSectionQuery"], "삼성전자")
+        for item in items[1:]:
+            self.assertNotIn("subSectionQuery", item)
+
+    def test_primary_sections_and_related_mode_are_mutually_exclusive(self):
+        args = [
+            "market_search.py",
+            "--query",
+            "삼성전자",
+            "--section",
+            "product",
+            "--related-kind",
+            "related-topic",
+            "--product-code",
+            "A005930",
+        ]
+        with patch.object(sys, "argv", args), patch.object(sys, "stderr"):
+            with patch.object(market_search.api, "get_result") as get_result:
+                with self.assertRaises(SystemExit) as error:
+                    market_search.main()
+                self.assertEqual(error.exception.code, 2)
+                get_result.assert_not_called()
+
+    def test_search_retains_observed_stock_and_industry_display_labels(self):
+        result = [
+            {
+                "type": "PRODUCT",
+                "data": {
+                    "items": [
+                        {"productCode": "A005930", "keyword": "삼성전자"},
+                        {"productCode": "A005935", "keyword": "삼성전자우"},
+                    ],
+                    "subSections": ["PRODUCT_DETAIL"],
+                },
+            },
+            {
+                "type": "TICS",
+                "data": {
+                    "items": [{"id": 169, "title": "반도체", "imageUrl": "unused"}],
+                    "subSections": ["TICS_PRODUCT"],
+                },
+            },
+        ]
+        self.assertEqual(
+            market_search.sanitize_search_results(result, 1),
+            [
+                {"type": "PRODUCT", "items": [{"productCode": "A005930", "keyword": "삼성전자"}]},
+                {"type": "TICS", "items": [{"id": 169, "title": "반도체"}]},
+            ],
+        )
+
     def test_build_search_body_uses_visible_home_sections(self):
         self.assertEqual(
             market_search.build_search_body(" Samsung ", ["product", "news"]),
@@ -2415,6 +2871,71 @@ class MarketSearchScriptTests(unittest.TestCase):
 
 
 class NewsScriptTests(unittest.TestCase):
+    def test_news_uses_us_metadata_company_code(self):
+        page = {"body": [], "lastPage": True, "pagingParam": {"number": 2, "key": None}}
+        with patch.object(
+            news.api, "get_result", side_effect=[{"companyCode": "NAS00208X-E0"}, page]
+        ) as get_result:
+            payload = news.fetch_news("US19990122001", 2, None)
+        self.assertEqual(
+            [call.args[0] for call in get_result.call_args_list],
+            [
+                "/api/v2/stock-infos/code-or-symbol/US19990122001",
+                "/api/v2/news/companies/NAS00208X-E0?size=2",
+            ],
+        )
+        self.assertEqual(payload["companyCode"], "NAS00208X-E0")
+        self.assertIs(payload["news"], page)
+
+    def test_news_explicit_company_override_needs_no_metadata_call(self):
+        with patch.object(news.api, "get_result", return_value={"body": []}) as get_result:
+            payload = news.fetch_news("NVDA", 2, None, company_code="NAS00208X-E0")
+        get_result.assert_called_once_with("/api/v2/news/companies/NAS00208X-E0?size=2")
+        self.assertEqual(payload["companyCode"], "NAS00208X-E0")
+
+    def test_news_invalid_cursor_precedes_us_metadata_lookup(self):
+        with patch.object(news.api, "get_result") as get_result:
+            with self.assertRaises(ValueError):
+                news.fetch_news("NVDA", 2, None, key="cursor\n")
+        get_result.assert_not_called()
+
+    def test_news_cursor_is_preserved_as_one_encoded_query_value(self):
+        from urllib.parse import parse_qs, urlsplit
+
+        key = "opaque/+cursor=2&size=100"
+        path = news.build_company_news_path("A005930", 2, 2, "latest", key)
+        query = parse_qs(urlsplit(path).query)
+        self.assertEqual(query["key"], [key])
+        self.assertEqual(query["size"], ["2"])
+        self.assertEqual(query["number"], ["2"])
+        self.assertEqual(query["orderBy"], ["latest"])
+
+    def test_fetch_news_carries_cursor_with_matching_page_and_sort(self):
+        response = {"body": [], "lastPage": True, "pagingParam": {"number": 3, "key": None}}
+        with patch.object(news.api, "get_result", return_value=response) as get_result:
+            payload = news.fetch_news(
+                "A005930",
+                2,
+                None,
+                page=2,
+                order_by="relevant",
+                key="opaque:2",
+                company_code="005930",
+            )
+        get_result.assert_called_once_with(
+            "/api/v2/news/companies/005930?size=2&number=2&orderBy=relevant&key=opaque%3A2"
+        )
+        self.assertEqual(payload["key"], "opaque:2")
+        self.assertIs(payload["news"], response)
+
+    def test_news_rejects_invalid_cursor_before_network_call(self):
+        for key in ["", "  ", "a" * 513, "cursor\n", "cursor\x00", "cursor\x7f", 1]:
+            with self.subTest(key=repr(key)):
+                with patch.object(news.api, "get_result") as get_result:
+                    with self.assertRaisesRegex(ValueError, "key must"):
+                        news.fetch_news("A005930", 2, None, key=key)
+                get_result.assert_not_called()
+
     def test_build_company_news_path_uses_company_code(self):
         self.assertEqual(
             news.build_company_news_path("A005930", 3, 2, "latest"),
@@ -2433,6 +2954,91 @@ class NewsScriptTests(unittest.TestCase):
 
 
 class FinancialsScriptTests(unittest.TestCase):
+    def test_records_selectors_send_verified_statement_and_period_codes(self):
+        cases = [
+            ("income", "quarter", "INC", "Q"),
+            ("balance", "quarter", "BAL", "Q"),
+            ("cash-flow", "quarter", "CAS", "Q"),
+            ("cash-flow", "year", "CAS", "Y"),
+            (None, "year", "INC", "Y"),
+            ("balance", None, "BAL", "Q"),
+        ]
+        for statement, period, factor_code, period_code in cases:
+            with self.subTest(statement=statement, period=period):
+                with patch.object(financials.api, "get_result", return_value={}) as get_result:
+                    financials.fetch_financials(
+                        "005930", "records", None, statement=statement, period=period
+                    )
+                get_result.assert_called_once_with(
+                    "/api/v2/companies/A005930/financial-statement-records",
+                    method="POST",
+                    body={"factorCode": factor_code, "period": period_code},
+                )
+
+    def test_records_selectors_reject_other_kinds_and_ambiguous_bodies_before_request(self):
+        cases = [
+            ("comprehensive", None, "require --kind records"),
+            ("estimate-date", None, "require --kind records"),
+            ("records", {}, "cannot be combined"),
+            ("records", {"factorCode": "INC"}, "cannot be combined"),
+        ]
+        with patch.object(financials.api, "get_result") as get_result:
+            for kind, body, message in cases:
+                with self.subTest(kind=kind, body=body):
+                    with self.assertRaisesRegex(ValueError, message):
+                        financials.fetch_financials(
+                            "A005930", kind, body, statement="cash-flow", allow_custom_body=True
+                        )
+            get_result.assert_not_called()
+
+    def test_records_selectors_reject_unknown_values_before_request(self):
+        with patch.object(financials.api, "get_result") as get_result:
+            for statement, period in [("", "quarter"), ("INC", "quarter"), ("income", "Q")]:
+                with self.subTest(statement=statement, period=period):
+                    with self.assertRaisesRegex(ValueError, "unknown financial"):
+                        financials.fetch_financials(
+                            "A005930", "records", None, statement=statement, period=period
+                        )
+            get_result.assert_not_called()
+
+    def test_default_request_and_custom_body_guard_are_preserved(self):
+        with patch.object(financials.api, "get_result", return_value={}) as get_result:
+            financials.fetch_financials("A005930", "records", None)
+            get_result.assert_called_once_with(
+                "/api/v2/companies/A005930/financial-statement-records", method="POST", body={}
+            )
+            get_result.reset_mock()
+            with self.assertRaisesRegex(ValueError, "custom financial POST bodies require"):
+                financials.fetch_financials("A005930", "records", {"factorCode": "CAS"})
+            get_result.assert_not_called()
+            body = {"factorCode": "CAS", "period": "Y"}
+            financials.fetch_financials("A005930", "records", body, allow_custom_body=True)
+            get_result.assert_called_once_with(
+                "/api/v2/companies/A005930/financial-statement-records", method="POST", body=body
+            )
+
+    def test_cli_rejects_body_file_with_selectors_without_reading_file_or_requesting(self):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "financials.py"),
+                "--kind",
+                "records",
+                "--statement",
+                "cash-flow",
+                "--period",
+                "year",
+                "--body-file",
+                "missing-financial-body.json",
+                "--allow-custom-body",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("--body-file cannot be combined", result.stderr)
+
     def test_build_financial_path_selects_company_endpoint(self):
         self.assertEqual(
             financials.build_financial_path("005930", "comprehensive"),
@@ -2491,6 +3097,151 @@ class TradingTrendScriptTests(unittest.TestCase):
             ],
         )
         self.assertEqual({item["date"] for item in normalized}, {"2026-04-24"})
+        self.assertTrue(all(item["hasData"] is None for item in normalized))
+        self.assertTrue(all(item["dataGrouping"] == "category" for item in normalized))
+
+    def test_normalize_investor_availability_distinguishes_missing_data_from_zero(self):
+        row = {
+            "baseDate": "2026-09-16",
+            "updatedAt": "2026-09-16T11:05:38.000+09:00",
+            "inMarketTime": True,
+            "hasIndividual": False,
+            "hasForeigner": True,
+            "hasInstitution": True,
+            "netIndividualsBuyVolume": 0,
+            "netForeignerBuyVolume": 0,
+            "netInstitutionBuyVolume": None,
+        }
+        normalized = trading_trend.normalize_investor_rows([row])
+        self.assertEqual(
+            [(item["investorType"], item["netBuyVolume"], item["hasData"]) for item in normalized],
+            [
+                ("individual", None, False),
+                ("foreigner", 0, True),
+                ("institution_total", None, False),
+            ],
+        )
+        for item in normalized:
+            self.assertEqual(item["updatedAt"], row["updatedAt"])
+            self.assertIs(item["inMarketTime"], True)
+            self.assertIs(item["hasIndividual"], False)
+            self.assertIs(item["hasForeigner"], True)
+            self.assertIs(item["hasInstitution"], True)
+
+    def test_normalize_intraday_groups_keeps_constituent_net_values_unavailable(self):
+        row = {
+            "baseDate": "2026-09-16",
+            "inMarketTime": True,
+            "hasInstitution": True,
+            "netInstitutionBuyVolume": 18000,
+            "netFinancialInvestmentBuyVolume": 0,
+            "netInsuranceBuyVolume": 0,
+            "netOtherFinancialInstitutionsBuyVolume": 0,
+            "netTrustBuyVolume": 0,
+            "netPrivateEquityFundBuyVolume": 0,
+            "netPensionFundBuyVolume": 0,
+            "netBankBuyVolume": 0,
+            "netOtherCorporationBuyVolume": 23000,
+            "netInsuranceOtherBuyVolume": 0,
+            "trustAndPrivateEquityFundBuyVolume": 18000,
+            "netTrustAndPrivateEquityFundBuyVolume": 999,
+        }
+        categories = {
+            item["investorType"]: item for item in trading_trend.normalize_investor_rows([row])
+        }
+        for investor_type in (
+            "financial_investment",
+            "insurance",
+            "other_financial",
+            "trust",
+            "private_equity_fund",
+        ):
+            with self.subTest(investor_type=investor_type):
+                self.assertIsNone(categories[investor_type]["netBuyVolume"])
+                self.assertIs(categories[investor_type]["hasData"], False)
+                self.assertEqual(categories[investor_type]["dataGrouping"], "intraday-group")
+        self.assertEqual(categories["trust"]["groupField"], "trustAndPrivateEquityFundBuyVolume")
+        for investor_type, net_value in (
+            ("institution_total", 18000),
+            ("pension_fund", 0),
+            ("bank", 0),
+            ("other_corporation", 23000),
+        ):
+            self.assertEqual(categories[investor_type]["netBuyVolume"], net_value)
+            self.assertIs(categories[investor_type]["hasData"], True)
+            self.assertEqual(categories[investor_type]["dataGrouping"], "category")
+
+        groups = trading_trend.normalize_investor_groups([row])
+        self.assertEqual(
+            [(item["sourceField"], item["value"], item["valueKind"]) for item in groups],
+            [
+                ("netInsuranceOtherBuyVolume", 0, "net"),
+                ("trustAndPrivateEquityFundBuyVolume", 18000, "unspecified"),
+            ],
+        )
+        self.assertEqual(groups[1]["investorTypes"], ["trust", "private_equity_fund"])
+        self.assertTrue(all(item["hasData"] is True for item in groups))
+        self.assertTrue(all("netBuyVolume" not in item for item in groups))
+
+    def test_normalize_after_hours_preserves_separate_category_net_values(self):
+        row = {
+            "baseDate": "2026-09-15",
+            "inMarketTime": False,
+            "hasInstitution": True,
+            "netTrustBuyVolume": 120,
+            "netPrivateEquityFundBuyVolume": -30,
+            "trustAndPrivateEquityFundBuyVolume": 999,
+        }
+        normalized = trading_trend.normalize_investor_rows([row])
+        self.assertEqual([item["netBuyVolume"] for item in normalized], [120, -30])
+        self.assertTrue(all(item["hasData"] is True for item in normalized))
+        self.assertTrue(all(item["dataGrouping"] == "category" for item in normalized))
+        self.assertEqual(trading_trend.normalize_investor_groups([row]), [])
+
+    def test_normalize_institution_availability_and_missing_group_sources(self):
+        row = {
+            "baseDate": "2026-09-16",
+            "inMarketTime": True,
+            "hasInstitution": False,
+            "netInstitutionBuyVolume": 0,
+            "netPensionFundBuyVolume": 0,
+            "netBankBuyVolume": 0,
+            "netOtherCorporationBuyVolume": 0,
+            "netTrustBuyVolume": 0,
+            "netInsuranceOtherBuyVolume": 0,
+        }
+        normalized = trading_trend.normalize_investor_rows([row])
+        self.assertTrue(all(item["netBuyVolume"] is None for item in normalized))
+        self.assertTrue(all(item["hasData"] is False for item in normalized))
+        groups = trading_trend.normalize_investor_groups([row])
+        self.assertEqual(len(groups), 1)
+        self.assertEqual(groups[0]["sourceField"], "netInsuranceOtherBuyVolume")
+        self.assertIsNone(groups[0]["value"])
+        self.assertIs(groups[0]["hasData"], False)
+        self.assertEqual(trading_trend.normalize_investor_groups([{"inMarketTime": True}]), [])
+
+    def test_fetch_normalized_investors_preserves_raw_result_and_group_provenance(self):
+        row = {
+            "baseDate": "2026-09-16",
+            "inMarketTime": True,
+            "hasIndividual": False,
+            "hasInstitution": True,
+            "netIndividualsBuyVolume": 0,
+            "trustAndPrivateEquityFundBuyVolume": 18000,
+        }
+        original_row = row.copy()
+        result = {"body": [row], "lastPage": False, "pagingParam": {"number": 2}}
+        with patch.object(trading_trend.api, "get_result", return_value=result):
+            payload = trading_trend.fetch_trading_trend(
+                "A010170", "investor", 3, None, None, normalize_investors=True
+            )
+        self.assertIs(payload["result"], result)
+        self.assertEqual(row, original_row)
+        self.assertIsNone(payload["normalizedInvestorRows"][0]["netBuyVolume"])
+        self.assertEqual(payload["normalizedInvestorGroups"][0]["valueKind"], "unspecified")
+        self.assertEqual(
+            payload["request"], {"size": 3, "from": None, "to": None, "page": 1, "key": None}
+        )
 
     def test_normalize_investor_result_accepts_explicit_empty_primary_lists(self):
         self.assertEqual(
@@ -2525,6 +3276,66 @@ class TradingTrendScriptTests(unittest.TestCase):
             trading_trend.build_trend_path("A005930", "fixed", None, "2026-01-01", "2026-01-31"),
             "/api/v1/stock-infos/trade/trend/fixed-trading-trend?productCode=A005930&from=2026-01-01&to=2026-01-31",
         )
+
+    def test_fetch_recent_page_uses_returned_cursor_and_preserves_metadata(self):
+        for trend_type, endpoint, cursor in (
+            ("investor", "trading-trend", "2026-09-13"),
+            ("program", "program-trading", "2026-09-11"),
+        ):
+            with self.subTest(trend_type=trend_type):
+                result = {"body": [], "lastPage": False, "pagingParam": {"number": 3}}
+                with patch.object(
+                    trading_trend.api, "get_result", return_value=result
+                ) as get_result:
+                    payload = trading_trend.fetch_trading_trend(
+                        "A010170", trend_type, 3, None, None, page=2, key=cursor
+                    )
+                get_result.assert_called_once_with(
+                    f"/api/v1/stock-infos/trade/trend/{endpoint}"
+                    f"?productCode=A010170&size=3&number=2&key={cursor}"
+                )
+                self.assertEqual(payload["request"]["page"], 2)
+                self.assertEqual(payload["request"]["key"], cursor)
+                self.assertIs(payload["result"], result)
+
+    def test_recent_paging_rejects_invalid_page_and_cursor_before_network(self):
+        for trend_type in ("investor", "program"):
+            for page, key, message in (
+                (0, None, "page must be at least 1"),
+                (1001, None, "page must be at most 1000"),
+                (2, "2026-02-30", "YYYY-MM-DD"),
+                (2, "20260913", "YYYY-MM-DD"),
+                (2, "2026-W37-7", "YYYY-MM-DD"),
+                (2, "2026-09-13&account=1", "YYYY-MM-DD"),
+                (2, "２０２６-09-13", "YYYY-MM-DD"),
+            ):
+                with self.subTest(trend_type=trend_type, page=page, key=key):
+                    with patch.object(trading_trend.api, "get_result") as get_result:
+                        with self.assertRaisesRegex(ValueError, message):
+                            trading_trend.fetch_trading_trend(
+                                "A010170", trend_type, 3, None, None, page=page, key=key
+                            )
+                    get_result.assert_not_called()
+
+    def test_non_paged_trend_types_reject_cursor_before_network(self):
+        for trend_type in ("fixed", "accumulated", "accumulated-detail", "broker"):
+            with self.subTest(trend_type=trend_type):
+                with patch.object(trading_trend.api, "get_result") as get_result:
+                    with self.assertRaisesRegex(ValueError, "recent investor/program or MDS"):
+                        trading_trend.fetch_trading_trend(
+                            "A010170", trend_type, 3, "2026-09-09", "2026-09-16", page=2
+                        )
+                get_result.assert_not_called()
+
+    def test_current_credit_selectors_and_legacy_credit_remain_distinct(self):
+        for trend_type in ("margin-loan", "securities-landing", "credit"):
+            with self.subTest(trend_type=trend_type):
+                self.assertEqual(
+                    trading_trend.build_trend_path(
+                        "010170", trend_type, 3, None, None, page=2, key="2026-09-11"
+                    ),
+                    f"/api/v1/mds/info/{trend_type}?stockCode=A010170&number=2&size=3&key=2026-09-11",
+                )
 
     def test_build_trend_path_for_lending_trading(self):
         self.assertEqual(
@@ -2576,6 +3387,35 @@ class TradingTrendScriptTests(unittest.TestCase):
 
 
 class PageApiCheckScriptTests(unittest.TestCase):
+    def test_cli_resolves_company_metadata_before_building_news_requests(self):
+        args = ["page_api_check.py", "--code", "A069500", "--pages", "news"]
+        with patch.object(sys, "argv", args):
+            with (
+                patch.object(
+                    page_api_check.api,
+                    "get_result",
+                    return_value={"companyCode": "observed-etf-company"},
+                ) as get_result,
+                patch.object(page_api_check, "run_checks", return_value=[]) as run_checks,
+                patch.object(page_api_check.api, "emit_output"),
+            ):
+                self.assertEqual(page_api_check.main(), 0)
+        get_result.assert_called_once_with("/api/v2/stock-infos/code-or-symbol/A069500")
+        self.assertEqual(
+            [check.path for check in run_checks.call_args.args[0]],
+            [
+                "/api/v2/news/companies/observed-etf-company?size=5",
+                "/api/v1/stock-detail/companies/observed-etf-company/filings?number=1&size=5",
+            ],
+        )
+
+    def test_cli_validates_pages_before_company_metadata_lookup(self):
+        with patch.object(sys, "argv", ["page_api_check.py", "--pages", "account"]):
+            with patch.object(page_api_check.api, "get_result") as get_result:
+                with self.assertRaisesRegex(ValueError, "unknown page"):
+                    page_api_check.main()
+        get_result.assert_not_called()
+
     def test_build_check_plan_maps_stock_pages_to_read_only_endpoints(self):
         plan = page_api_check.build_check_plan(
             "A005930",
@@ -2611,7 +3451,7 @@ class PageApiCheckScriptTests(unittest.TestCase):
             [item.path for item in plan],
         )
 
-    def test_transaction_status_plan_uses_shared_mds_info_types(self):
+    def test_transaction_status_plan_includes_current_and_legacy_credit(self):
         plan = page_api_check.build_check_plan(
             "A005930",
             ["transaction-status"],
@@ -2626,8 +3466,12 @@ class PageApiCheckScriptTests(unittest.TestCase):
         self.assertEqual(
             mds_paths,
             {
-                trading_trend.build_mds_info_path("A005930", mds_type, 5)
-                for mds_type in trading_trend.MDS_INFO_TYPES
+                "/api/v1/mds/info/margin-loan?stockCode=A005930&number=1&size=5",
+                "/api/v1/mds/info/securities-landing?stockCode=A005930&number=1&size=5",
+                "/api/v1/mds/info/credit?stockCode=A005930&number=1&size=5",
+                "/api/v1/mds/info/lending-trading?stockCode=A005930&number=1&size=5",
+                "/api/v1/mds/info/short-selling-trend?stockCode=A005930&number=1&size=5",
+                "/api/v1/mds/info/cfd?stockCode=A005930&number=1&size=5",
             },
         )
 

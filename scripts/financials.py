@@ -25,6 +25,8 @@ FINANCIAL_PATHS = {
 }
 
 GET_KINDS = {"estimate-date"}
+STATEMENT_CODES = {"income": "INC", "balance": "BAL", "cash-flow": "CAS"}
+PERIOD_CODES = {"quarter": "Q", "year": "Y"}
 
 
 def build_financial_path(code: str, kind: str) -> str:
@@ -39,18 +41,40 @@ def fetch_financials(
     body: dict[str, Any] | None,
     *,
     allow_custom_body: bool = False,
+    statement: str | None = None,
+    period: str | None = None,
 ) -> dict[str, Any]:
+    path = build_financial_path(code, kind)
     method = "GET" if kind in GET_KINDS else "POST"
+    if statement is not None or period is not None:
+        if kind != "records":
+            raise ValueError("--statement and --period require --kind records")
+        if body is not None:
+            raise ValueError("--statement and --period cannot be combined with a custom body")
+        request_body = build_records_body(
+            "income" if statement is None else statement,
+            "quarter" if period is None else period,
+        )
+    else:
+        request_body = None if method == "GET" else validate_body(body or {}, allow_custom_body)
     result = api.get_result(
-        build_financial_path(code, kind),
+        path,
         method=method,
-        body=None if method == "GET" else validate_body(body or {}, allow_custom_body),
+        body=request_body,
     )
     return {
         "code": api.normalize_product_code(code),
         "kind": kind,
         "result": result,
     }
+
+
+def build_records_body(statement: str, period: str) -> dict[str, str]:
+    if statement not in STATEMENT_CODES:
+        raise ValueError(f"unknown financial statement: {statement}")
+    if period not in PERIOD_CODES:
+        raise ValueError(f"unknown financial period: {period}")
+    return {"factorCode": STATEMENT_CODES[statement], "period": PERIOD_CODES[period]}
 
 
 def validate_body(body: dict[str, Any], allow_custom: bool) -> dict[str, Any]:
@@ -82,6 +106,16 @@ def main() -> int:
         help="Financial endpoint to call",
     )
     parser.add_argument(
+        "--statement",
+        choices=sorted(STATEMENT_CODES),
+        help="Statement for --kind records; defaults to income when --period is supplied",
+    )
+    parser.add_argument(
+        "--period",
+        choices=sorted(PERIOD_CODES),
+        help="Period for --kind records; defaults to quarter when --statement is supplied",
+    )
+    parser.add_argument(
         "--body-file",
         help="Optional JSON object body for POST endpoints; defaults to {}",
     )
@@ -93,12 +127,18 @@ def main() -> int:
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")
     args = parser.parse_args()
+    if args.body_file is not None and (args.statement is not None or args.period is not None):
+        parser.error("--body-file cannot be combined with --statement or --period")
 
     payload = fetch_financials(
         args.code,
         args.kind,
-        load_body(args.body_file, allow_custom=args.allow_custom_body),
+        load_body(args.body_file, allow_custom=args.allow_custom_body)
+        if args.body_file is not None
+        else None,
         allow_custom_body=args.allow_custom_body,
+        statement=args.statement,
+        period=args.period,
     )
     api.emit_output(api.render_json(payload), args.output)
     return 0

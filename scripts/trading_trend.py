@@ -23,11 +23,13 @@ FIXED_TYPES = {
 
 MDS_INFO_TYPES = {
     "credit": "credit",
+    "margin-loan": "margin-loan",
+    "securities-landing": "securities-landing",
     "lending-trading": "lending-trading",
     "short-selling-trend": "short-selling-trend",
     "cfd": "cfd",
 }
-_MDS_KEY_RE = re.compile(r"^\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$")
+_PAGING_KEY_RE = re.compile(r"^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$")
 
 INVESTOR_NET_FIELDS = (
     ("individual", "개인", "netIndividualsBuyVolume"),
@@ -42,6 +44,49 @@ INVESTOR_NET_FIELDS = (
     ("bank", "은행", "netBankBuyVolume"),
     ("other_corporation", "기타법인", "netOtherCorporationBuyVolume"),
 )
+
+INTRADAY_INVESTOR_GROUPS = (
+    (
+        "netInsuranceOtherBuyVolume",
+        "금융투자·보험·기타금융",
+        ("financial_investment", "insurance", "other_financial"),
+        "net",
+    ),
+    (
+        "trustAndPrivateEquityFundBuyVolume",
+        "투신·사모펀드",
+        ("trust", "private_equity_fund"),
+        "unspecified",
+    ),
+)
+_INTRADAY_GROUP_FIELDS = {
+    investor_type: field
+    for field, _, investor_types, _ in INTRADAY_INVESTOR_GROUPS
+    for investor_type in investor_types
+}
+
+
+def _investor_metadata(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "date": row.get("baseDate") or row.get("date") or row.get("tradeDate"),
+        **{
+            field: row.get(field)
+            for field in (
+                "hasIndividual",
+                "hasForeigner",
+                "hasInstitution",
+                "inMarketTime",
+                "updatedAt",
+            )
+        },
+    }
+
+
+def _has_investor_data(row: dict[str, Any], field: str, flag: str) -> bool | None:
+    if row.get(field) is None:
+        return False
+    available = row.get(flag)
+    return available if isinstance(available, bool) else None
 
 
 def _rows_from_result(result: Any) -> list[dict[str, Any]]:
@@ -65,20 +110,59 @@ def _rows_from_result(result: Any) -> list[dict[str, Any]]:
 def normalize_investor_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     normalized: list[dict[str, Any]] = []
     for row in rows:
-        trade_date = row.get("baseDate") or row.get("date") or row.get("tradeDate")
         for investor_type, label_ko, field_name in INVESTOR_NET_FIELDS:
             if field_name not in row:
                 continue
+            availability_flag = {
+                "individual": "hasIndividual",
+                "foreigner": "hasForeigner",
+            }.get(investor_type, "hasInstitution")
+            group_field = (
+                _INTRADAY_GROUP_FIELDS.get(investor_type)
+                if row.get("inMarketTime") is True
+                else None
+            )
+            has_data = (
+                False
+                if group_field is not None
+                else _has_investor_data(row, field_name, availability_flag)
+            )
             normalized.append(
                 {
-                    "date": trade_date,
+                    **_investor_metadata(row),
                     "investorType": investor_type,
                     "labelKo": label_ko,
                     "field": field_name,
-                    "netBuyVolume": row.get(field_name),
+                    "netBuyVolume": None if has_data is False else row.get(field_name),
+                    "hasData": has_data,
+                    "dataGrouping": "intraday-group" if group_field is not None else "category",
+                    **({"groupField": group_field} if group_field is not None else {}),
                 }
             )
     return normalized
+
+
+def normalize_investor_groups(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    groups: list[dict[str, Any]] = []
+    for row in rows:
+        if row.get("inMarketTime") is not True:
+            continue
+        for field, label_ko, investor_types, value_kind in INTRADAY_INVESTOR_GROUPS:
+            if field not in row:
+                continue
+            has_data = _has_investor_data(row, field, "hasInstitution")
+            groups.append(
+                {
+                    **_investor_metadata(row),
+                    "labelKo": label_ko,
+                    "investorTypes": list(investor_types),
+                    "sourceField": field,
+                    "value": None if has_data is False else row.get(field),
+                    "valueKind": value_kind,
+                    "hasData": has_data,
+                }
+            )
+    return groups
 
 
 def normalize_investor_result(result: Any) -> list[dict[str, Any]]:
@@ -96,9 +180,19 @@ def build_trend_path(
 ) -> str:
     product_code = api.normalize_product_code(code)
     if trend_type in RECENT_TYPES:
+        page = _validate_paging(page, key)
         return api.build_path(
             f"/api/v1/stock-infos/trade/trend/{RECENT_TYPES[trend_type]}",
-            {"productCode": product_code, "size": size},
+            {
+                "productCode": product_code,
+                "size": size,
+                "number": page if page != 1 or key is not None else None,
+                "key": key,
+            },
+        )
+    if trend_type not in MDS_INFO_TYPES and (page != 1 or key is not None):
+        raise ValueError(
+            "--page and --key are supported only for recent investor/program or MDS data"
         )
     if trend_type in FIXED_TYPES:
         if start is None or end is None:
@@ -114,6 +208,18 @@ def build_trend_path(
     raise ValueError(f"unknown trend type: {trend_type}")
 
 
+def _validate_paging(page: int, key: str | None) -> int:
+    page = api.require_int_range("page", page, minimum=1, maximum=1000)
+    if key is not None:
+        if not isinstance(key, str) or not _PAGING_KEY_RE.fullmatch(key):
+            raise ValueError("key must be a YYYY-MM-DD paging key")
+        try:
+            date.fromisoformat(key)
+        except ValueError as exc:
+            raise ValueError("key must be a YYYY-MM-DD paging key") from exc
+    return page
+
+
 def build_mds_info_path(
     code: str,
     mds_type: str,
@@ -124,14 +230,7 @@ def build_mds_info_path(
     product_code = api.normalize_product_code(code)
     if mds_type not in MDS_INFO_TYPES:
         raise ValueError(f"unknown mds info type: {mds_type}")
-    page = api.require_int_range("page", page, minimum=1, maximum=1000)
-    if key is not None:
-        if not _MDS_KEY_RE.fullmatch(key):
-            raise ValueError("key must be a YYYY-MM-DD paging key")
-        try:
-            date.fromisoformat(key)
-        except ValueError as exc:
-            raise ValueError("key must be a YYYY-MM-DD paging key") from exc
+    page = _validate_paging(page, key)
     return api.build_path(
         f"/api/v1/mds/info/{MDS_INFO_TYPES[mds_type]}",
         {"stockCode": product_code, "number": page, "size": size, "key": key},
@@ -150,8 +249,6 @@ def fetch_trading_trend(
 ) -> dict[str, Any]:
     if size is not None:
         size = api.require_int_range("size", size, minimum=1, maximum=120)
-    if trend_type not in MDS_INFO_TYPES and (page != 1 or key is not None):
-        raise ValueError("--page and --key are supported only for credit/lending/short/CFD data")
     result = api.get_result(build_trend_path(code, trend_type, size, start, end, page, key))
     payload = {
         "code": api.normalize_product_code(code),
@@ -160,12 +257,17 @@ def fetch_trading_trend(
             "size": size,
             "from": start,
             "to": end,
-            **({"page": page, "key": key} if trend_type in MDS_INFO_TYPES else {}),
+            **(
+                {"page": page, "key": key}
+                if trend_type in RECENT_TYPES or trend_type in MDS_INFO_TYPES
+                else {}
+            ),
         },
         "result": result,
     }
     if normalize_investors and trend_type in {"investor", "fixed"}:
         payload["normalizedInvestorRows"] = normalize_investor_result(result)
+        payload["normalizedInvestorGroups"] = normalize_investor_groups(_rows_from_result(result))
     return payload
 
 
@@ -188,18 +290,18 @@ def main() -> int:
         "--page",
         type=int,
         default=1,
-        help="MDS page number for credit, lending, short-selling, or CFD",
+        help="Page number for recent investor/program or MDS credit/lending/short-selling/CFD",
     )
     parser.add_argument(
         "--key",
-        help="MDS YYYY-MM-DD paging key from the previous response pagingParam",
+        help="YYYY-MM-DD paging key from the previous response pagingParam",
     )
     parser.add_argument("--from", dest="start", help="Start date YYYY-MM-DD")
     parser.add_argument("--to", dest="end", help="End date YYYY-MM-DD")
     parser.add_argument(
         "--normalize-investors",
         action="store_true",
-        help="Add normalized KR investor net-buy rows for investor/fixed endpoints",
+        help="Add KR investor net-buy rows with availability metadata and separate intraday groups",
     )
     api.add_json_format_argument(parser)
     parser.add_argument("--output", help="Write JSON output to a file")

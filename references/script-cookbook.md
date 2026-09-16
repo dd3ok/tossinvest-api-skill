@@ -51,8 +51,13 @@ python3 scripts/news.py --code A005930 --page 2 --order-by relevant --size 5
 
 News and filings use numbered pages. In JSON output, check `news.lastPage` for
 `news.py` and `result.lastPage` for `filings.py`; stop when that value is `true`.
-For filings, `--key` accepts a paging key returned by the previous response;
+For both scripts, `--key` accepts a paging key returned by the previous response;
 omit it when none is provided, and never invent a key.
+Both resolve `companyCode` from stock metadata before each invocation, including
+numeric KR stocks and ETFs. Reuse a verified company ID with `--company-code`
+to avoid that lookup. For example, the observed product `A0162Z0` uses
+`EFKSP0162Z0`, and `US19990122001` uses `NAS00208X-E0`; do not derive those IDs
+from a ticker or prefix. The output records the resolved `companyCode`.
 
 Collector design pitfall: do not let enrichment failures erase base prices.
 Persist `/api/v3/stock-prices/details` snapshots first and treat candles or
@@ -156,6 +161,7 @@ python3 scripts/community_comments.py --code US20100311002 --sort recent --last-
 python3 scripts/community_comments.py --lounge-id LOUNGE_193394 --sort popular --limit 5
 python3 scripts/community_comments.py --post-id 309855038 --pages 2 --limit 20
 python3 scripts/community_comments.py --post-id 309855038 --last-reply-id 309855039 --pages 2 --limit 20
+python3 scripts/community_comments.py --comment-id 322620406 --reply-sort popular --pages 1 --limit 5
 ```
 
 Lounge mode uses the same sanitizer and 1-5 page bound as stock comments.
@@ -163,6 +169,13 @@ Post-permalink mode follows the public v1 reply cursor with `lastReplyId`, also
 within the 1-5 page and 100-row safety caps. Continue only from the normalized
 `nextLastCommentId` or `nextLastReplyId` emitted by the script, passing it back
 as `--last-comment-id` or `--last-reply-id` respectively.
+Comment-reply mode (`--comment-id`) is a distinct v2 API. It accepts
+`--reply-sort popular`, `newest`, or `oldest`, and returns the paired
+`nextLastCommentId` / `nextLastLikeCount` cursor. Resume with both
+`--reply-last-comment-id` and `--reply-last-like-count`; zero likes is valid.
+Do not substitute the stock/lounge `recent` token or the v1 post cursor.
+`--include-replies` preserves the existing `replies` list and also returns
+`replyPagination`; truncation does not mean the server has no more replies.
 Never emit raw profile ids, avatar URLs, follow flags, or unredacted free-form
 text. The stock status flags fetch public page metadata only and do not expose
 orderability, balances, accounts, or order mutations.
@@ -175,11 +188,19 @@ Use the public navigation search for bounded discovery across visible sections:
 python3 scripts/market_search.py --query 삼성전자 --section product --section news --limit 5
 python3 scripts/market_search.py --query 반도체 --section tics --section screener --limit 5
 python3 scripts/market_search.py --query 코스피 --section market-index --limit 5
+python3 scripts/market_search.py --query 삼성전자 --related-kind related-topic --product-code A005930 --limit 5
+python3 scripts/market_search.py --query 삼성전자 --related-kind company-tics --company-code 005930 --limit 5
+python3 scripts/market_search.py --query 반도체 --related-kind tics-product --tics-id 169 --limit 5
+python3 scripts/market_search.py --query 코스피 --related-kind index-description --index-code KGG01P --limit 5
 ```
 
-The script accepts only the observed `PRODUCT`, `NEWS`, `TICS`, `SCREENER`, and
-`MARKET_INDEX` sections, emits at most 20 rows per section, and drops unneeded
-nested status metadata.
+Main search accepts the observed `PRODUCT`, `NEWS`, `TICS`, `SCREENER`, and
+`MARKET_INDEX` sections. Related search accepts the four explicit kinds above;
+use the main result's `subSectionQuery`, or its name when no subsection query is
+returned, with the observed target ID. Do not combine `--section` and
+`--related-kind`. Output is sanitized and limited to 20 rows per section.
+Related output records `receivedItems`, `emittedItems` and `truncated`: the
+limit is local, not server pagination (the checked TICS product result had 562 rows).
 
 ## Charts And Local Indicators
 
@@ -209,6 +230,8 @@ Request contracts: [analytics](api-stock.md#analytics-apis) and
 ```bash
 python3 scripts/financials.py --code A005930 --kind comprehensive
 python3 scripts/financials.py --code A005930 --kind valuation
+python3 scripts/financials.py --code A005930 --kind records --statement balance --period quarter
+python3 scripts/financials.py --code A005930 --kind records --statement cash-flow --period year
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-01-01 --to 2026-01-31
 python3 scripts/trading_trend.py --code A005930 --type investor --size 20
 python3 scripts/trading_trend.py --code A005930 --type fixed --from 2026-04-24 --to 2026-04-24 --normalize-investors
@@ -217,14 +240,29 @@ python3 scripts/trading_trend.py --code A005930 --type lending-trading --size 5
 python3 scripts/trading_trend.py --code A005930 --type lending-trading --page 2 --key 2026-08-12 --size 5
 python3 scripts/trading_trend.py --code A005930 --type short-selling-trend --size 5
 python3 scripts/trading_trend.py --code A005930 --type cfd --size 5
+python3 scripts/trading_trend.py --code A010170 --type margin-loan --size 5
+python3 scripts/trading_trend.py --code A010170 --type securities-landing --size 5
 ```
 
-Credit, lending-trading, short-selling-trend, and CFD routes are
+Financial-record selectors map `income/balance/cash-flow` to `INC/BAL/CAS` and
+`quarter/year` to `Q/Y`. Supplying one selector defaults the other to income or
+quarter. With neither, the legacy `{}` body remains. Selectors apply only to
+`--kind records` and cannot be combined with `--body-file`; other custom-body
+verification requirements remain unchanged.
+
+Current credit subtypes are `margin-loan` and `securities-landing` (upstream
+spelling); the older `credit` endpoint remains available for compatibility.
+These and lending-trading, short-selling-trend, and CFD routes are
 public transaction-status page datasets only. For another page, pass the response
 `pagingParam.number` and `pagingParam.key` back as `--page` and `--key`; do not
 invent a date key. Use these routes for visible public page data, not for
 account credit limits, margin eligibility, borrowing, orderability, leverage decisions,
 or trading advice.
+Recent `investor` and `program` results also accept numbered/key continuation.
+When using `--normalize-investors`, keep `hasData` and `normalizedInvestorGroups`:
+an unavailable provisional value is `null`, not zero, and grouped intraday
+categories cannot be split into individual investor values. The trust/private
+equity group's `valueKind=unspecified` must not be reported as net buying.
 
 ## Themes And TICS
 
