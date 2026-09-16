@@ -69,7 +69,7 @@ calling application, not in this public skill.
 | `wts-cert-api /api/v3/dashboard/wts/overview/indicator/mini-chart` | Object: `indexMap`; public overview mini-chart metadata |
 | `wts-cert-api /api/v4/dashboard/wts/overview/indicator` | Current public home indicator aggregate; `scripts/dashboard_ranking.py --kind indicator` uses the exact GET path with no query or body |
 | `/api/v3/dashboard/wts/overview/indicator/{indexCode}/related-etfs` | Object: `indexCode`, `etfs[]`; empty POST body accepted in verification |
-| `/api/v1/stock-infos/index/net-buying/range` | Object: `code`, `step`, `nextDate`, `investorActivityAmounts[]`; current public page accepts `range=week|month|year` |
+| `/api/v1/stock-infos/index/net-buying/range` | Object: `code`, `step`, `nextDate`, `investorActivityAmounts[]`; current public page accepts `range=week\|month\|year` |
 | `/api/v1/stock-infos/index/net-buying/daily` | Object: `code`, `nextDate`, `investorActivityAmounts[]` |
 
 `scripts/indices.py` has chart presets for these verified r-chart windows:
@@ -100,12 +100,27 @@ case for dotted indicator codes.
 | `/api/v2/news/companies/{companyCode}` | Object: `pagingParam`, `body[]`, `lastPage` |
 | `/api/v2/news/{newsId}` | News detail object; verify exact keys per current response before transforming |
 
+Company identifiers come from `stockInfo.companyCode`, rather than a product-code
+prefix rule. The news/filings CLIs perform a metadata lookup unless supplied with
+an already observed `--company-code`. Checked mappings on 2026-09-16 included
+`US19990122001` → `NAS00208X-E0` and `A0162Z0` → `EFKSP0162Z0`; the associated
+news and filings requests each returned two rows. Their output `companyCode` is
+the resolved identifier; missing metadata causes an error without a guessed request.
+
+For company news, continue with the returned `pagingParam.number` and optional
+`pagingParam.key`, preserving code/size/order. `news.py --key` accepts the opaque
+key without interpreting its contents; omit it when null. The 2026-09-16
+`A005930` latest-news check returned two disjoint two-row pages with null keys.
+Its row keys included `id`, `createdAt`, `updatedAt`, `source`, `title`, `summary`,
+`contentText`, `stockCodes`, `stockInfo`, `ticsIds`, `ticsTitles`, `relatedNews`,
+`newsType`, `imageUrls`, and `resolvedNewsMetaLabels`.
+
 ## Calendar Shapes
 
 | Endpoint | Observed `result` shape |
 |---|---|
 | `wts-cert-api /api/v4/calendar/monthly/{YYYY-MM}` | Object: `events[]`, `includeMajorStock`; monthly page filters are applied client-side by `calendar.py` |
-| `wts-cert-api /api/v4/calendar/monthly/{YYYY-MM}/index?countryType=kr|us` | Object: `events[]`, `includeMajorStock`; public index-page calendar subset |
+| `wts-cert-api /api/v4/calendar/monthly/{YYYY-MM}/index?countryType=kr\|us` | Object: `events[]`, `includeMajorStock`; public index-page calendar subset |
 | `wts-cert-api /api/v1/calendar/economic-indicators/{ric}` | Object: `category`, `frequency`, `name`, `announcementDate`, `announcementTime`, `indicatorDetail`, `historicalData[]`, `relatedNews`, `relatedArticles[]`, `upcomingIndicators`, `upcomingLive` |
 | `wts-cert-api /api/v1/nova-calendar/ai/analysis/indicators` | Object: `title`, `contents`, `cacheCreatedAt`; public page AI text only |
 
@@ -113,12 +128,22 @@ case for dotted indicator codes.
 
 | Endpoint | Observed `result` shape |
 |---|---|
-| `/api/v3/search-all/wts-auto-complete` | List of typed sections. Each row has `type` and `data`; `data.items[]` contains public products, news, industries, screeners, or market indices. `scripts/market_search.py` keeps only bounded UI-useful fields. |
+| `/api/v3/search-all/wts-auto-complete` | List of typed sections. Each row has `type` and `data`; `data.items[]` contains public products, news, industries, screeners, or market indices. Stock labels include `keyword`/`productName`; industry labels use `title` (live-checked 2026-09-16). `scripts/market_search.py` preserves these labels and bounded `subSectionQuery`, limits rows locally, and supports four typed related-panel queries through `--related-kind`. |
 | `/api/v2/dashboard/wts/overview/tics/ranking` | Object: `basedAt`, `duration`, `tics[]`; rows include `ticsId`, `name`, `rank`, `fluctuationRate`, market-cap/trading-amount totals, and leading stock. |
 | `/api/v2/dashboard/wts/overview/tics/{ticsId}/stocks` | Object: `nation`, `page`, `size`, `sortBy`, `sortOrder`, `totalCount`, `stocks[]`; rows include price, change, market cap, trading value, volume, analyst opinion, and signal. |
 | `/api/v2/dashboard/wts/overview/tics/{ticsId}/etfs` | Object: paging/sort metadata plus `etfs[]`; rows include price, change, trading value, expense ratio, leverage factor, and top holding. |
 | `wts-cert-api /api/v1/screener/filters/base` | Object with `basedAt`; `scripts/screener_count.py --include-filter-base` uses exact `{filterId, nation}` bodies for selected allowlisted filters. |
 | `wts-cert-api /api/v1/screener/filters/range` | Object with current `min` and `max`; `--include-filter-range` accepts only filters already validated by the script. |
+
+Related search results checked on 2026-09-16 share `data.items[]` and an empty
+`data.subSections` in the sampled responses. `RELATED_TOPIC` includes a section
+title; `COMPANY_TICS` includes section `id`/`title`; stock items expose
+`productCode`, `productName`, optional `companyName`/`code`, and currency maps
+`base`/`close` with `krw`/`usd` values. `MARKET_INDEX_DESCRIPTION` items contain
+`code` and `description`. The script allows only those fields and records raw
+received count versus locally emitted count. `truncated` means the output limit
+cut the returned array; it is not a `hasNext` cursor or server page indicator.
+See the [typed related-search options](api-market.md#dashboard-and-discovery-apis).
 
 | Endpoint | Observed `result` shape |
 |---|---|
@@ -176,9 +201,9 @@ These checks preserve the existing 1–5 page and 100-row client caps.
 | Endpoint | Observed `result` shape |
 |---|---|
 | `wts-cert-api /api/v4/comments` | Object: `results[]`, `hasNext`, `key`, `totalCount`; use `lastCommentId={key}` for the next page |
-| `wts-cert-api /api/v2/comments/{commentId}/replies` | Object: `results[]`, `hasNext`, `key`, `totalCount`; v1 replies returned object keys `comment`, `replies`, `topic` |
+| `wts-cert-api /api/v2/comments/{commentId}/replies` | Object: `results[]`, `hasNext`, `key`, `totalCount`; continue with `lastCommentId=key` and the last raw row's `statistic.likeCount` as `lastLikeCount`, preserving `replySortType=POPULAR\|NEWEST\|OLDEST` |
 | `wts-cert-api /api/v1/comments/{postId}/replies` | Object: `topic`, `comment`, `replies`; `replies.body[]` is continued with the numeric `lastReplyId` cursor |
-| `wts-cert-api /api/v4/feed/recommend/ranking-posts` | Object: `feeds[]`, `key.lastRecommendId`; source rows include profile/social fields, so `feed.py` emits sanitized comments and normalized `nextLastRecommendId` only |
+| `wts-cert-api /api/v4/feed/recommend/ranking-posts` | Object: `feeds[]`, `key.lastRecommendId`; source rows include profile/social fields, so `feed.py` emits sanitized comments and normalized `nextLastRecommendId` only. Continuation requires a nonempty raw page and a valid key; zero sanitized comments alone does not end pagination. |
 | `wts-cert-api /api/v1/boards/STOCK/{productCode}/related` | Object: `about`, `commentCount`, `followingCount`, `isMember`, `logoImageUrl`, `subjectId`, `title` |
 | `wts-cert-api /api/v1/community/board/{productCode}/recommend-profiles` | List of profile suggestions; sanitize before displaying |
 | `wts-cert-api /api/v1/community/top-rankings/{ranking}` | Object: `type`, `items[]`; `scripts/feed.py --kind community-ranking` emits at most 10 rows and removes profile ids, avatar URLs, and follow/personal flags |
@@ -200,7 +225,49 @@ emitting `feeds[]`. Numeric profile ids embedded in mention markup are removed,
 and a prior normalized cursor can be supplied with `--last-comment-id` or
 `--last-reply-id`.
 
+The 2026-09-16 logged-out `A005930/community` reply check returned two sanitized
+rows for the expanded public comment: `hasNext=false`, a numeric `key`, and
+`totalCount=null`. No second page was requested. The sorted v2 continuation
+contract is verified in deployed source, while this direct response verifies
+only the first page with `replySortType=POPULAR`.
+
+`community_comments.py --comment-id` emits a bounded v2 reply envelope with
+`replySort`, `lastCommentId`, `lastLikeCount`, `pagesFetched`, `hasNext`,
+`nextLastCommentId`, `nextLastLikeCount`, `totalCount`, and sanitized `replies`.
+Use `--reply-sort popular|newest|oldest` and the paired
+`--reply-last-comment-id`/`--reply-last-like-count` to resume; zero likes is a
+valid cursor value. The existing `--pages`/`--limit` bounds apply. Duplicate
+reply IDs are emitted once; missing, malformed, repeated, or cyclic continuation
+IDs fail explicitly. Local truncation resumes from the last emitted reply's ID
+and like count so unreturned rows are not skipped. An ended page clears both
+next-cursor fields even if the server retains a key.
+
+`--include-replies` retains each comment's sanitized `replies` list and adds
+`replyPagination` metadata for a single bounded reply page. Resume an individual
+comment through `--comment-id`; the legacy Python `fetch_comment_replies()`
+helper still returns only the sanitized list. V1 post `lastReplyId` and v2
+sorted reply cursors remain separate contracts.
+
 ## Financial POST Shapes
+
+Current statement selectors (2026-09-16) use
+`{factorCode:"INC"|"BAL"|"CAS",period:"Q"|"Y"}` for
+`/financial-statement-records`. `INC`, `BAL`, and `CAS` mean income statement,
+balance sheet, and cash-flow statement. Four direct `A005930` checks confirmed
+all three quarterly statements and annual cash flow: response
+`selectedFactor.code`/`selectedPeriod.code` matched the request and `table`
+contained ten `{period,value[]}` entries. This table is not a paged list.
+
+`financials.py --kind records --statement cash-flow --period year` supplies
+this verified body without custom-body opt-in. Named selectors reject other
+kinds and any simultaneous body file; omitting both selectors preserves `{}`.
+
+Comprehensive uses separate indicator codes: the same sample defaulted to
+`{factorCode:"LIABILITY_RATIO",period:"Q",range:3}` and offered liability,
+current, and interest-coverage ratios. Read factor/period/range codes from
+`selectable*` before non-default requests. Do not interpret comprehensive as
+the income/balance/cash-flow tab selector. Full contracts and direct-check
+limits are in [Analytics APIs](api-stock.md#analytics-apis).
 
 The checked analytics POST endpoints accepted `Content-Type: application/json` with `{}` during manual verification:
 
@@ -234,27 +301,64 @@ Observed result keys:
 
 ## Transaction Status Shapes
 
+Rechecked 2026-09-16 on the public `A010170` transaction-status page using UI
+observation, deployed source, and direct GET responses; this was not a browser
+network capture. Source links and exact UI field mappings are in the
+[transaction-status audit](transaction-status-audit-2026-09-16.md).
+
 | Endpoint | Observed `result` shape |
 |---|---|
 | `/api/v1/mds/broker/trading-ranking?code={productCode}` | Object: `code`, `top5ActivityList[]`, foreign ask/bid volume and value fields, `updatedAt` |
 | `/api/v1/stock-infos/trade/trend/trading-trend` | Object: `pagingParam`, `body[]`, `lastPage`; body entries include investor buy/sell/net volume fields. Live KR rows include aggregate net fields for individual/foreigner/institution total/other corporation plus institution-detail fields: `netFinancialInvestmentBuyVolume`, `netInsuranceBuyVolume`, `netOtherFinancialInstitutionsBuyVolume`, `netTrustBuyVolume`, `netPrivateEquityFundBuyVolume`, `netPensionFundBuyVolume`, `netBankBuyVolume`. Some detail categories expose gross buy fields but not matching sell fields; use explicit `net*BuyVolume` fields for net-flow semantics. |
-| `/api/v1/stock-infos/trade/trend/program-trading` | Object: `pagingParam`, `body[]`, `lastPage`; body entries include arbitrage, non-arbitrage, and total buy/sell/net quantities |
+| `/api/v1/stock-infos/trade/trend/program-trading` | Object: `pagingParam`, `body[]`, `lastPage`; body entries include arbitrage, non-arbitrage, and total buy/sell/net quantities plus `arbitrageNetBuyChangeQuantity`, `nonArbitrageNetBuyChangeQuantity`, `totalNetBuyChangeQuantity` |
 | `/api/v1/stock-infos/trade/trend/fixed-trading-trend` | List: date-bounded investor buy/sell/net volume rows. Live KR rows include `netIndividualsBuyVolume` (개인), `netForeignerBuyVolume` (외국인), `netInstitutionBuyVolume` (기관계), `netOtherCorporationBuyVolume` (기타법인), and institution-detail net fields such as `netFinancialInvestmentBuyVolume`, `netInsuranceBuyVolume`, `netOtherFinancialInstitutionsBuyVolume`, `netTrustBuyVolume`, `netPrivateEquityFundBuyVolume`, `netPensionFundBuyVolume`, `netBankBuyVolume`. |
 | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend` | List: date-bounded accumulated net investor-volume rows |
 | `/api/v1/stock-infos/trade/trend/accumulated-fixed-trading-trend/detail` | Object: accumulated net investor-volume fields by detail category |
-| `/api/v1/mds/info/credit` | Object: `pagingParam`, `body[]`, `lastPage`; rows include margin loan and securities lending balance/rate fields |
-| `/api/v1/mds/info/lending-trading` | Object: `pagingParam`, `body[]`, `lastPage`; rows include `executionQuantity`, `repaymentQuantity`, `lendingTradingBalanceVolume`, `lendingTradingBalanceAmount` |
+| `/api/v1/mds/info/margin-loan` and `/api/v1/mds/info/securities-landing` | Object: `pagingParam`, `body[]`, `lastPage`; current credit UI rows use `increaseDecreaseQuantity`, `newQuantity`, `returnQuantity`, `balanceQuantity`, `balanceRate`, `lendingRate`; also observed `baseDate`, `close`, `fluctuationRate`, `updatedAt` |
+| `/api/v1/mds/info/credit` | Older combined object: `pagingParam`, `body[]`, `lastPage`; rows include margin loan and securities lending balance/rate fields, but omit current UI new/returned quantity and lending-rate detail |
+| `/api/v1/mds/info/lending-trading` | Object: `pagingParam`, `body[]`, `lastPage`; UI uses `lendingTradingFluctuation` for change, then `executionQuantity`, `repaymentQuantity`, `lendingTradingBalanceVolume`, `lendingTradingBalanceAmount` |
 | `/api/v1/mds/info/short-selling-trend` | Object: `pagingParam`, `body[]`, `lastPage`; rows include `shortTradingVolume`, `shortTradingAmount`, `shortSellingTradingAmountRatio`, `shortSellingAveragePrice` |
 | `/api/v1/mds/info/cfd` | Object: `pagingParam`, `body[]`, `lastPage`; rows include new/settle/balance buy and sell quantity/rate fields |
 
-For the four MDS page families, continue with the returned
+For recent investor/program and all six supported MDS page types, continue with the returned
 `pagingParam.number` and `pagingParam.key`; `trading_trend.py --page/--key`
 preserves those applied inputs in its output.
+
+`--normalize-investors` preserves raw `result` and adds category rows containing
+the existing `date`, `investorType`, `labelKo`, `field`, and `netBuyVolume`, plus:
+
+- `hasData`: the relevant availability flag, or null when the flag is absent;
+  false when the value is null or the category is only available as an intraday
+  group. Explicitly unavailable categories have `netBuyVolume=null`. Missing
+  flags preserve the previous numeric output with unknown availability.
+- `hasIndividual`, `hasForeigner`, `hasInstitution`, `inMarketTime`, `updatedAt`:
+  source metadata, with null for absent fields. The UI gates institution detail
+  (including pension, bank, and other corporation) on `hasInstitution`; this is
+  an observed display rule, not a separate per-category publication guarantee.
+- `dataGrouping`: `category` normally, or `intraday-group` for the five grouped
+  constituent categories while `inMarketTime=true`. Grouped rows include
+  `groupField`, and their individual `netBuyVolume` is null.
+
+The additional `normalizedInvestorGroups` list keeps intraday group values
+separate from category net volumes. Each record includes `date`, `labelKo`,
+`investorTypes`, `sourceField`, `value`, `valueKind`, `hasData`, `inMarketTime`,
+`updatedAt`, and availability flags. `netInsuranceOtherBuyVolume` combines
+financial investment/insurance/other financial and has `valueKind=net`.
+`trustAndPrivateEquityFundBuyVolume` combines trust/private equity and has
+`valueKind=unspecified`: its exact UI source field is known, but its gross/net
+semantics are not established. Missing group fields produce no synthetic group
+record. After-hours category rows retain their own net fields and the group list
+is empty.
 
 On 2026-09-07, the credit endpoint with `size=3` returned two rows on page 1
 and `lastPage=false` with a cursor; page 2 returned three rows with no date
 overlap. A short page alone is not an end condition. Follow server continuation
 metadata, preserve the stock/size/filter state, and stop on a repeated cursor.
+
+The 2026-09-16 `A010170` CFD check returned `body=[]` for `size=3` while
+`lastPage=false`. The deployed client's initial `size=50` returned 25 historical
+rows. An empty first page does not establish an empty series; retain bounded
+cursor continuation and deduplicate dates when combining pages.
 
 The 2026-09-16 A005930 short-selling sample also returned two rows for `size=3`
 with `lastPage=false` and a continuation. Additional row fields included
@@ -264,6 +368,21 @@ definitions for `shortSellingVolumeRate` and `shortSellingAmountRate` do not
 establish the units of these differently named web fields. The
 [targeted impact check](official-api-audit-2026-09-16.md#public-client-impact)
 records the sample scope.
+
+The subsequent `A010170` UI/source check verified that `foreignerRatio`, current
+credit `balanceRate`/`lendingRate`, CFD balance rates, and short-selling
+`shortSellingTradingAmountRatio` are percentage points: the UI divides by 100
+before percent formatting, so raw `1.85` displays as `1.85%`. Quantity fields
+are displayed as shares and amounts as KRW, sometimes abbreviated. The
+short-selling average comes from `shortSellingAveragePrice`, rounded down to
+integer KRW. `shortSellingRatio` is a separate field; it was `0.544` when the
+amount-ratio field was `0.54` on 2026-09-14.
+
+Recent and fixed-date investor results retain distinct provenance: `A010170`
+foreign net volume on 2026-09-15 was `103327` in the recent response/UI table
+versus `97744` in fixed-date data. The page mentions off-market transactions,
+but the discrepancy's cause was not proven. Do not silently substitute one
+series for the other.
 
 ## Transport And Identifier Checks — 2026-09-07
 

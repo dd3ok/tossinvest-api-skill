@@ -43,6 +43,62 @@ class TossInvestApiTests(unittest.TestCase):
         self.assertEqual(api.to_company_code("005930"), "005930")
         self.assertEqual(api.to_company_code("AAPL"), "AAPL")
 
+    def test_resolve_company_code_resolves_numeric_kr_including_etf_identifiers(self):
+        for code, company in [
+            ("A005930", "005930"),
+            ("005930", "005930"),
+            ("A069500", "ETF-metadata-code"),
+        ]:
+            with self.subTest(code=code):
+                with patch.object(
+                    api, "get_result", return_value={"companyCode": company}
+                ) as get_result:
+                    self.assertEqual(api.resolve_company_code(code), company)
+                get_result.assert_called_once_with(
+                    f"/api/v2/stock-infos/code-or-symbol/{api.normalize_product_code(code)}"
+                )
+
+    def test_resolve_company_code_uses_metadata_for_opaque_products_and_symbols(self):
+        for code, company in [
+            ("US19990122001", "NAS00208X-E0"),
+            ("A0162Z0", "EFKSP0162Z0"),
+            ("NVDA", "NAS00208X-E0"),
+            ("F", "observed-company-F"),
+        ]:
+            with self.subTest(code=code):
+                with patch.object(
+                    api, "get_result", return_value={"companyCode": company}
+                ) as get_result:
+                    self.assertEqual(api.resolve_company_code(code), company)
+                get_result.assert_called_once_with(f"/api/v2/stock-infos/code-or-symbol/{code}")
+
+    def test_resolve_company_code_rejects_missing_or_malformed_metadata(self):
+        for metadata in [{}, {"companyCode": None}, {"companyCode": "../private"}, []]:
+            with self.subTest(metadata=metadata):
+                with patch.object(api, "get_result", return_value=metadata) as get_result:
+                    with self.assertRaises(RuntimeError):
+                        api.resolve_company_code("US19990122001")
+                get_result.assert_called_once()
+
+    def test_explicit_company_code_skips_metadata_and_preserves_opaque_case(self):
+        with patch.object(api, "get_result") as get_result:
+            self.assertEqual(
+                api.resolve_company_code("NVDA", company_code="Nas00208X-E0"),
+                "Nas00208X-E0",
+            )
+        get_result.assert_not_called()
+        self.assertEqual(api.company_code_path_segment("Nas00208X-E0"), "Nas00208X-E0")
+
+    def test_company_resolution_rejects_invalid_identifiers_before_network(self):
+        with patch.object(api, "get_result") as get_result:
+            for code in ["", "NVDA/news", "NVDA?size=100", "x" * 49]:
+                with self.subTest(code=code), self.assertRaises(ValueError):
+                    api.resolve_company_code(code)
+            for company in ["", "../../private", "company?field=value", "x" * 65]:
+                with self.subTest(company=company), self.assertRaises(ValueError):
+                    api.resolve_company_code("NVDA", company_code=company)
+        get_result.assert_not_called()
+
     def test_build_path_encodes_params_and_skips_none_values(self):
         path = api.build_path(
             "/api/v3/stock-prices/details",
@@ -362,6 +418,36 @@ class TossInvestApiTests(unittest.TestCase):
         for path in allowed_paths:
             with self.subTest(path=path):
                 api.validate_request_target(api.CERT_BASE_URL, path)
+
+    def test_v2_reply_query_accepts_source_sorts_and_paired_zero_like_cursor(self):
+        for sort in ("POPULAR", "NEWEST", "OLDEST"):
+            for cursor in ("", "&lastCommentId=12&lastLikeCount=0"):
+                with self.subTest(sort=sort, cursor=cursor):
+                    api.validate_request_target(
+                        api.CERT_BASE_URL,
+                        f"/api/v2/comments/11/replies?replySortType={sort}{cursor}",
+                    )
+
+    def test_v2_reply_query_rejects_unverified_keys_sorts_and_malformed_cursors(self):
+        for query in (
+            "replySortType=RECENT",
+            "replySortType=POPULAR&replySortType=NEWEST",
+            "lastCommentId=12",
+            "lastLikeCount=0",
+            "lastCommentId=12&lastLikeCount=-1",
+            "lastCommentId=12&lastLikeCount=1.5",
+            "lastCommentId=12&lastLikeCount=%EF%BC%90",
+            "lastCommentId=not-numeric&lastLikeCount=0",
+            "lastCommentId=%D9%A1%D9%A2&lastLikeCount=0",
+            "lastCommentId=12&lastLikeCount=0&lastLikeCount=1",
+            "lastReplyId=12",
+            "replySortType=POPULAR&profileId=12",
+        ):
+            with self.subTest(query=query):
+                with self.assertRaisesRegex(RuntimeError, "Blocked TossInvest endpoint"):
+                    api.validate_request_target(
+                        api.CERT_BASE_URL, f"/api/v2/comments/11/replies?{query}"
+                    )
 
     def test_cert_public_social_allowlist_rejects_unverified_writes_and_queries(self):
         rejected_paths = [

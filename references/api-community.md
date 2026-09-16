@@ -32,6 +32,13 @@ Observed from `/feed/recommended` and `/feed/news`. Keep only feed endpoints tha
 | Dashboard/news tab feed | `script-backed` | POST | `/api/v1/dashboard/wts/news` | Body `{ "type": "HOT" }` etc.; result includes `type`, `title`, `news[]` |
 | News detail | `script-backed` | GET | `/api/v2/news/{newsId}` | Detail payload for a selected news item |
 
+The 2026-09-16
+[deployed recommendation query](https://www.tossinvest.com/assets/v2/_next/static/chunks/1901-e370805f386c219f.js)
+continues only when the raw `feeds[]` is nonempty and `key.lastRecommendId` is
+present. `feed.py` follows this rule: an empty raw page clears `hasNext` and the
+normalized cursor. A nonempty raw page may produce zero sanitized comments;
+that alone does not mean the server reached the end.
+
 Cataloged public dashboard news `type` values:
 
 ```text
@@ -69,15 +76,15 @@ recommended-feed v4 continuation shape.
 Use `scripts/stock_page.py` when the user asks for the public stock main-page
 bundle: resolved product metadata, price details, AI signal detail, and
 sanitized public comments. Use `scripts/community_comments.py` for comments,
-lounges, or public post permalinks; stock mode resolves display symbols through
+lounges, sorted public replies, or public post permalinks; stock mode resolves display symbols through
 `code-or-symbol` before comment lookup.
 
 | Purpose | Status | Method | Path | Params and notes |
 |---|---|---:|---|---|
 | Stock page composite | `script-backed` | mixed | `scripts/stock_page.py` | Uses `code-or-symbol`, price details, AI detail, optional red flags/trading status/trading analysis, and sanitized comments |
-| Public stock comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=STOCK`, `subjectId={stockInfo.guid}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; resolve every product code or display symbol through `code-or-symbol` first. Confirmed 2026-09-07: `A005930` must use `KR7005930003`; sending the product code returned an empty result despite visible comments. Accept a prior cursor through `--last-comment-id`. |
-| Public lounge comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=LOUNGE`, `subjectId=LOUNGE_{digits}`, `commentSortType=POPULAR|RECENT`, optional `lastCommentId`; same sanitizer, start-cursor option, and page limits as stock comments |
-| Public comment replies | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/comments/{commentId}/replies` | Sanitized reply rows; v1 replies also observed but v2 is preferred |
+| Public stock comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=STOCK`, `subjectId={stockInfo.guid}`, `commentSortType=POPULAR\|RECENT`, optional `lastCommentId`; resolve every product code or display symbol through `code-or-symbol` first. Confirmed 2026-09-07: `A005930` must use `KR7005930003`; sending the product code returned an empty result despite visible comments. Accept a prior cursor through `--last-comment-id`. |
+| Public lounge comments | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v4/comments` | Query exactly `subjectType=LOUNGE`, `subjectId=LOUNGE_{digits}`, `commentSortType=POPULAR\|RECENT`, optional `lastCommentId`; same sanitizer, start-cursor option, and page limits as stock comments |
+| Public comment replies | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v2/comments/{commentId}/replies` | Query: optional `replySortType=POPULAR\|NEWEST\|OLDEST`, paired numeric `lastCommentId` and nonnegative integer `lastLikeCount`; result: `results[]`, `hasNext`, `key`, `totalCount`; sorted v2 replies are distinct from the v1 permalink contract |
 | Public community post permalink and replies | `public-social-sensitive` / `script-backed` | GET | `https://wts-cert-api.tossinvest.com/api/v1/comments/{postId}/replies` | Result has `topic`, `comment`, and `replies.body`; optional numeric `lastReplyId` continues replies; `community_comments.py --post-id --last-reply-id` sanitizes both the post and reply rows |
 | Stock community related board | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/boards/STOCK/{productCode}/related` | Board metadata only |
 | Stock community recommended profiles | `public-social-sensitive` | GET | `https://wts-cert-api.tossinvest.com/api/v1/community/board/{productCode}/recommend-profiles` | Public profile suggestions; strip profile ids, URLs, avatars, and follow flags before display |
@@ -92,6 +99,16 @@ Observed `GET /api/v4/comments` response shape:
 - Pagination: pass `lastCommentId={key}` for the next page
 - Comment row keys include `commentId`, `author`, `authorUserProfileId`,
   `message`, `statistic`, `holding`, `board`, `createdAt`, and `updatedAt`
+
+On 2026-09-16, the public `A005930/community` page exposed reply expansion.
+The deployed [community bundle](https://www.tossinvest.com/assets/v2/_next/static/chunks/1901-e370805f386c219f.js)
+defines reply sorts `POPULAR`, `NEWEST`, and `OLDEST` (main-comment latest sort
+uses `RECENT`, a different enum). Its v2 caller sends `replySortType` and, when
+`hasNext` is true, continues with `lastCommentId=result.key` and
+`lastLikeCount=results[-1].statistic.likeCount`. It deduplicates reply IDs.
+This continuation contract is source-verified; the bounded live check is
+recorded in [Public Community Shapes](response-notes.md#public-community-shapes).
+Only these exact query keys are allowed on the already cataloged GET route.
 
 Sanitization requirements:
 

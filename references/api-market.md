@@ -202,6 +202,40 @@ Observed on home, stock detail, analytics, and transaction-status pages.
 | Related themes | `script-backed` | GET | `/api/v1/tics/{ticsId}/related` | Related categories for a theme page |
 | Theme news | `script-backed` | GET | `/api/v2/news/tics/{ticsId}` | Query can include `size`; related news for a theme |
 | Theme fluctuations | `script-backed` | GET | `/api/v2/tics/{ticsId}/fluctuations` | Theme fluctuation/history data |
+
+The 2026-09-16 search checks returned public stock labels in `PRODUCT.keyword`
+and industry labels in `TICS.title`; `market_search.py` preserves both fields.
+For `삼성전자`, the response had 30 product rows and 30 news rows; for `반도체`,
+the TICS response contained the named industry with ID `169`. `--limit` slices
+each returned section locally; it is not a server page selector. The
+[deployed search UI](https://www.tossinvest.com/assets/v2/_next/static/chunks/9196-5e2fc6fb74a48df3.js)
+also reveals already-returned rows with its “more” controls. Selecting a result
+can request related subsections from the same endpoint using `data.subSections`.
+The CLI supports the four public related sections below. `--section` and
+`--related-kind` are mutually exclusive; provide exactly the target flag matching
+the selected related kind. Use the selected main result's `subSectionQuery` as
+`--query`, or its `name` when that field is absent. Main-search output retains a
+bounded plain-string `subSectionQuery` for this purpose.
+
+| Related kind | API section and typed option | CLI target |
+|---|---|---|
+| `related-topic` | `RELATED_TOPIC`, `{ "productCode": "A005930" }` | `--product-code A005930` |
+| `company-tics` | `COMPANY_TICS`, `{ "companyCode": "005930" }` | `--company-code 005930` |
+| `tics-product` | `TICS_PRODUCT`, `{ "ticsId": 169 }` | `--tics-id 169` |
+| `index-description` | `MARKET_INDEX_DESCRIPTION`, `{ "code": "KGG01P" }` | `--index-code KGG01P` |
+
+These requests use the same `{ "query": ..., "sections": [...] }` POST body.
+Bounded checks on 2026-09-16 returned 22 related products for Samsung Electronics,
+three products in the company-TICS panel, 562 products for TICS `169`, and one
+KOSPI description. The company-TICS response identified its own industry as
+`id=553`, `title=종합반도체`; do not substitute the broader search TICS ID `169`.
+Related output keeps public names/codes, section ID/title, descriptions, and
+numeric or null `base`/`close` values under `krw`/`usd`. `receivedItems`,
+`emittedItems`, and `truncated` describe local output limiting. In particular,
+`--limit 3` does not prevent the TICS endpoint from returning the full array.
+Stock link identifiers are retained as `productCode`; no arbitrary response URLs
+or unchecked nested sections are emitted.
+
 ### Current Industry Dashboard And Sector Behavior
 
 The 2026-08-04 industry-page check established three different paging models:

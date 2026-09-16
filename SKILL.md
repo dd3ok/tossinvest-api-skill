@@ -12,9 +12,10 @@ Use this skill to inspect TossInvest web pages and run bundled read-only lookup 
 
 Use Python 3.14.7, the sole supported runtime, with network access.
 
-For the September 7 comprehensive public-web check and its verification limits, read the
-[2026-09-07 update audit](references/update-audit-2026-09-07.md). Stock comments
-resolve metadata `guid` before querying; a product code is not the comment subject ID.
+For the current route inventory, directly browsed states, paging checks and remaining
+limits, read the [2026-09-16 public-page audit](references/public-pages-audit-2026-09-16.md).
+News and filings resolve metadata `companyCode`; stock comments resolve metadata
+`guid`. Neither identifier can be inferred safely from a product code.
 
 ## Official Open API Boundary
 
@@ -53,7 +54,7 @@ It also links the original public documents for subsequent field-level diffs.
 | Filings or company news | `scripts/filings.py`, `scripts/news.py` | [Filings and news APIs](references/api-stock.md#filings-and-news-apis) |
 | Financial statements, estimates, valuation, dividend | `scripts/financials.py` | [Analytics API contracts](references/api-stock.md#analytics-apis) |
 | Investor trading trend, broker ranking, public transaction-status credit/lending/short-selling/CFD tabs (not account credit/margin), pension fund | `scripts/trading_trend.py`, `scripts/pension_fund_trend.py` | [Financials and investor trend](references/script-cookbook.md#financials-and-investor-trend); [Transaction status shapes](references/response-notes.md#transaction-status-shapes) |
-| Market-wide search across products, news, industries, screeners, and indices | `scripts/market_search.py` | [Market search](references/script-cookbook.md#market-search) |
+| Market-wide search and related products, industries, company TICS and index descriptions | `scripts/market_search.py` | [Market search](references/script-cookbook.md#market-search) |
 | Current TICS industry ranking and `/sector/{tics-id}` detail, stock/ETF/news paging | `scripts/sector.py` | [Themes and TICS](references/script-cookbook.md#themes-and-tics); [Current sector behavior](references/api-market.md#current-industry-dashboard-and-sector-behavior) |
 | Legacy theme endpoint discovery and related-theme ranking; TICS IDs remain current | `scripts/theme.py` | [Dashboard and discovery APIs](references/api-market.md#dashboard-and-discovery-apis) |
 | Market indices, daily quote-table paging, FX charts, exchange-rate widgets, bond indicators, commodity indicators, crypto-like index pages | `scripts/indices.py` | [Index and market indicator APIs](references/api-market.md#index-and-market-indicator-apis) |

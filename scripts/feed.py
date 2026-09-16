@@ -90,7 +90,11 @@ def sanitize_recommended_feed_result(result: Any) -> dict[str, Any]:
 
     key = result.get("key") if isinstance(result.get("key"), dict) else {}
     next_id = key.get("lastRecommendId")
-    if not isinstance(next_id, str) or not _RECOMMEND_ID_RE.fullmatch(next_id):
+    if (
+        not result["feeds"]
+        or not isinstance(next_id, str)
+        or not _RECOMMEND_ID_RE.fullmatch(next_id)
+    ):
         next_id = None
     return {
         "feedCount": len(feeds),
