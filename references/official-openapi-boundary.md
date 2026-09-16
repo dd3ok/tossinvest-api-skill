@@ -1,12 +1,13 @@
 # Official Open API Boundary
 
-Checked: 2026-09-07
+Checked: 2026-09-16
 
 Published-document verification only; no authenticated API or WebSocket session
-was executed. Sources were fetched at 2026-09-06 23:42:56-23:42:57 UTC
-(2026-09-07 08:42:56-08:42:57 KST). Exact response-byte SHA-256 values,
-36 REST operations, 90 schema inventories, 10 AsyncAPI operations, and comparison
-limits are recorded in [the dated audit](official-api-audit-2026-09-07.md).
+was executed. Sources were fetched at 2026-09-16 01:37:57 UTC
+(2026-09-16 10:37:57 KST). Exact response-byte SHA-256 values, comparison of
+36 REST operations and 90 schemas, the unchanged AsyncAPI document, and public
+client impact are recorded in [the latest audit](official-api-audit-2026-09-16.md).
+Its linked snapshot preserves the complete public documents for future diffs.
 
 Sources:
 
@@ -27,6 +28,7 @@ to add OAuth, account, asset, or order workflows to this skill.
 
 - [Boundary](#boundary)
 - [Official API Shape](#official-api-shape)
+- [September 16 Contract Review](#september-16-contract-review)
 - [Stock Reference And Paging Contracts](#stock-reference-and-paging-contracts)
 - [Official Rate Limits](#official-rate-limits)
 - [Official WebSocket Boundary](#official-websocket-boundary)
@@ -57,10 +59,10 @@ authenticated client project and read the official docs directly.
 
 ## Official API Shape
 
-Official OpenAPI JSON checked on 2026-09-07:
+Official OpenAPI JSON checked on 2026-09-16:
 
 - OpenAPI specification version: `3.1.0`
-- Official API document version: `1.2.14`
+- Official API document version: `1.2.17`
 - Base server: `https://openapi.tossinvest.com`
 - Auth: OAuth 2.0 Client Credentials via `POST /oauth2/token`
 - Resource calls use `Authorization: Bearer {access_token}`. Token issuance is
@@ -77,7 +79,13 @@ Official OpenAPI JSON checked on 2026-09-07:
 - Canonical document size: 33 paths, 36 operations (29 GET, 6 POST, 1 DELETE),
   13 tags, and 90 component schemas
 
-Historical local baseline: document `1.2.9`, 27 paths and 13 tags, checked
+Compared with the 2026-09-07 document `1.2.14`, all 36 method/path pairs and
+90 schema names remain present. Eight operation and twelve schema fingerprints
+changed; top-level field names and required lists match the prior inventory.
+The old raw JSON is absent, so exact nested-field, enum, or description deltas
+cannot be reconstructed from these fingerprints.
+
+Earlier historical baseline: document `1.2.9`, 27 paths and 13 tags, checked
 2026-08-05. All 24 distinct method/path pairs explicitly listed in that local
 reference are still present. The original 1.2.9 JSON is unavailable locally;
 therefore the +6 path count and locally missing paths below are verified, but a
@@ -85,7 +93,7 @@ complete historical field/operation diff or universal absence of deletions is
 not established.
 
 `llms.txt` mentions JWKS in its quick Auth summary, but the canonical OpenAPI
-JSON checked on 2026-09-07 did not list a JWKS operation. Use the OpenAPI JSON as
+JSON checked on 2026-09-16 did not list a JWKS operation. Use the OpenAPI JSON as
 the source of truth for exact official paths.
 
 Official market-data overlap includes:
@@ -130,11 +138,44 @@ web-endpoint scripts for these operations. The dated audit also inventories the
 official create/modify/cancel operations as reference-only, without executing
 them or adding CLI support.
 
+## September 16 Contract Review
+
+The changed objects currently specify the following. These are current
+contract details, not a claim that each feature was introduced after September 7:
+
+- Stock and market-indicator candles are newest first. Stock `1m` timestamps
+  mark the end of `[timestamp - 1 minute, timestamp)`; daily stock timestamps
+  use local midnight. This definition does not establish the meaning of the
+  public-web `dt` field or the separate indicator candle timestamp.
+- Official short-selling ratios are decimal fractions: volume ratio up to
+  five decimal places and amount ratio up to four. For example, `0.03215`
+  means 3.215%. Preserve null separately from zero; do not apply this unit
+  definition to similarly named web fields without independent evidence.
+- KR integrated sessions exclude pre/post-market closing-price sessions.
+  Each pre/regular/after session can be null; all-null means `integrated=null`.
+  After-market start/end spans the KRX/NXT union, and NXT's auction end is null
+  when its after-market is closed.
+- Ranking volume and amount accumulate over the requested `duration`.
+  `TOSS_SECURITIES_*` uses Toss executions; other types use the whole market.
+- KR official stock symbols may contain letters as well as digits. Holdings
+  covers KR/US stocks; empty holdings returns zero summaries and an empty list.
+- Reference-only order schemas document domestic opening-auction
+  `timeInForce=OPG` for LIMIT/MARKET. US fractional quantity is MARKET SELL
+  only, up to six decimal places; fractional and amount orders accept requests
+  only from regular-session start until one hour before session end.
+  Order history excludes unsupported pre/post-market closing-price order types.
+  Conditional-order lists support symbol filtering for both OPEN and CLOSED.
+
+The public client impact check found no required runtime change. It verified
+six existing web requests and the chart's chronological indicator calculation.
+Keep official `timestamp`/`nextBefore` contracts separate from web
+`dt`/`nextDateTime`; see the dated audit for the sample coverage and limitations.
+
 ## Stock Reference And Paging Contracts
 
-Six GET paths absent from the previous local reference are present in the
-current canonical JSON. These are additions to the local documentation; the
-exact upstream introduction release is unverified:
+Six GET paths absent from the August 5 local reference were recorded on
+September 7 and remain present. These are historical additions to the local
+documentation; the exact upstream introduction release is unverified:
 
 | Method and path | Contract and public-web comparison |
 | --- | --- |
@@ -191,8 +232,10 @@ Other pagination and response contracts to preserve:
   100), and filters `from`/`to` by orderedAt KST dates. Conditional-order lists
   use nextCursor/cursor for both OPEN and CLOSED. No account calls were tested.
 
-The complete method/path and schema inventory is in
-[the dated audit](official-api-audit-2026-09-07.md). These published contracts
+The September 7 method/path and schema inventory is in
+[the previous audit](official-api-audit-2026-09-07.md); current changes and the
+complete source snapshot are in [the latest audit](official-api-audit-2026-09-16.md).
+These published contracts
 do not promote official endpoints to this skill's public-web script support.
 
 ## Official Rate Limits
@@ -232,10 +275,10 @@ Official normal and 429 responses include:
 - `X-RateLimit-Reset`
 - `Retry-After` on 429 responses
 
-These are published limits, not runtime-header observations. Relative to the
-prior local record, MARKET_DATA changed from 10 to 15, MARKET_DATA_CHART from
-5 to 20, and STOCK_ALL/STOCK_TRADING_TREND are newly recorded groups. Other
-listed values match the previous record. `X-RateLimit-Reset` is estimated seconds
+These are published limits, not runtime-header observations. All listed values
+match the September 7 record. That record changed MARKET_DATA from 10 to 15,
+MARKET_DATA_CHART from 5 to 20, and added STOCK_ALL/STOCK_TRADING_TREND relative
+to the August 5 reference. `X-RateLimit-Reset` is estimated seconds
 until one token replenishes, not a Unix reset timestamp. The official guide's
 Retry-After/backoff advice does not change the public-web stop rule below.
 
@@ -248,6 +291,7 @@ TPS than the official Open API documents.
 
 The current REST document links a separate AsyncAPI document: specification
 `3.0.0`, document `1.2.2`, four logical channels and ten operations.
+Its exact bytes match the September 7 document.
 Its server is `wss://openapi-ws.tossinvest.com/ws/v1`, using Bearer and registered
 IP at handshake. It is not the anonymous-page guest/STOMP transport documented
 in [websocket-api-reference.md](websocket-api-reference.md); do not move its
@@ -286,10 +330,15 @@ Documented contracts, not live-tested here:
   and JSON-body summaries also have an OAuth exception: token 400/401/403
   responses use OAuth `error`/`error_description`, and token requests use form
   encoding. Resource success uses `result`; resource failure uses `error`.
-- A separate browser pass in this audit observed the Connection sidebar link
+- The order-history supported-type description does not explicitly include OPG,
+  while the creation/response schemas do. Its actual history behavior is not
+  established by this documentation-only check. The overview's broad
+  amount-order error wording also omits the one-hour cutoff in the operation.
+- A separate browser pass in the September 7 audit observed the Connection sidebar link
   `/docs/connection` rendering a not-found page on 2026-09-07. Its HTTP status
   was not observed. This is a documentation-UI finding, not API deletion:
-  the linked AsyncAPI document was successfully fetched in the evidence above.
+  the linked AsyncAPI document remains available. The UI link was not revisited
+  on September 16.
 
 ## Refresh Policy
 
@@ -304,3 +353,9 @@ complete historical diff. Keep the checked date tied to the observed values; nev
 roll it forward without completing that comparison. If the official sources are
 unavailable or disagree, retain the prior value only as historical context and
 label the current claim `needs-recheck`.
+
+For the next comparison, use the public-document snapshot linked from the
+September 16 audit. Verify each member against `sources.json`, then compare the
+full JSON objects (including reusable components, security, and path metadata)
+and Markdown text. Keep description/example changes separate from structural
+changes; an operation fingerprint alone does not cover referenced components.

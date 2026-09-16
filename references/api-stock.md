@@ -13,7 +13,9 @@ for returned fields, use [stock and price shapes](response-notes.md#stock-and-pr
 Status labels and host/identifier rules are defined in the
 [common catalog](api-catalog.md#verification-status). A script-backed label is
 not a current-availability guarantee. Dates below remain scoped observations;
-the [2026-09-07 audit](update-audit-2026-09-07.md) states the latest checked scope.
+the [2026-09-07 audit](update-audit-2026-09-07.md) records the comprehensive check.
+The [September 16 impact check](official-api-audit-2026-09-16.md#public-client-impact)
+adds targeted chart and short-selling observations.
 
 ## Contents
 
@@ -98,6 +100,15 @@ Observed candle keys:
 ```text
 dt, base, open, high, low, close, volume, amount
 ```
+
+The 2026-09-16 compatibility sample returned newest-first A005930 daily and
+minute candles. Daily paging passed `nextDateTime` unchanged as `from` and
+returned three older candles without overlap. Preserve the raw order in output;
+`stock_chart.py` sorts by `dt` for local indicator calculation and maps values
+back to that order. The official API uses different fields (`timestamp`,
+`nextBefore`) and describes a stock minute candle's ending time; this does not
+establish web `dt` interval semantics. See the
+[official change impact check](official-api-audit-2026-09-16.md#public-client-impact).
 
 The `/stocks/A005930/order` chart's `+` button has `aria-label="보조지표"`.
 Playwright verification on 2026-04-20 showed that opening the menu and selecting

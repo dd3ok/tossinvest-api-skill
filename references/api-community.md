@@ -14,7 +14,7 @@ for social output fields, use [public community shapes](response-notes.md#public
 Status labels and host/identifier rules are defined in the
 [common catalog](api-catalog.md#verification-status). A script-backed label is
 not a current-availability guarantee. Dates below remain scoped observations;
-the [2026-09-07 audit](update-audit-2026-09-07.md) states the latest checked scope.
+the [2026-09-07 audit](update-audit-2026-09-07.md) records this domain's checked scope.
 
 ## Contents
 

@@ -12,13 +12,17 @@ Use this skill to inspect TossInvest web pages and run bundled read-only lookup 
 
 Use Python 3.14.7, the sole supported runtime, with network access.
 
-For current change evidence and verification limits, read the
+For the September 7 comprehensive public-web check and its verification limits, read the
 [2026-09-07 update audit](references/update-audit-2026-09-07.md). Stock comments
 resolve metadata `guid` before querying; a product code is not the comment subject ID.
 
 ## Official Open API Boundary
 
 TossInvest has a separate official Open API documented at `developers.tossinvest.com/docs`. This skill is not that OAuth-based client and does not require official Open API app setup, `Authorization` tokens, `X-Tossinvest-Account`, or IP registration. For official Open API integration or exact official rate-limit questions, read [references/official-openapi-boundary.md](references/official-openapi-boundary.md) and the official docs; do not retrofit official account, asset, or order workflows into this skill.
+
+For the September 16 official-document changes and their effect on this public
+client, read [the official update audit](references/official-api-audit-2026-09-16.md).
+It also links the original public documents for subsequent field-level diffs.
 
 ## When To Use
 
