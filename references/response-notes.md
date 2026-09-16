@@ -256,6 +256,15 @@ and `lastPage=false` with a cursor; page 2 returned three rows with no date
 overlap. A short page alone is not an end condition. Follow server continuation
 metadata, preserve the stock/size/filter state, and stop on a repeated cursor.
 
+The 2026-09-16 A005930 short-selling sample also returned two rows for `size=3`
+with `lastPage=false` and a continuation. Additional row fields included
+`shortSellingRatio`, `volume`, `tradingAmount`, `inMarketTime`, and `updatedAt`.
+Preserve web ratio fields as returned: the official API's decimal-fraction
+definitions for `shortSellingVolumeRate` and `shortSellingAmountRate` do not
+establish the units of these differently named web fields. The
+[targeted impact check](official-api-audit-2026-09-16.md#public-client-impact)
+records the sample scope.
+
 ## Transport And Identifier Checks — 2026-09-07
 
 The shared HTTP client accepts an approved HTTPS origin only, rejects redirects,

@@ -13,7 +13,9 @@ WebSocket protocol and client setup remain in the
 Status labels and host/identifier rules are defined in the
 [common catalog](api-catalog.md#verification-status). A script-backed label is
 not a current-availability guarantee. Dates below remain scoped observations;
-the [2026-09-07 audit](update-audit-2026-09-07.md) states the latest checked scope.
+the [2026-09-07 audit](update-audit-2026-09-07.md) records the comprehensive check.
+The [September 16 impact check](official-api-audit-2026-09-16.md#public-client-impact)
+adds targeted KOSPI daily-quote and KR ranking observations.
 
 ## Contents
 
