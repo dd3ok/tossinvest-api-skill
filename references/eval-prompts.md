@@ -4,10 +4,38 @@ Use these prompts after installing the skill to check whether another agent sele
 
 ## Contents
 
+- [Running a Small Evaluation](#running-a-small-evaluation)
 - [Activation Scenarios](#activation-scenarios)
 - [Lookup Scenarios](#lookup-scenarios)
 - [Discovery Scenarios](#discovery-scenarios)
 - [Safety Scenarios](#safety-scenarios)
+
+## Running a Small Evaluation
+
+For a small instruction change, start with three cases: a normal lookup, the
+changed workflow, and an out-of-scope request. Select from the scenarios below;
+expand to the activation cases when changing the description.
+
+1. Install the candidate under its canonical name in the target host and confirm
+   that the host discovers it. Use a fresh conversation for each case, with no
+   explicit skill selector when testing natural activation.
+2. Run the same prompts against the previous skill version in separate fresh
+   conversations, using the same host, model and inputs. Use local fixtures for
+   repeatable response checks; live prices may change between runs.
+3. For a path-related change, start in an unrelated working directory. Verify
+   that the agent invokes the installed script by absolute path, resolves bundled
+   filters under the skill root, and writes requested output in the user workspace.
+4. Record host/model, skill revision, prompt, working directory, expected and
+   observed behavior, and pass/fail. Check the tool trace for selected references,
+   script arguments, bounded calls and safety handling; final prose alone is not
+   evidence that the right workflow ran. Record sanitized evidence only.
+
+Separate static validation (frontmatter, links, packaging and unit tests), CLI
+smoke checks, and actual host behavior. An installed script's `--help` passing
+from another directory does not prove automatic activation or live lookup success.
+Mark host scenarios that were not run as untested.
+
+This small comparison follows the [Agent Skills evaluation guide](https://agentskills.io/skill-creation/evaluating-skills).
 
 ## Activation Scenarios
 

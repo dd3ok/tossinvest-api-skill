@@ -79,9 +79,18 @@ test -f "$skill_dir/references/api-community.md"
 test -f "$skill_dir/references/websocket-api-reference.md"
 test -f "$skill_dir/requirements-websocket.txt"
 test -f "$skill_dir/scripts/websocket_prices.py"
-python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
-python3 "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
+(
+  cd "$workspace"
+  python3 "$skill_dir/scripts/stock_summary.py" --help >/dev/null
+  python3 "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
+)
 ```
+
+These smoke checks verify installed CLI startup from outside the skill directory.
+For instruction or routing changes, also use the small comparison in
+[Evaluation Prompts](../references/eval-prompts.md#running-a-small-evaluation).
+Record static/CLI results separately from host discovery, activation and task
+execution; list untested hosts explicitly rather than treating packaging as host validation.
 
 ## Documentation
 
