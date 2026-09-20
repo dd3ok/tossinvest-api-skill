@@ -90,6 +90,12 @@
 
 ## 설치
 
+`SKILL.md`, `scripts/`, `references/`는 호스트가 함께 사용하는 본체입니다.
+`agents/openai.yaml`은 Codex용 표시 정보와 자동 호출 정책이며, 다른 호스트의 권한·호출 설정을 대신하지 않습니다.
+아래 설치 경로와 별개로, 각 호스트에서 실제 스킬 발견·선택·실행은
+[수동 점검 절차](references/eval-prompts.md#running-a-small-evaluation)로 확인하세요.
+CI의 형식·설치 구조 검증만으로 모든 호스트의 동작이 검증되지는 않습니다.
+
 ### Codex
 
 Codex에서는 공개 GitHub URL로 설치를 요청할 수 있습니다.
@@ -98,7 +104,9 @@ Codex에서는 공개 GitHub URL로 설치를 요청할 수 있습니다.
 https://github.com/dd3ok/tossinvest-api-skill 에서 스킬을 설치해줘.
 ```
 
-설치가 끝나면 Codex를 재시작해 스킬 목록을 다시 로드하세요. 이후 TossInvest 또는 토스증권을 언급한 주식 데이터 요청이 이 스킬로 연결됩니다.
+Codex는 설치·변경된 스킬을 자동으로 탐색합니다. 목록에 나타나지 않으면 재시작하세요.
+이후 TossInvest 또는 토스증권을 언급한 공개 데이터 요청에서 스킬을 선택할 수 있습니다.
+설치 경로와 자동 호출 동작은 [Codex 공식 가이드](https://learn.chatgpt.com/docs/build-skills)를 참고하세요.
 
 수동으로 설치하려면 다음처럼 스킬 디렉터리에 클론합니다.
 
@@ -185,6 +193,10 @@ python3.14 -m venv .venv
 ```
 
 Windows PowerShell에서는 `py -3.14 -m venv .venv`로 생성하고, 이후 `.venv/bin/python` 명령의 실행 파일을 모두 `.venv/Scripts/python.exe`로 바꿉니다. 1회 테스트가 끝나면 가상환경을 비활성화한 상태에서 `.venv` 디렉터리만 삭제하면 선택 의존성도 함께 제거됩니다.
+
+아래와 뒤의 상대경로 예제는 스킬 루트에서 실행하는 명령입니다. 다른 프로젝트에서
+설치된 스킬을 사용할 때는 로드된 `SKILL.md`가 있는 디렉터리를 기준으로 스크립트와
+번들 파일의 절대경로를 지정하세요. 사용자 입력·결과 파일은 사용자 작업 폴더를 기준으로 합니다.
 
 스크립트별 옵션은 `--help`로 확인합니다.
 

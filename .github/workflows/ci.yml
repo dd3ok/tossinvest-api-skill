@@ -62,8 +62,11 @@ jobs:
           test -f "$skill_dir/requirements-websocket.txt"
           test -f "$skill_dir/scripts/websocket_prices.py"
           agentskills validate "$skill_dir"
-          python "$skill_dir/scripts/stock_summary.py" --help >/dev/null
-          python "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
+          (
+            cd "$workspace"
+            python "$skill_dir/scripts/stock_summary.py" --help >/dev/null
+            python "$skill_dir/scripts/websocket_prices.py" --help >/dev/null
+          )
 
       - name: Compile scripts
         shell: bash

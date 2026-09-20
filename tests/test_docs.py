@@ -340,6 +340,7 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_websocket_api_reference_documents_protocol_schema_and_safety(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         websocket = (ROOT / "references" / "websocket-api-reference.md").read_text(encoding="utf-8")
         safety = (ROOT / "references" / "safety-rules.md").read_text(encoding="utf-8")
@@ -472,7 +473,7 @@ class DocumentationPromptTests(unittest.TestCase):
         self.assertTrue((ROOT / "requirements-websocket.txt").exists())
         self.assertTrue((ROOT / "scripts" / "websocket_prices.py").exists())
         self.assertIn("scripts/websocket_prices.py", skill)
-        self.assertIn(".venv/bin/python scripts/websocket_prices.py", skill)
+        self.assertIn(".venv/bin/python scripts/websocket_prices.py", cookbook)
         self.assertIn("scripts/websocket_prices.py", readme)
         for expected in [
             "### WebSocket 클라이언트 운영 제한",

@@ -1,6 +1,6 @@
 ---
 name: tossinvest-web-api
-description: Use this skill when users need public, read-only TossInvest/토스증권 data visible on tossinvest.com, including KR/US quotes, order books, candles, financials, filings, market search, news, rankings, industries/sectors, bond pages, screeners, calendars, indices, FX, crypto-like index pages, sanitized public community data, or browser-observed WebSocket market streams. Use public endpoint re-verification or WebSocket re-verification only when the user explicitly asks for it. Do not use for login, accounts, holdings, orders, authenticated broker workflows, bulk scraping, or investment advice.
+description: Use this skill when users need public, read-only TossInvest/토스증권 quotes, charts, financials, filings, news, rankings, sectors, bond pages, screeners, calendars, indices/FX, crypto-like index pages, or sanitized community data; also for browser-observed WebSocket streams and explicitly requested public endpoint re-verification. Do not use for login, accounts, orders, bulk scraping, or investment advice.
 license: MIT
 ---
 
@@ -8,12 +8,12 @@ license: MIT
 
 ## Overview
 
-Use this skill to inspect TossInvest web pages and run bundled read-only lookup scripts for public stock, market, index, bond-page, calendar, theme, financial, filing, news, ranking, investor-trend, screener, and public community questions. Do not combine it with tools that automate login, account access, or trading.
+Use the bundled scripts for public data visible on `tossinvest.com`. Choose the task and its references from the routing table below.
 
 Use Python 3.14.7, the sole supported runtime, with network access.
 
-For the current route inventory, directly browsed states, paging checks and remaining
-limits, read the [2026-09-16 public-page audit](references/public-pages-audit-2026-09-16.md).
+When checking page coverage, observed tabs, paging or remaining verification gaps,
+read the [2026-09-16 public-page audit](references/public-pages-audit-2026-09-16.md).
 News and filings resolve metadata `companyCode`; stock comments resolve metadata
 `guid`. Neither identifier can be inferred safely from a product code.
 
@@ -27,10 +27,9 @@ It also links the original public documents for subsequent field-level diffs.
 
 ## When To Use
 
-- Use for public TossInvest stock or market data visible on `tossinvest.com`.
-- Use for quotes, order books, candles, financials, filings, news, themes, rankings, sectors, public bond pages, indices, market calendars, investor trends, screeners, and sanitized public community comments.
-- Use for an unofficial WebSocket API reference, including API-style server, channel, receive-operation, message-field descriptions, and bounded public read-only client work for browser-observed real-time market streams after reading [references/websocket-api-reference.md](references/websocket-api-reference.md).
-- Use when re-verifying an observed read-only browser endpoint before updating scripts or references.
+- Use for public TossInvest stock and market lookups, from quotes to market calendars and sanitized public community comments.
+- Use for bounded public streams and the unofficial WebSocket API reference; follow the WebSocket routes below.
+- Use when explicitly asked to re-verify an observed read-only browser endpoint or WebSocket contract before updating scripts or references.
 
 ## When Not To Use
 
@@ -89,7 +88,7 @@ host rules, or page evidence, start with the
 
 1. For normal lookups, choose a bundled script from the routing table.
 2. For WebSocket questions or implementation, read the relevant sections of [references/websocket-api-reference.md](references/websocket-api-reference.md). For a snapshot-versus-stream question, use its [HTTP snapshot and stream semantics](references/websocket-api-reference.md#http-snapshot-and-stream-semantics). For API-reference or client implementation work, cover the server, STOMP lifecycle, channel/destination, receive operation, message envelope, payload fields, and evidence status. A client may obtain the current logged-out browser guest bootstrap at runtime, but must keep it memory-only and never expose or persist it.
-3. For missing or drifted endpoints, start from [Known Observed Pages](references/api-catalog.md#known-observed-pages), then follow [references/capture-workflow.md](references/capture-workflow.md).
+3. When explicitly asked to re-verify missing or drifted endpoints, start from [Known Observed Pages](references/api-catalog.md#known-observed-pages), then follow [references/capture-workflow.md](references/capture-workflow.md).
 4. Exclude telemetry, personalization, login, account, and order calls. For WebSocket work, use only the anonymous public-page bootstrap required for a read-only session, consume it in memory, and discard it when the connection closes.
 5. Prefer `wts-info-api.tossinvest.com` read-only endpoints.
 6. Use `wts-cert-api.tossinvest.com` only for public visible page data or metadata, limited to cataloged or script-backed endpoint families and never requiring cookies, authorization headers, account identifiers, or personal data.
@@ -97,27 +96,26 @@ host rules, or page evidence, start with the
 
 ## Script Use
 
-Use the task routing table to choose a script, then run `python3 scripts/<name>.py --help` for current options.
+Resolve the skill root from the directory containing the loaded `SKILL.md`, not
+from the user's current working directory. Resolve bundled `scripts/`,
+`references/`, `examples/`, and `requirements-websocket.txt` against that root.
+Use quoted absolute paths when invoking a script or passing a bundled filter file.
+Resolve user-supplied input and output paths against the user's workspace instead.
 
-Common first-pass checks:
+Use the routing table to choose one script, then inspect its `--help`. The cookbook's
+relative commands assume the skill root; adapt them to the installed absolute path.
+For example, replace the placeholder below with the loaded skill's actual directory:
 
 ```bash
-python3 scripts/stock_summary.py --code A005930 --no-overview
-python3 scripts/stock_page.py --code SOXL --comment-limit 5
-python3 scripts/market_search.py --query 삼성전자 --section product --section news
-python3 scripts/quote.py --code A005930 --ticks 5
-python3 scripts/sector.py --kind ranking --nation us --duration 1d
-python3 scripts/sector.py --kind detail --tics-id 79 --nation us --stock-page 1 --news-page 1
-.venv/bin/python scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
-python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
-python3 scripts/calendar.py --year-month 2026-05
-python3 scripts/page_api_check.py --code A005930 --pages order,analytics,news,transaction-status
+skill_root="/absolute/path/to/tossinvest-web-api"
+python3 "$skill_root/scripts/stock_summary.py" --help
+python3 "$skill_root/scripts/stock_summary.py" --code A005930 --no-overview
 ```
 
-The WebSocket command assumes the project-local optional dependency setup in
+For WebSocket work, use the virtual environment's absolute interpreter path after
+the optional dependency setup in
 [Real-Time WebSocket Streams](references/script-cookbook.md#real-time-websocket-streams),
-including the Windows Python path substitution. The other HTTP commands use only
-the standard library.
+including the Windows Python path substitution. HTTP scripts use only the standard library.
 
 `page_api_check.py --pages order` is an order page read-only smoke check only; it does not call order placement or mutation APIs.
 
@@ -125,7 +123,7 @@ For US stock candles, use an observed TossInvest product/source code such as `US
 
 ## Lookup Failures
 
-On HTTP 400/404, non-JSON content, missing `result`, changed response shape, or another endpoint-drift signal: stop using the stale path. Open the matching public TossInvest page, re-capture browser requests with [references/capture-workflow.md](references/capture-workflow.md), and start from [Known Observed Pages](references/api-catalog.md#known-observed-pages).
+On HTTP 400/404, non-JSON content, missing `result`, changed response shape, or another endpoint-drift signal: stop using the stale path and report the failure. If the user explicitly requested re-verification, open the matching public TossInvest page and follow the Workflow capture step above.
 
 If `/api/v3/stock-prices/details` returns a successful JSON response but omits the requested code or has no matching row, treat that as a target-level stale or endpoint-incompatible product code, not a transport outage. Record the failing target separately, cool it down before the next collector pass, and keep processing the remaining price targets.
 
