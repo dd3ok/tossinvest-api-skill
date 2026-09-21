@@ -31,17 +31,21 @@ mkdir -p ~/.agents/skills
 git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git ~/.agents/skills/tossinvest-web-api
 ```
 
-위 `git clone` 명령의 설치 경로를 아래 표에 맞게 바꾸세요. 별도 설치 명령이 있는 호스트는 해당 명령을 사용합니다.
+위 `git clone` 명령의 설치 경로를 아래 표에 맞게 바꾸세요.
 
-| 호스트 | 설치 위치 또는 명령 | 안내 |
+| 호스트 | 설치 위치 | 안내 |
 | --- | --- | --- |
 | <a id="codex"></a>Codex | 개인 `~/.agents/skills/tossinvest-web-api` · 프로젝트 `.agents/skills/tossinvest-web-api` | [공식 안내](https://learn.chatgpt.com/docs/build-skills) |
 | <a id="claude-code"></a>Claude Code | 개인 `~/.claude/skills/tossinvest-web-api` · 프로젝트 `.claude/skills/tossinvest-web-api` | [공식 안내](https://code.claude.com/docs/en/skills) |
 | <a id="antigravity-cli"></a>Antigravity CLI | 프로젝트 `.agents/skills/tossinvest-web-api` | [공식 안내](https://antigravity.google/docs/skills) |
+| <a id="hermes-agent"></a>Hermes Agent | 개인 `~/.hermes/skills/tossinvest-web-api` | [공식 안내](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills/) |
+| <a id="openclaw"></a>OpenClaw | 설정한 에이전트 workspace의 `skills/tossinvest-web-api` | [공식 안내](https://docs.openclaw.ai/tools/skills) |
 
 위 clone 명령은 `main`을 설치합니다. 버전을 고정하려면 `--branch <태그>`를 추가하고 [릴리스 목록](https://github.com/dd3ok/tossinvest-api-skill/releases)의 실제 태그를 사용하세요.
 최종 파일 위치는 `.agents/skills/tossinvest-web-api/SKILL.md`처럼 스킬 이름과 폴더명이 일치해야 합니다.
 Antigravity CLI는 `agy` 실행 후 `/skills`에서 설치 여부를 확인하세요.
+Hermes의 프로젝트 `.hermes/skills` 또는 `.agents/skills`를 사용하려면 해당 프로젝트가 신뢰된 상태여야 합니다.
+OpenClaw에서는 `openclaw skills list --eligible`과 `openclaw skills info tossinvest-web-api`로 발견 여부를 확인하세요. Python은 실제 실행 호스트나 샌드박스에도 필요합니다.
 
 `SKILL.md`, `scripts/`, `references/`는 호스트가 함께 사용하는 본체입니다.
 `agents/openai.yaml`은 Codex용 표시 정보와 자동 호출 정책이며 다른 호스트의 권한·호출 설정을 대신하지 않습니다.
