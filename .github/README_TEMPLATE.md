@@ -8,6 +8,8 @@
 
 [설치](#설치) · [빠른 시작](#빠른-시작) · [지원 범위](#지원-범위) · [문서 안내](#문서-안내) · [변경 이력]({{DOC_ROOT}}CHANGELOG.md)
 
+---
+
 ## 설치
 
 Codex에서는 다음과 같이 요청하세요.
@@ -39,6 +41,8 @@ git clone --depth 1 https://github.com/{{REPOSITORY}}.git ~/.agents/skills/{{SKI
 
 </details>
 
+---
+
 ## 빠른 시작
 
 설치 후 새 대화에서 자연어로 요청하세요.
@@ -60,11 +64,15 @@ git clone --depth 1 https://github.com/{{REPOSITORY}}.git ~/.agents/skills/{{SKI
 
 {{OPTIONAL_RUNTIME_NOTE}}
 
+---
+
 ## 지원 범위
 
 | 하고 싶은 일 | 제공 기능 |
 | --- | --- |
 {{CAPABILITY_ROWS}}
+
+---
 
 ## 문서 안내
 
@@ -75,6 +83,8 @@ git clone --depth 1 https://github.com/{{REPOSITORY}}.git ~/.agents/skills/{{SKI
 | 응답 필드와 페이징 | [응답 설명]({{DOC_ROOT}}references/response-notes.md) |
 | 허용 범위와 중단 조건 | [안전 규칙]({{DOC_ROOT}}references/safety-rules.md) |
 
+---
+
 ## 한계와 안전 범위
 
 - 공개 데이터만 조회합니다. 로그인·계좌·보유종목·주문·개인화·쓰기 작업은 지원하지 않습니다.
@@ -82,6 +92,8 @@ git clone --depth 1 https://github.com/{{REPOSITORY}}.git ~/.agents/skills/{{SKI
 - 비공식 API의 경로·응답·데이터 가용성은 예고 없이 바뀔 수 있습니다. CI 통과가 현재 API의 성공이나 모든 호스트의 실행을 보장하지는 않습니다.
 
 {{PROJECT_BOUNDARY_NOTE}}
+
+---
 
 ## 개발 및 문의
 
@@ -97,6 +109,8 @@ git clone --depth 1 https://github.com/{{REPOSITORY}}.git ~/.agents/skills/{{SKI
 
 오류나 문서 개선은 [Issues](https://github.com/{{REPOSITORY}}/issues)로 알려주세요. 쿠키·토큰·원본 HAR·계좌 정보는 공개 이슈에 올리지 마세요.
 {{SECURITY_NOTE}}
+
+---
 
 ## 라이선스
 

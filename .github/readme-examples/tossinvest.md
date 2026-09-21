@@ -7,6 +7,8 @@
 
 [설치](#설치) · [빠른 시작](#빠른-시작) · [지원 범위](#지원-범위) · [문서 안내](#문서-안내) · [변경 이력](../../CHANGELOG.md)
 
+---
+
 ## 설치
 
 Codex에서는 다음과 같이 요청하세요.
@@ -40,6 +42,8 @@ git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git ~/.agents/
 
 </details>
 
+---
+
 ## 빠른 시작
 
 설치 후 새 대화에서 자연어로 요청하세요.
@@ -61,6 +65,8 @@ python3 scripts/stock_summary.py --code A005930 --no-overview
 
 WebSocket 수신에는 잠금된 선택 의존성이 필요합니다. [가상환경 설정과 수신 예제](../../references/script-cookbook.md#real-time-websocket-streams)를 따르세요.
 
+---
+
 ## 지원 범위
 
 | 하고 싶은 일 | 제공 기능 |
@@ -70,6 +76,8 @@ WebSocket 수신에는 잠금된 선택 의존성이 필요합니다. [가상환
 | 시장 탐색하기 | 검색, 랭킹, 섹터·ETF, 지수·환율·채권·원자재, 캘린더, 스크리너 |
 | 공개 콘텐츠 읽기 | 뉴스·공시, 정제된 피드·종목/라운지 댓글·답글 |
 | 실시간 데이터 받기 | 공개 주식 체결과 검증된 지수·가상자산형 지수의 제한된 WebSocket 수신 |
+
+---
 
 ## 문서 안내
 
@@ -85,6 +93,8 @@ WebSocket 수신에는 잠금된 선택 의존성이 필요합니다. [가상환
 | 응답 필드와 페이징 | [응답 설명](../../references/response-notes.md) |
 | 허용 범위와 중단 조건 | [안전 규칙](../../references/safety-rules.md) |
 
+---
+
 ## 한계와 안전 범위
 
 - 공개 데이터만 조회합니다. 로그인·계좌·보유종목·주문·개인화·쓰기 작업은 지원하지 않습니다.
@@ -93,6 +103,8 @@ WebSocket 수신에는 잠금된 선택 의존성이 필요합니다. [가상환
 
 이 스킬은 토스증권의 공식 OAuth Open API 클라이언트가 아닙니다. [공식 API와의 구분](../../references/official-openapi-boundary.md)을 참고하세요.
 WebSocket의 임시 게스트 연결값은 실행 중 메모리에만 유지하고 출력·로그·파일에 남기지 않습니다.
+
+---
 
 ## 개발 및 문의
 
@@ -109,6 +121,8 @@ python3 -B -m unittest discover -s tests
 
 오류나 문서 개선은 [Issues](https://github.com/dd3ok/tossinvest-api-skill/issues)로 알려주세요. 쿠키·토큰·원본 HAR·계좌 정보는 공개 이슈에 올리지 마세요.
 민감한 보안 제보는 [SECURITY.md](../../SECURITY.md)의 비공개 제보 절차를 따르세요.
+
+---
 
 ## 라이선스
 
