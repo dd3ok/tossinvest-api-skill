@@ -1,36 +1,132 @@
-# 비공식 토스증권 API / TossInvest API Skill
+# 토스증권 API Skill
 
-[![CI](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml)
-[![최신 릴리스](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skill?sort=semver)](https://github.com/dd3ok/tossinvest-api-skill/releases/latest)
+<a id="비공식-토스증권-api-tossinvest-api-skill"></a>
 
-> 토스증권 웹에 공개된 API를 바탕으로 만든 경량 에이전트 스킬입니다.  
-> 로그인이나 계좌 인증 없이 공개 주식·시장 데이터를 Codex, Claude Code 같은 에이전트가 안전하게 다시 조회하도록 돕습니다.  
-> 공식 Open API, 증권사 거래 API, 투자 조언 도구가 아닙니다.
+[![CI](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml/badge.svg)](https://github.com/dd3ok/tossinvest-api-skill/actions/workflows/ci.yml) [![최신 릴리스](https://img.shields.io/github/v/release/dd3ok/tossinvest-api-skill?sort=semver)](https://github.com/dd3ok/tossinvest-api-skill/releases/latest)
 
-[설치](#설치) · [빠른 실행](#스크립트-빠른-실행) · [문서 안내](#문서-안내) · [상세 실행 예제](references/script-cookbook.md) · [API 목록](references/api-catalog.md#choose-a-reference) · [변경 이력](CHANGELOG.md)
+`tossinvest.com`의 공개 주식·시장 데이터를 **에이전트와 Python CLI에서 읽기 전용으로 조회**하는 스킬입니다.
+비공식 프로젝트이며 로그인·계좌·주문이나 투자 조언은 지원하지 않습니다.
 
-## 문서 안내
+[설치](#설치) · [빠른 시작](#빠른-시작) · [지원 범위](#지원-범위) · [문서 안내](#문서-안내) · [변경 이력](CHANGELOG.md)
 
-| 찾는 내용 | 문서 |
-| --- | --- |
-| 실행할 명령과 옵션 조합 | [실행 예제](references/script-cookbook.md#contents) |
-| 종목 시세·차트·재무·종목 뉴스·공시·투자자 동향 | [종목 API](references/api-stock.md) |
-| 지수·환율·채권·캘린더·랭킹·검색·섹터·스크리너 | [시장 API](references/api-market.md) |
-| 뉴스 탐색·피드·댓글·답글·댓글을 포함한 종목 통합 조회 | [피드·커뮤니티 API](references/api-community.md) |
-| 응답 필드·커서·출력 정제 | [응답 설명](references/response-notes.md#contents) |
-| API 확인 상태·호스트·제외 범위·관찰 페이지 | [공통 API 카탈로그](references/api-catalog.md#verification-status) |
+---
 
-실시간 스트림은 [WebSocket 문서](references/websocket-api-reference.md),
-공식 OAuth API와의 차이는 [공식 API 구분 문서](references/official-openapi-boundary.md)를 참고하세요.
+## 설치
 
-## 공식 Open API와의 구분
+Codex에서는 다음과 같이 요청하세요.
 
-이 스킬은 `developers.tossinvest.com/docs`에서 제공하는 토스증권 공식 Open API 클라이언트가 아닙니다.  
-토스증권 공개 웹 페이지에 이미 표시되는 주식·시장 데이터를 조회하도록 돕는 경량 에이전트 스킬입니다.  
-공식 Open API 앱 설정, OAuth 토큰, 계좌 헤더, IP 등록 절차는 필요하지 않습니다.  
-계좌·자산·주문 업무가 필요하다면 공식 Open API 문서를 기준으로 별도 클라이언트를 구현하세요.
+```text
+https://github.com/dd3ok/tossinvest-api-skill 에서 스킬을 설치해줘.
+```
+
+설치 후 스킬 목록에서 `tossinvest-web-api`가 보이는지 확인하세요. 설치 폴더명도 이 이름을 사용합니다.
+
+<details>
+<summary>직접 설치하거나 다른 에이전트에서 사용하기</summary>
+
+Codex 개인 스킬 경로에 직접 설치하는 예시입니다. 셸 명령은 Bash 기준입니다.
+
+```bash
+mkdir -p ~/.agents/skills
+git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git ~/.agents/skills/tossinvest-web-api
+```
+
+위 `git clone` 명령의 설치 경로를 아래 표에 맞게 바꾸세요. 별도 설치 명령이 있는 호스트는 해당 명령을 사용합니다.
+
+| 호스트 | 설치 위치 또는 명령 | 안내 |
+| --- | --- | --- |
+| <a id="codex"></a>Codex | 개인 `~/.agents/skills/tossinvest-web-api` · 프로젝트 `.agents/skills/tossinvest-web-api` | [공식 안내](https://learn.chatgpt.com/docs/build-skills) |
+| <a id="claude-code"></a>Claude Code | 개인 `~/.claude/skills/tossinvest-web-api` · 프로젝트 `.claude/skills/tossinvest-web-api` | [공식 안내](https://code.claude.com/docs/en/skills) |
+| <a id="antigravity-cli"></a>Antigravity CLI | 프로젝트 `.agents/skills/tossinvest-web-api` | [공식 안내](https://antigravity.google/docs/skills) |
+
+위 clone 명령은 `main`을 설치합니다. 버전을 고정하려면 `--branch <태그>`를 추가하고 [릴리스 목록](https://github.com/dd3ok/tossinvest-api-skill/releases)의 실제 태그를 사용하세요.
+최종 파일 위치는 `.agents/skills/tossinvest-web-api/SKILL.md`처럼 스킬 이름과 폴더명이 일치해야 합니다.
+Antigravity CLI는 `agy` 실행 후 `/skills`에서 설치 여부를 확인하세요.
+
+`SKILL.md`, `scripts/`, `references/`는 호스트가 함께 사용하는 본체입니다.
+`agents/openai.yaml`은 Codex용 표시 정보와 자동 호출 정책이며 다른 호스트의 권한·호출 설정을 대신하지 않습니다.
+각 환경에서 [수동 점검 절차](references/eval-prompts.md#running-a-small-evaluation)에 따라 스킬 발견과 첫 조회를 확인하세요.
+
+</details>
+
+---
+
+<a id="스크립트-빠른-실행"></a>
+<a id="로컬-스크립트만-실행"></a>
+
+## 빠른 시작
+
+설치 후 새 대화에서 자연어로 요청하세요.
+
+```text
+토스증권 기준으로 A005930의 종목 요약과 현재 시세를 조회해줘.
+```
+
+직접 CLI를 실행할 때는 **Python 3.14.7**을 사용합니다. HTTP 조회는 표준 라이브러리로 실행합니다.
+스킬이 설치된 폴더(저장소 루트)에서 다음 명령을 실행하면 JSON 결과가 출력됩니다.
+
+```bash
+python3 scripts/stock_summary.py --code A005930 --no-overview
+```
+
+`python3 --version`이 `Python 3.14.7`인지 확인하세요. Windows에서는 `py -3.14`로 바꿀 수 있지만, `3.14` 명령 이름만으로 패치 버전이 고정되지는 않습니다.
+다른 작업 폴더에서는 로드된 `SKILL.md`가 있는 디렉터리를 기준으로 스크립트와 번들 파일의 절대경로를 사용하세요. 상대 입력·출력 경로는 실행한 작업 폴더 기준입니다.
+전체 옵션은 `--help`, 다른 조회 방법은 [실행 예제](references/script-cookbook.md)를 참고하세요.
+
+<details>
+<summary>WebSocket 수신 설정</summary>
+
+WebSocket 수신에만 잠금된 선택 의존성이 필요합니다. 프로젝트 전용 가상환경에 설치하세요.
+
+```bash
+python3.14 --version  # Python 3.14.7인지 확인
+python3.14 -m venv .venv
+.venv/bin/python -m pip install -r requirements-websocket.txt
+.venv/bin/python scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
+```
+
+Windows에서는 `py -3.14 -m venv .venv`로 생성하고 `.venv/bin/python`을 `.venv/Scripts/python.exe`로 바꿉니다.
+다른 채널은 [수신 예제](references/script-cookbook.md#real-time-websocket-streams)와 [WebSocket 클라이언트 운영 제한](#websocket-클라이언트-운영-제한)을 확인하세요.
+
+</details>
+
+미국 주식 차트에는 `US20100311002` 같은 TossInvest 상품/소스 코드가 필요합니다. `SPY`, `NVDA` 같은 표시 티커를 그대로 넣으면 HTTP 400이 날 수 있습니다. [코드 선택 안내](references/script-cookbook.md#charts-and-local-indicators)를 참고하세요.
+
+<a id="프롬프트-예시"></a>
+
+<details>
+<summary>추가 요청과 랭킹 조회 예시</summary>
+
+```text
+토스증권에서 A005930의 일봉 캔들을 조회하고 RSI 14와 MACD를 계산해줘.
+토스증권 비로그인 공개 페이지의 A005930 실시간 체결 WebSocket 채널과 수신 필드를 설명해줘.
+```
+
+```bash
+python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_market_amount --market us --duration 20d
+```
+
+<a id="주식-요약-출력-예시"></a>
+<a id="차트와-로컬-보조지표-출력-예시"></a>
+
+전체 명령과 출력 해석은 [실행 예제](references/script-cookbook.md)와 [응답 설명](references/response-notes.md)을 참고하세요.
+
+</details>
+
+---
 
 ## 지원 범위
+
+| 하고 싶은 일 | 제공 기능 |
+| --- | --- |
+| 종목 살펴보기 | 국내·미국 종목 요약, 현재가·호가, 재무·배당, 투자자 동향 |
+| 차트 분석하기 | 캔들 조회와 RSI·SMA·EMA·MACD·Bollinger Bands의 로컬 계산 |
+| 시장 탐색하기 | 검색, 랭킹, 섹터·ETF, 지수·환율·채권·원자재, 캘린더, 스크리너 |
+| 공개 콘텐츠 읽기 | 뉴스·공시, 정제된 피드·종목/라운지 댓글·답글 |
+| 실시간 데이터 받기 | 공개 주식 체결과 검증된 지수·가상자산형 지수의 제한된 WebSocket 수신 |
+
+<details>
+<summary>HTTP·차트·WebSocket 상세 기능과 운영 제한</summary>
 
 ### 공개 HTTP 기반 조회
 
@@ -57,189 +153,6 @@
 - 국내·미국 top100은 단일 WebSocket 랭킹 채널이 아니라 10초 주기 HTTP 랭킹 snapshot과 최대 100개 종목별 체결 구독을 결합함
 - 검색·산업·투자자 동향·조건검색·뉴스의 핵심 목록은 HTTP로 조회하며, 화면에 보이는 종목 가격은 공용 체결 이벤트가 덧씌워질 수 있음; `scripts/quote.py`의 현재가·호가·체결 틱은 HTTP 조회
 - 구독·메모리·출력 제한은 [WebSocket 클라이언트 운영 제한](#websocket-클라이언트-운영-제한) 참고
-
-설치 후 TossInvest 또는 토스증권을 언급해 자연어로 요청하면 종목 요약, 시세, 차트, 재무, 뉴스, 공시, 테마, 지수, 캘린더, 랭킹, 스크리너를 조회하고 공개 WebSocket 실시간 체결을 제한적으로 수신할 수 있습니다.
-
-## 안정성 및 버전 정책
-
-날짜별 주요 변경과 이전 릴리스 요약은 [변경 이력](CHANGELOG.md)을 참고하세요.
-
-2026-09-16에 공식 Open API 참고 문서를 `1.2.17` 기준으로 갱신했습니다.
-기존 명세 8개·스키마 12개의 변경과 원본을 기록하고, 관련 공개 웹 요청 6건의
-호환성을 확인했습니다. 이번 점검에서 런타임 수정이 필요한 변경은 발견되지 않았습니다.
-범위와 비교 한계는 [공식 API 갱신 결과](references/official-api-audit-2026-09-16.md)를 참고하세요.
-
-같은 날 공개 웹 경로 62개를 분류하고 대표 페이지의 탭·링크·페이징을 직접 점검했습니다.
-뉴스·공시 회사 식별자, 거래현황 가용성·그룹 필드, 답글 커서, 관련 검색과 재무 옵션을 보완했습니다.
-직접 확인한 화면·API와 미검증·로그인 제한은
-[공개 페이지 점검 결과](references/public-pages-audit-2026-09-16.md)에 구분했습니다.
-
-공개 페이지·커뮤니티 GUID·HTTP 방어를 포함한 이전 종합 점검은
-[2026-09-07 업데이트 점검 결과](references/update-audit-2026-09-07.md)에 남아 있습니다.
-
-2026-09-07부터 Python 3.14.7만 지원·검증하며, 기존 Python 3.12 지원은 종료했습니다.
-
-`v1.0.0`부터 다음 저장소 표면을 안정된 공개 계약으로 취급합니다.
-
-- 스킬 이름 `tossinvest-web-api`와 `.agents/skills/tossinvest-web-api` 설치 경로
-- `SKILL.md`, `scripts/`, `references/`, `agents/`를 포함한 설치 레이아웃
-- 문서화된 CLI 명령과 옵션, 로그인·계좌·주문을 제외하는 안전 경계
-- Python 3.14.7 CI 호환성, HTTP 표준 라이브러리 실행, WebSocket 선택 의존성 잠금 파일
-
-이 버전 정책은 이 저장소가 제공하는 인터페이스에 적용됩니다. 토스증권 웹 API와 WebSocket 채널은 여전히 비공식·미문서화 인터페이스이며 예고 없이 경로, 응답 필드, 접근 가능 여부가 바뀔 수 있습니다. 외부 응답 필드와 데이터 가용성은 하위 호환성 계약에 포함하지 않으며, 관찰된 변경은 API 카탈로그의 상태 표기와 릴리스 노트에 기록합니다.
-
-## 설치
-
-`SKILL.md`, `scripts/`, `references/`는 호스트가 함께 사용하는 본체입니다.
-`agents/openai.yaml`은 Codex용 표시 정보와 자동 호출 정책이며, 다른 호스트의 권한·호출 설정을 대신하지 않습니다.
-아래 설치 경로와 별개로, 각 호스트에서 실제 스킬 발견·선택·실행은
-[수동 점검 절차](references/eval-prompts.md#running-a-small-evaluation)로 확인하세요.
-CI의 형식·설치 구조 검증만으로 모든 호스트의 동작이 검증되지는 않습니다.
-
-### Codex
-
-Codex에서는 공개 GitHub URL로 설치를 요청할 수 있습니다.
-
-```text
-https://github.com/dd3ok/tossinvest-api-skill 에서 스킬을 설치해줘.
-```
-
-Codex는 설치·변경된 스킬을 자동으로 탐색합니다. 목록에 나타나지 않으면 재시작하세요.
-이후 TossInvest 또는 토스증권을 언급한 공개 데이터 요청에서 스킬을 선택할 수 있습니다.
-설치 경로와 자동 호출 동작은 [Codex 공식 가이드](https://learn.chatgpt.com/docs/build-skills)를 참고하세요.
-
-수동으로 설치하려면 다음처럼 스킬 디렉터리에 클론합니다.
-
-```bash
-CODEX_SKILLS_DIR="$HOME/.agents/skills"
-mkdir -p "$CODEX_SKILLS_DIR"
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git "$CODEX_SKILLS_DIR/tossinvest-web-api"
-```
-
-이미 클론한 작업 디렉터리를 쓰고 싶다면 심볼릭 링크로 노출할 수 있습니다.
-
-```bash
-CODEX_SKILLS_DIR="$HOME/.agents/skills"
-mkdir -p "$CODEX_SKILLS_DIR"
-ln -sfn /path/to/tossinvest-api-skill "$CODEX_SKILLS_DIR/tossinvest-web-api"
-```
-
-특정 저장소에서만 쓰고 싶다면 이 저장소를 아래 위치에 클론하거나 복사하세요.
-
-```text
-.agents/skills/tossinvest-web-api/
-```
-
-스킬 루트 디렉터리명은 `SKILL.md`의 `name: tossinvest-web-api`와 맞추세요. 일부 validator는 스킬 이름과 부모 디렉터리명 일치를 검사하므로, 저장소 루트를 그대로 쓰더라도 최종 로컬 스킬 경로는 `.agents/skills/tossinvest-web-api`로 유지하세요.
-
-### Claude Code
-
-Claude Code는 개인 스킬 폴더와 프로젝트 스킬 폴더에서 사용자 정의 스킬을 탐색합니다.
-
-개인 설치:
-
-```bash
-mkdir -p ~/.claude/skills
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git ~/.claude/skills/tossinvest-web-api
-```
-
-프로젝트 설치:
-
-```bash
-mkdir -p .claude/skills
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git .claude/skills/tossinvest-web-api
-```
-
-지원 범위에 맞는 TossInvest/토스증권 공개 주식·시장 데이터 요청이라면 Claude가 이 스킬을 사용할 수 있습니다.
-
-### Antigravity CLI
-
-Antigravity CLI는 프로젝트의 `.agents/skills/<skill-name>/SKILL.md` 레이아웃에서 로컬 Agent Skill을 탐색합니다. 이 저장소는 `SKILL.md`, `scripts/`, `references/`를 포함한 스킬 루트이므로 프로젝트별 스킬 디렉터리에 클론하거나 복사해 사용하세요.
-
-프로젝트 설치:
-
-```bash
-mkdir -p .agents/skills
-git clone --depth 1 https://github.com/dd3ok/tossinvest-api-skill.git .agents/skills/tossinvest-web-api
-```
-
-개발 중인 로컬 체크아웃을 바로 반영하려면 심볼릭 링크로 노출합니다.
-
-```bash
-mkdir -p .agents/skills
-ln -sfn /path/to/tossinvest-api-skill .agents/skills/tossinvest-web-api
-```
-
-최종 파일 위치는 `.agents/skills/tossinvest-web-api/SKILL.md`가 되어야 합니다. Antigravity CLI를 `agy`로 실행한 뒤 `/skills`에서 `tossinvest-web-api`가 보이는지 확인하세요.
-
-### 로컬 스크립트만 실행
-
-에이전트 스킬로 설치하지 않고 Python 스크립트만 실행할 수도 있습니다. HTTP 스크립트는 Python 표준 라이브러리만 사용합니다. WebSocket 스크립트만 선택 의존성 하나가 필요합니다.
-
-아래 `python3` 명령은 Python 3.14.7 인터프리터로 실행하세요. Windows에서는 `py -3.14`를 사용할 수 있습니다. 실행 전에 `python3 --version`(Windows: `py -3.14 --version`)이 `Python 3.14.7`인지 확인하세요. `3.14` 명령 이름만으로 패치 버전이 고정되지는 않습니다.
-
-```bash
-git clone https://github.com/dd3ok/tossinvest-api-skill.git
-cd tossinvest-api-skill
-python3 scripts/stock_summary.py --code A005930 --no-overview
-```
-
-WebSocket 수신을 사용할 때만 다음 의존성을 설치합니다. 프로젝트 전용 가상환경에 설치하면 전역 Python을 바꾸지 않고, 테스트 뒤 `.venv`만 삭제해 깨끗하게 제거할 수 있습니다.
-
-```bash
-python3.14 --version  # Python 3.14.7인지 확인
-python3.14 -m venv .venv
-.venv/bin/python -m pip install -r requirements-websocket.txt
-```
-
-Windows PowerShell에서는 `py -3.14 -m venv .venv`로 생성하고, 이후 `.venv/bin/python` 명령의 실행 파일을 모두 `.venv/Scripts/python.exe`로 바꿉니다. 1회 테스트가 끝나면 가상환경을 비활성화한 상태에서 `.venv` 디렉터리만 삭제하면 선택 의존성도 함께 제거됩니다.
-
-아래와 뒤의 상대경로 예제는 스킬 루트에서 실행하는 명령입니다. 다른 프로젝트에서
-설치된 스킬을 사용할 때는 로드된 `SKILL.md`가 있는 디렉터리를 기준으로 스크립트와
-번들 파일의 절대경로를 지정하세요. 사용자 입력·결과 파일은 사용자 작업 폴더를 기준으로 합니다.
-
-스크립트별 옵션은 `--help`로 확인합니다.
-
-```bash
-python3 scripts/stock_chart.py --help
-```
-
-## 스크립트 빠른 실행
-
-자주 쓰는 실행 예시는 다음과 같습니다.
-
-```bash
-python3 scripts/stock_summary.py --code A005930 --no-overview
-python3 scripts/stock_page.py --code SOXL --comment-limit 5
-python3 scripts/market_search.py --query 삼성전자 --section product --section news --limit 5
-python3 scripts/community_comments.py --code NVDA --sort popular --limit 5
-python3 scripts/community_comments.py --lounge-id LOUNGE_193394 --sort popular --limit 5
-python3 scripts/community_comments.py --post-id 309855038 --pages 2 --limit 20
-python3 scripts/quote.py --code A005930 --ticks 5
-python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_total_amount --market us --duration realtime --hide-investment-risk
-python3 scripts/dashboard_ranking.py --kind live-chart --live-chart biggest_market_amount --market us --duration 20d
-python3 scripts/dashboard_ranking.py --kind indicator
-python3 scripts/indices.py --code KGG01P --include-daily-quotes --daily-quote-count 20
-python3 scripts/sector.py --kind detail --tics-id 925 --nation us --stock-page 1 --etf-page 1 --news-page 1
-python3 scripts/feed.py --kind recommended
-python3 scripts/feed.py --kind community-ranking --community-ranking profit --community-limit 10
-.venv/bin/python scripts/websocket_prices.py --kr-stock A005930 --duration 10 --max-events 5
-.venv/bin/python scripts/websocket_prices.py --us-stock US20100311002 --duration 10 --max-events 5
-.venv/bin/python scripts/websocket_prices.py --kr-index QGG01P --duration 10 --max-events 5
-.venv/bin/python scripts/websocket_prices.py --us-index COMP.NAI --duration 10 --max-events 5
-.venv/bin/python scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 10 --max-events 5
-python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd --bollinger-period 20
-python3 scripts/stock_chart.py --code US20100311002 --securities-type us-s --range day:1 --count 20
-python3 scripts/financials.py --code A005930 --kind comprehensive
-python3 scripts/calendar.py --year-month 2026-05 --kind economic --country us
-python3 scripts/calendar.py --kind economic-detail --ric USPMI=ECI --date 2026-06-01 --include-analysis
-python3 scripts/calendar.py --year-month 2026-06 --kind index-events --index-country us
-python3 scripts/screener_count.py --nation kr --rsi oversold --include-results --size 5
-```
-
-더 많은 실행 예시는 [references/script-cookbook.md](references/script-cookbook.md)를, 엔드포인트 목록은 [references/api-catalog.md](references/api-catalog.md)를 참고하세요.
-
-미국 주식 차트는 TossInvest 상품/소스 코드가 필요합니다. `SPY`, `NVDA` 같은 표시 티커를 `c-chart` 상품 코드로 바로 넣으면 HTTP 400이 날 수 있습니다.
 
 ### WebSocket 클라이언트 운영 제한
 
@@ -275,147 +188,90 @@ python3 -m pip check
 .venv/bin/python scripts/websocket_prices.py --crypto VWAP.KRW-BTC --duration 15 --max-events 1
 ```
 
-### 주식 요약 출력 예시
+</details>
 
-실시간 값은 계속 바뀝니다. 아래 주식 요약과 차트 예시는 고정된 시장 데이터가 아니라 출력 형태를 보여줍니다.
+---
 
-```bash
-python3 scripts/stock_summary.py --code A005930 --no-overview
-```
+## 문서 안내
 
-```json
-{
-  "code": "A005930",
-  "info": {
-    "code": "A005930",
-    "name": "삼성전자",
-    "market": "KOSPI",
-    "companyCode": "005930"
-  },
-  "price": {
-    "code": "A005930",
-    "close": 70000,
-    "changeType": "RISE",
-    "volume": 12345678
-  },
-  "overview": null
-}
-```
+| 찾는 내용 | 문서 |
+| --- | --- |
+| 실행 명령과 옵션 조합 | [실행 예제](references/script-cookbook.md) |
+| API 목록과 확인 상태 | [API 카탈로그](references/api-catalog.md) |
+| 종목 시세·차트·재무·공시 | [종목 API](references/api-stock.md) |
+| 지수·환율·검색·랭킹·섹터·캘린더 | [시장 API](references/api-market.md) |
+| 뉴스 탐색·피드·공개 댓글 | [피드·커뮤니티 API](references/api-community.md) |
+| 실시간 채널·수신 필드·운영 제한 | [WebSocket 문서](references/websocket-api-reference.md) |
+| 실제 스킬 선택·실행 비교 | [Codex 평가 기록](references/skill-evaluation-2026-09-21.md) |
+| 응답 필드와 페이징 | [응답 설명](references/response-notes.md) |
+| 허용 범위와 중단 조건 | [안전 규칙](references/safety-rules.md) |
 
-### 차트와 로컬 보조지표 출력 예시
+---
 
-```bash
-python3 scripts/stock_chart.py --code A005930 --range day:1 --count 61 --rsi-period 14 --macd
-```
+## 한계와 안전 범위
 
-```json
-{
-  "code": "A005930",
-  "chart": {
-    "code": "A005930",
-    "candles": [
-      {
-        "dt": "2026-04-20T00:00:00+09:00",
-        "close": 70000,
-        "volume": 12345678
-      }
-    ]
-  },
-  "technicalIndicators": {
-    "rsi": {
-      "period": 14,
-      "source": "local calculation from c-chart close prices"
-    },
-    "macd": {
-      "fastPeriod": 12,
-      "slowPeriod": 26,
-      "signalPeriod": 9,
-      "source": "local calculation from c-chart close prices"
-    }
-  }
-}
-```
+- 공개 데이터만 조회합니다. 로그인·계좌·보유종목·주문·개인화·쓰기 작업은 지원하지 않습니다.
+- 대량 수집과 접근 제어 우회를 하지 않습니다. HTTP 403·429, 챌린지 또는 로그인 전환이 발생하면 중단합니다.
+- 비공식 API의 경로·응답·데이터 가용성은 예고 없이 바뀔 수 있습니다. CI 통과가 현재 API의 성공이나 모든 호스트의 실행을 보장하지는 않습니다.
 
-## 프롬프트 예시
+<a id="안전-범위"></a>
+<a id="공식-open-api와의-구분"></a>
 
-처음 써볼 때는 이런 요청이 유용합니다.
+이 스킬은 토스증권의 공식 Open API 클라이언트가 아니며, 공식 API 앱 설정·OAuth 토큰·계좌 헤더·IP 등록이 필요하지 않습니다. [공식 API와의 구분](references/official-openapi-boundary.md)을 참고하세요.
+WebSocket의 임시 게스트 연결값은 실행 중 메모리에만 유지하고 출력·로그·파일에 남기지 않습니다.
+`wts-cert-api.tossinvest.com`은 공개 페이지에서 확인되고 카탈로그에 있거나 스크립트로 검증된 엔드포인트군만 사용합니다. 쿠키·인증 헤더·계좌 식별자·개인 데이터가 필요한 요청은 제외합니다.
+새 API를 조사할 때는 [캡처 절차](references/capture-workflow.md)와 [안전 규칙](references/safety-rules.md)을 먼저 확인하세요.
 
-```text
-토스증권 기준으로 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
-토스증권 SOXL 메인에 보이는 왜 떨어졌을까 내용과 커뮤니티 댓글을 같이 조회해줘.
-토스증권에서 A005930의 일봉 캔들을 조회하고 RSI 14와 MACD를 계산해줘.
-TossInvest 스크리너에서 RSI 과매도 조건에 해당하는 한국 주식을 찾아줘.
-토스증권에서 KGG01P의 KOSPI 지수 가격, 차트, 지수 관련 뉴스를 조회해줘.
-토스증권에서 국내와 미국 거래대금 기준 실시간 차트 top100 랭킹을 조회해줘.
-토스증권 비로그인 공개 페이지의 A005930 실시간 체결 WebSocket 채널과 수신 필드를 설명해줘.
-문서화되지 않은 주식 페이지 엔드포인트를 찾기 위해 TossInvest 네트워크 호출을 조사해줘.
-```
+---
 
-새로운 네트워크 호출을 조사하기 전에는 [references/capture-workflow.md](references/capture-workflow.md)와 [references/safety-rules.md](references/safety-rules.md)를 먼저 확인하세요.
+## 안정성 및 버전 정책
 
-## 저장소 구성
+`v1.0.0`부터 다음 저장소 표면을 안정된 공개 계약으로 취급합니다.
 
-```text
-tossinvest-api-skill/
-├── SKILL.md
-├── scripts/
-├── references/
-├── examples/
-│   └── filters/
-├── agents/
-├── tests/
-├── SECURITY.md
-├── LICENSE
-└── README.md
-```
+- 스킬 이름 `tossinvest-web-api`와 `.agents/skills/tossinvest-web-api` 설치 경로
+- `SKILL.md`, `scripts/`, `references/`, `agents/`를 포함한 설치 레이아웃
+- 문서화된 CLI 명령과 옵션, 로그인·계좌·주문을 제외하는 안전 경계
+- Python 3.14.7 CI 호환성, HTTP 표준 라이브러리 실행, WebSocket 선택 의존성 잠금 파일
+
+이 버전 정책은 이 저장소가 제공하는 인터페이스에 적용됩니다. 토스증권 웹 API와 WebSocket 채널은 여전히 비공식·미문서화 인터페이스이며 예고 없이 경로, 응답 필드, 접근 가능 여부가 바뀔 수 있습니다. 외부 응답 필드와 데이터 가용성은 하위 호환성 계약에 포함하지 않으며, 관찰된 변경은 API 카탈로그의 상태 표기와 릴리스 노트에 기록합니다.
+
+2026-09-07부터 Python 3.14.7만 지원·검증하며 기존 Python 3.12 지원은 종료했습니다.
+
+---
+
+## 개발 및 문의
+
+<details>
+<summary>저장소 구성</summary>
+
+### 저장소 구성
 
 | 경로 | 용도 |
 | --- | --- |
-| `SKILL.md` | 에이전트가 읽는 라우팅 규칙, 안전 규칙, 작업 흐름 |
-| `scripts/` | 시세, 차트, 재무, 랭킹, 스크리너, 뉴스, 공시, 테마, 지수, 투자자 동향 조회 스크립트 |
-| `references/` | API 카탈로그, WebSocket API 레퍼런스, 네트워크 캡처 절차, 응답 노트, 안전 규칙, 스모크 테스트 프롬프트 |
-| `examples/filters/` | 재사용 가능한 스크리너 필터 JSON 예시 |
-| `agents/openai.yaml` | Codex/OpenAI 계열 도구에서 노출할 표시 메타데이터 |
-| `tests/` | 스크립트 헬퍼와 엔드포인트 경로 생성 로직을 검증하는 유지보수자·CI용 테스트 |
-| `SECURITY.md` | 민감한 엔드포인트, 개인정보, 자격 증명 처리 관련 제보 절차 |
-| `LICENSE` | MIT 라이선스 본문 |
+| `SKILL.md` · `agents/openai.yaml` | 에이전트 작업 규칙과 Codex 표시·호출 설정 |
+| `scripts/` · `examples/filters/` | 공개 조회 CLI와 스크리너 필터 예시 |
+| `references/` | API 카탈로그, WebSocket API 레퍼런스, 실행 예제와 안전 규칙 |
+| `tests/` · `.github/workflows/ci.yml` | 회귀 검사와 설치 검증 |
+| `SECURITY.md` · `LICENSE` | 비공개 보안 제보와 MIT 라이선스 |
 
-유지보수자와 CI 검증은 Python 3.14.7 환경에서 실행합니다. 전체 테스트에서는 잠금된 WebSocket 의존성도 설치해 라이브러리 테스트를 실행합니다.
+</details>
+
+에이전트 작업 규칙은 [SKILL.md](SKILL.md)에 있습니다.
+수정 후 저장소 루트에서 테스트하고, [유지보수 안내](.github/RELEASE_CHECKLIST.md)의 검증 절차를 따르세요.
 
 ```bash
 python3 -m pip install -r requirements-websocket.txt
-python3 -m unittest discover -s tests -v
+python3 -B -m unittest discover -s tests
 ```
 
-릴리스 전에는 다음 검증도 함께 실행하는 것을 권장합니다.
+이 README는 `main` 기준이며, 릴리스 배지는 가장 최근에 발행한 버전을 가리킵니다.
+특정 릴리스의 지원 환경은 해당 태그의 README를, 미출시 변경과 호환성 안내는 [변경 이력](CHANGELOG.md)을 확인하세요.
 
-```bash
-for f in scripts/*.py; do python3 -m py_compile "$f" || exit 1; done
-for f in scripts/*.py; do python3 "$f" --help >/dev/null || exit 1; done
-for f in examples/filters/*.json; do python3 -m json.tool "$f" >/dev/null || exit 1; done
-```
+오류나 문서 개선은 [Issues](https://github.com/dd3ok/tossinvest-api-skill/issues)로 알려주세요. 쿠키·토큰·원본 HAR·계좌 정보는 공개 이슈에 올리지 마세요.
+민감한 보안 제보는 [SECURITY.md](SECURITY.md)의 비공개 제보 절차를 따르세요.
 
-공개 릴리스 전에는 [.github/RELEASE_CHECKLIST.md](.github/RELEASE_CHECKLIST.md)를 함께 확인하세요.
-
-## 안전 범위
-
-이 프로젝트는 TossInvest 공식 API, 증권사 API, 거래 API, 투자 조언 도구가 아닙니다.
-
-공개 주식·시장 페이지에서 확인할 수 있는 정보만 읽기 전용으로 조회하세요. 다음 용도로는 사용하지 않습니다.
-
-- 로그인, 인증, 인증서, 쿠키, 인증 헤더, 세션 상태
-- 계좌 잔고, 보유 종목, 이체, 주문, 주문 정정, 주문 취소
-- 계좌 식별자, 개인 금융 데이터, 원본 HAR 저장, 접근 제어 우회
-- 공개 TossInvest 웹 페이지에 보이지 않는 데이터 접근
-- 크롤러, 배경 모니터, 대량 반복 조회처럼 동작하는 자동 수집
-- 막힌 요청이나 비정상 응답을 우회하기 위한 자동 재시도
-
-`wts-cert-api.tossinvest.com`은 민감한 호스트로 취급하세요. 공개 페이지에서 보이는 데이터나 메타데이터이고, 카탈로그에 있거나 스크립트로 검증된 엔드포인트군에 속하며, 쿠키·인증 헤더·계좌 식별자·개인 데이터가 필요 없을 때만 사용합니다.
-
-요청이 막히거나 로그인/확인 화면으로 이어지면 자동 재시도를 멈추고, 현재 공개 웹 페이지에서 같은 데이터가 노출되는지 먼저 확인하세요. 이 프로젝트는 서비스 보호 장치나 접근 제어 흐름을 우회하지 않습니다.
-
-민감한 엔드포인트, 개인정보, 자격 증명 처리 관련 제보는 [SECURITY.md](SECURITY.md)를 먼저 확인하세요. GitHub 이슈에는 쿠키, 토큰, 인증 헤더, 원본 HAR, 계좌·개인 금융 데이터를 올리지 마세요.
+---
 
 ## 라이선스
 
-MIT 라이선스입니다. 자세한 내용은 [LICENSE](LICENSE)를 참고하세요.
+[MIT](LICENSE)
