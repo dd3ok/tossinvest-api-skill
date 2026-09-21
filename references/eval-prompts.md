@@ -37,6 +37,8 @@ Mark host scenarios that were not run as untested.
 
 This small comparison follows the [Agent Skills evaluation guide](https://agentskills.io/skill-creation/evaluating-skills).
 
+For an executed comparison, see the [2026-09-21 Codex evaluation](skill-evaluation-2026-09-21.md): five paired scenarios, with host limitations and observed commands/results separated from static validation.
+
 ## Activation Scenarios
 
 Run these selection-only cases multiple times after changing the frontmatter
