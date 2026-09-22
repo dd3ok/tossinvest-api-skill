@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from typing import Any
 
 import community_comments
@@ -43,6 +44,11 @@ def resolve_stock_info(code_or_symbol: str) -> dict[str, Any]:
     result = api.get_result(f"/api/v2/stock-infos/code-or-symbol/{code}")
     if not isinstance(result, dict):
         raise RuntimeError("Unexpected TossInvest response: stock info is not a dictionary")
+    product_code = result.get("code")
+    if not isinstance(product_code, str) or not re.fullmatch(
+        r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", product_code.strip()
+    ):
+        raise RuntimeError("Unexpected TossInvest response: stock info has no valid product code")
     return result
 
 
@@ -62,7 +68,7 @@ def fetch_stock_page(
     info = resolve_stock_info(code_or_symbol)
     if include_comments:
         comment_subject_id = community_comments.comment_subject_id_from_stock_info(info)
-    product_code = api.normalize_product_code(str(info.get("code") or code_or_symbol))
+    product_code = api.normalize_product_code(info["code"])
     price_rows = api.get_result(
         api.build_path("/api/v3/stock-prices/details", {"productCodes": product_code})
     )

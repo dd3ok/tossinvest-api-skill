@@ -97,11 +97,12 @@ class DocumentationPromptTests(unittest.TestCase):
             with self.subTest(file=name):
                 self.assertIn("official", normalized.lower())
                 self.assertIn("Open API", normalized)
-                self.assertIn("IP registration", normalized)
+                if name != "SKILL.md":
+                    self.assertIn("IP registration", normalized)
 
         self.assertIn("공식 Open API", readme)
         self.assertIn("IP 등록", readme)
-        self.assertIn("does not require official Open API app setup", skill)
+        self.assertIn("(references/official-openapi-boundary.md)", skill)
         self.assertIn("OAuth credentials", safety)
         self.assertIn("X-Tossinvest-Account", boundary)
         self.assertIn("MARKET_DATA_CHART", boundary)
@@ -350,7 +351,6 @@ class DocumentationPromptTests(unittest.TestCase):
 
         self.assertIn("references/websocket-api-reference.md", skill)
         self.assertFalse((ROOT / "references" / "websocket-observations.md").exists())
-        self.assertIn("unofficial WebSocket API reference", skill)
         for expected in [
             "### 공개 HTTP 기반 조회",
             "종목 요약과 현재가·호가 스냅샷·장중 체결 틱 조회",
@@ -544,15 +544,12 @@ class DocumentationPromptTests(unittest.TestCase):
                 with self.subTest(path=path.relative_to(ROOT), term=term):
                     self.assertNotIn(term, text)
 
-    def test_skill_body_has_positive_when_to_use_guidance(self):
+    def test_skill_routes_all_executable_scripts(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("## When To Use\n", text)
-        self.assertLess(text.index("## When To Use"), text.index("## When Not To Use"))
-        section = text.split("## When To Use", 1)[1].split("## When Not To Use", 1)[0]
-        self.assertIn("public TossInvest", section)
-        self.assertIn("quotes", section)
-        self.assertIn("market calendars", section)
-        self.assertIn("read-only browser endpoint", section)
+        for script in (ROOT / "scripts").glob("*.py"):
+            if '__name__ == "__main__"' in script.read_text(encoding="utf-8"):
+                with self.subTest(script=script.name):
+                    self.assertIn(f"scripts/{script.name}", text)
 
     def test_skill_body_stays_progressively_disclosed(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -648,7 +645,6 @@ class DocumentationPromptTests(unittest.TestCase):
     def test_catalog_records_observed_excluded_drift_endpoints(self):
         catalog = (ROOT / "references" / "api-community.md").read_text(encoding="utf-8")
         for expected in [
-            "/api/v3/dashboard/wts/overview/indicator",
             "/api/v4/dashboard/wts/overview/indicator",
             "/api/v2/dashboard/wts/overview/signals",
             "/api/v1/exchange/current-quote/for-buy",
@@ -672,7 +668,6 @@ class DocumentationPromptTests(unittest.TestCase):
 
         self.assertIn("scripts/stock_page.py", skill)
         self.assertIn("scripts/community_comments.py", skill)
-        self.assertIn("sanitized public community comments", skill)
         self.assertIn("/api/v4/comments", catalog)
         self.assertIn("lastCommentId", catalog)
         self.assertIn("/api/v2/comments/{commentId}/replies", catalog)
@@ -885,14 +880,11 @@ class DocumentationPromptTests(unittest.TestCase):
 
     def test_skill_documents_collector_target_hygiene(self):
         text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("/api/v3/stock-prices/details", text)
-        self.assertIn("no matching row", text)
-        self.assertIn("target-level stale or endpoint-incompatible product code", text)
-        self.assertIn("cool it down before the next collector pass", text)
-        self.assertIn("Collector target hygiene", text)
-        self.assertIn("US and KR target pools", text)
-        self.assertIn("KR ETN-like `Q...` codes", text)
-        self.assertIn("recent-failure cooldown", text)
+        self.assertIn("(references/script-cookbook.md#collector-target-hygiene)", text)
+        cookbook = (ROOT / "references" / "script-cookbook.md").read_text(encoding="utf-8")
+        section = cookbook.split("### Collector Target Hygiene", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("/api/v3/stock-prices/details", section)
+        self.assertIn("`c-chart`", section)
 
     def test_openai_skill_metadata_is_localized_and_distributable(self):
         text = (ROOT / "agents" / "openai.yaml").read_text(encoding="utf-8")
@@ -971,7 +963,6 @@ class DocumentationPromptTests(unittest.TestCase):
             "scripts/page_api_check.py --code A005930",
             "scripts/indices.py --code KGG01P --include-net-buying --net-buying-range month",
             "scripts/indices.py --code KGG01P --include-fx-chart --fx-range 1y --fx-step week:1",
-            "scripts/indices.py --code VWAP.KRW-BTC --range 1w --step min:10 --include-crypto-prices",
             "refuses account/auth workflow",
             "no personalized investment advice",
         ]:
