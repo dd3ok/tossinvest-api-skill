@@ -1,4 +1,7 @@
 import importlib.util
+import json
+import re
+import shlex
 import subprocess
 import sys
 import unittest
@@ -459,6 +462,30 @@ class PensionFundTrendScriptTests(unittest.TestCase):
 
 
 class IndicesScriptTests(unittest.TestCase):
+    def test_documented_weekly_crypto_commands_fetch_chart(self):
+        for name in ("script-cookbook.md", "eval-prompts.md"):
+            text = (ROOT / "references" / name).read_text(encoding="utf-8")
+            commands = [
+                command
+                for command in re.findall(r"scripts/indices\.py --code VWAP\.KRW-BTC [^`\n]+", text)
+                if "--range 1w --step min:10" in command
+            ]
+            self.assertTrue(commands, name)
+            for command in commands:
+                argv = shlex.split(command)
+                with (
+                    self.subTest(file=name, command=command),
+                    patch.object(sys, "argv", argv),
+                    patch.object(indices.api, "get_result", return_value={}) as get_result,
+                    patch.object(indices.api, "emit_output") as emit_output,
+                ):
+                    self.assertEqual(indices.main(), 0)
+                    self.assertIn("chart", json.loads(emit_output.call_args.args[0]))
+                    get_result.assert_any_call(
+                        "/api/v1/r-chart/crypto/VWAP.KRW-BTC/1w/min:10"
+                        "?session=main&investMode=krx&last=false"
+                    )
+
     def test_build_index_chart_path_keeps_step_and_encodes_query(self):
         self.assertEqual(
             indices.build_index_chart_path("KGG01P", "kr-s", "1d", "min:5", "krx"),
@@ -2294,6 +2321,34 @@ class CommunityCommentsScriptTests(unittest.TestCase):
 
 
 class StockPageScriptTests(unittest.TestCase):
+    def test_missing_or_invalid_resolved_code_stops_before_followup_requests(self):
+        for code in (None, "", " ", 123, True, [], "../account", "NVDA?x=1"):
+            with (
+                self.subTest(code=code),
+                patch.object(
+                    stock_page.api, "get_result", return_value={"code": code}
+                ) as get_result,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "no valid product code"):
+                    stock_page.fetch_stock_page(
+                        "NVDA",
+                        include_ai_detail=False,
+                        include_comments=False,
+                        comment_sort="popular",
+                        comment_limit=5,
+                        comment_pages=1,
+                        include_replies=False,
+                    )
+                get_result.assert_called_once_with("/api/v2/stock-infos/code-or-symbol/NVDA")
+
+    def test_resolved_code_is_authoritative_without_restricting_product_prefixes(self):
+        for code in ("US20100311002", "A005930", "Q530123", "NAS.TEST-1"):
+            with (
+                self.subTest(code=code),
+                patch.object(stock_page.api, "get_result", return_value={"code": code}),
+            ):
+                self.assertEqual(stock_page.resolve_stock_info("NVDA")["code"], code)
+
     def test_ai_signal_index_preserves_case_without_changing_stock_normalization(self):
         self.assertIn(
             "productCode=RFU.GCv1&productType=INDEX",
@@ -2954,6 +3009,57 @@ class NewsScriptTests(unittest.TestCase):
 
 
 class FinancialsScriptTests(unittest.TestCase):
+    def test_dividend_kinds_return_values_using_get(self):
+        cases = {
+            "dividend-summary": "/api/v1/stock-infos/dividend/A005930/summary",
+            "dividend-years": "/api/v1/stock-infos/dividend/A005930/years",
+            "dividend-yield-history": "/api/v1/stock-infos/A005930/dividends/yield-ratio/histories",
+        }
+        for kind, path in cases.items():
+            result = [{"paymentDate": "2026-09-01", "cash": 100}]
+            with (
+                self.subTest(kind=kind),
+                patch.object(financials.api, "get_result", return_value=result) as get_result,
+            ):
+                payload = financials.fetch_financials("005930", kind, None)
+                get_result.assert_called_once_with(path, method="GET", body=None)
+                self.assertEqual(payload, {"code": "A005930", "kind": kind, "result": result})
+
+    def test_dividend_years_cli_preserves_range_and_values(self):
+        with (
+            patch.object(
+                sys, "argv", ["financials.py", "--kind", "dividend-years", "--years", "3"]
+            ),
+            patch.object(
+                financials.api, "get_result", return_value={"histories": []}
+            ) as get_result,
+            patch.object(financials.api, "emit_output") as emit_output,
+        ):
+            self.assertEqual(financials.main(), 0)
+            get_result.assert_called_once_with(
+                "/api/v1/stock-infos/dividend/A005930/years?years=3", method="GET", body=None
+            )
+            self.assertEqual(json.loads(emit_output.call_args.args[0])["result"], {"histories": []})
+
+    def test_dividend_options_reject_invalid_combinations_before_request(self):
+        cases = [
+            ("dividend-summary", None, {"years": 3}),
+            ("comprehensive", None, {"years": 3}),
+            ("dividend-years", None, {"years": 0}),
+            ("dividend-years", None, {"years": 2_147_483_648}),
+            ("dividend-years", None, {"statement": "income"}),
+            ("dividend-summary", {}, {}),
+            ("dividend-summary", {"years": 3}, {"allow_custom_body": True}),
+        ]
+        for kind, body, options in cases:
+            with (
+                self.subTest(kind=kind, body=body, options=options),
+                patch.object(financials.api, "get_result") as get_result,
+            ):
+                with self.assertRaises(ValueError):
+                    financials.fetch_financials("A005930", kind, body, **options)
+                get_result.assert_not_called()
+
     def test_records_selectors_send_verified_statement_and_period_codes(self):
         cases = [
             ("income", "quarter", "INC", "Q"),

@@ -123,11 +123,13 @@ Sanitization requirements:
 - Treat v4 feed `feeds[].comment` and permalink v1 `comment`/`replies.body[]`
   as the same sanitizer boundary; never expose either source object directly.
 
+For overview indicator v3/v4 contracts and status, use the owning
+[market reference](api-market.md#index-and-market-indicator-apis).
+
 Observed drift, excluded, and sensitive public-social endpoints:
 
 | Endpoint | Status | Reason |
 |---|---|---|
-| `https://wts-cert-api.tossinvest.com/api/v3/dashboard/wts/overview/indicator` | `observed-drift` | Home traffic exposes newer overview indicator aggregate; current scripts use narrower indicator routes |
 | `https://wts-cert-api.tossinvest.com/api/v4/dashboard/wts/overview/indicator` | `script-backed` | Current home aggregate is exposed through `dashboard_ranking.py --kind indicator`; the client permits only the exact GET path with no query or body |
 | `https://wts-info-api.tossinvest.com/api/v2/dashboard/wts/overview/signals` | `observed-drift` | Home traffic also exposes a v2 signals route; `dashboard_ranking.py --kind signals` remains on the verified public v1 helper |
 | `https://wts-api.tossinvest.com/api/v1/exchange/current-quote/for-buy` | `excluded` | `wts-api` exchange quote route observed on exchange-rate page; keep out until exact host/path safety review |

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fetch read-only TossInvest financial and valuation endpoints."""
+"""Fetch read-only TossInvest financial, valuation, and dividend endpoints."""
 
 from __future__ import annotations
 
@@ -22,17 +22,26 @@ FINANCIAL_PATHS = {
     "stability": "/api/v2/stock-infos/stability/{code}",
     "revenue-net-profit": "/api/v2/stock-infos/revenue-and-net-profit/{code}",
     "operating-income": "/api/v2/stock-infos/operating-income/{code}",
+    "dividend-summary": "/api/v1/stock-infos/dividend/{code}/summary",
+    "dividend-years": "/api/v1/stock-infos/dividend/{code}/years",
+    "dividend-yield-history": "/api/v1/stock-infos/{code}/dividends/yield-ratio/histories",
 }
 
-GET_KINDS = {"estimate-date"}
+GET_KINDS = {"estimate-date", "dividend-summary", "dividend-years", "dividend-yield-history"}
 STATEMENT_CODES = {"income": "INC", "balance": "BAL", "cash-flow": "CAS"}
 PERIOD_CODES = {"quarter": "Q", "year": "Y"}
 
 
-def build_financial_path(code: str, kind: str) -> str:
+def build_financial_path(code: str, kind: str, *, years: int | None = None) -> str:
     if kind not in FINANCIAL_PATHS:
         raise ValueError(f"unknown financial kind: {kind}")
-    return FINANCIAL_PATHS[kind].format(code=api.normalize_product_code(code))
+    path = FINANCIAL_PATHS[kind].format(code=api.normalize_product_code(code))
+    if years is not None:
+        if kind != "dividend-years":
+            raise ValueError("--years requires --kind dividend-years")
+        api.require_int_range("years", years, minimum=1, maximum=2_147_483_647)
+        return api.build_path(path, {"years": years})
+    return path
 
 
 def fetch_financials(
@@ -43,9 +52,12 @@ def fetch_financials(
     allow_custom_body: bool = False,
     statement: str | None = None,
     period: str | None = None,
+    years: int | None = None,
 ) -> dict[str, Any]:
-    path = build_financial_path(code, kind)
+    path = build_financial_path(code, kind, years=years)
     method = "GET" if kind in GET_KINDS else "POST"
+    if method == "GET" and body is not None:
+        raise ValueError("GET financial endpoints do not accept a custom body")
     if statement is not None or period is not None:
         if kind != "records":
             raise ValueError("--statement and --period require --kind records")
@@ -96,7 +108,7 @@ def load_body(path: str | None, *, allow_custom: bool = False) -> dict[str, Any]
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Fetch TossInvest financial statement, estimate, or valuation data."
+        description="Fetch TossInvest financial statement, estimate, valuation, or dividend data."
     )
     parser.add_argument("--code", default="A005930", help="TossInvest product code")
     parser.add_argument(
@@ -114,6 +126,11 @@ def main() -> int:
         "--period",
         choices=sorted(PERIOD_CODES),
         help="Period for --kind records; defaults to quarter when --statement is supplied",
+    )
+    parser.add_argument(
+        "--years",
+        type=int,
+        help="Range code for --kind dividend-years; use selectableRanges from its default response",
     )
     parser.add_argument(
         "--body-file",
@@ -139,6 +156,7 @@ def main() -> int:
         allow_custom_body=args.allow_custom_body,
         statement=args.statement,
         period=args.period,
+        years=args.years,
     )
     api.emit_output(api.render_json(payload), args.output)
     return 0

@@ -190,6 +190,12 @@ combinations were inspected in source but not all directly rechecked.
 Dividend `years` uses its own response's `selectedRange.code`. The same
 sample offered `1`, `3`, `5`, `2147483647`; default and `years=3` returned
 14 history entries. This is a year-range selector, not numbered pagination.
+`financials.py --kind dividend-summary`, `dividend-years`, and
+`dividend-yield-history` return the actual `result` over GET. `--years` applies
+only to `dividend-years`; omit it to discover `selectableRanges`, then use a
+returned code. The local positive-int cap is not a server-supported range list.
+GET kinds accept no body. Report a next payment only if the returned schedule
+contains a future payment date; historical payments do not establish a next date.
 
 Observed response-shape highlights:
 

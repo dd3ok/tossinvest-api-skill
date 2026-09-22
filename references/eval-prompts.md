@@ -72,6 +72,15 @@ project. Execution quality is covered by the later scenarios.
 ## Lookup Scenarios
 
 ```text
+토스증권 삼성전자 A005930의 다음 배당 지급일과 최근 3년 배당 내역을 조회해줘.
+```
+
+Expected behavior:
+- Uses `financials.py --kind dividend-summary` for payment dates and `--kind dividend-years --years 3` for the observed 3-year range; checks `selectableRanges` when choosing another range.
+- Returns dividend values, not `page_api_check.py` shape summaries. Treats `years` as a range selector, not pagination.
+- If no future payment date is returned, reports the next date as unconfirmed rather than reusing a historical date.
+
+```text
 토스증권 기준으로 A005930의 간단한 종목 요약과 현재 시세를 조회해줘.
 ```
 
@@ -120,7 +129,7 @@ Expected behavior:
 Expected behavior:
 - Uses `scripts/indices.py`.
 - Fetches index chart with `--include-chart`, FX chart with `--include-fx-chart`, exchange-rate widget with `--include-exchange-rates`, and market indicators with `--include-indicators --indicator-type bond` / `commodity` as separate calls if needed.
-- Preserves case-sensitive dotted indicator codes when fetching a selected commodity or bond code, for example `scripts/indices.py --code RFU.GCv1 --include-chart`.
+- Preserves case-sensitive dotted indicator codes. `RFU.GCv1` is an identifier example with a recorded sign-in redirect, not an unconditional chart recipe; stops at the current public-page access boundary.
 - Uses the default `--securities-type auto` behavior unless a current capture shows a more specific value is needed.
 - Uses `--chart-preset intraday|quarter|daily` for common chart windows when the user asks for an intraday, quarterly, or longer daily chart.
 - Uses `--include-mini-chart`, `--include-related-etfs`, or `--include-net-buying` when the user asks for index overview widgets, related ETFs, or investor net-buying widgets.
@@ -155,7 +164,7 @@ VWAP.KRW-BTC 1주 차트와 crypto premium fields 확인해줘.
 ```
 
 Expected behavior:
-- Uses `scripts/indices.py --code VWAP.KRW-BTC --range 1w --step min:10 --include-crypto-prices`.
+- Uses `scripts/indices.py --code VWAP.KRW-BTC --include-chart --range 1w --step min:10 --include-crypto-prices` and verifies that output contains `chart`.
 - Treats `premium`, `premiumRate`, and exchange-rate fields as public page metadata, not advice.
 
 ```text
