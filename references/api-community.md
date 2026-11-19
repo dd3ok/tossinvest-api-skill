@@ -32,6 +32,12 @@ Observed from `/feed/recommended` and `/feed/news`. Keep only feed endpoints tha
 | Dashboard/news tab feed | `script-backed` | POST | `/api/v1/dashboard/wts/news` | Body `{ "type": "HOT" }` etc.; result includes `type`, `title`, `news[]` |
 | News detail | `script-backed` | GET | `/api/v2/news/{newsId}` | Detail payload for a selected news item |
 
+On 2026-11-19, scrolling the logged-out recommended feed sent `lastRecommendId`
+and returned 20 more entries after an initial 24. In a linked lounge,
+the popular list sent `lastCommentId` and returned another 11 entries with
+`hasNext=true`. The public post permalink returned `topic`, `comment` and
+`replies`; a further page of permalink replies was not verified.
+
 The 2026-09-16
 [deployed recommendation query](https://www.tossinvest.com/assets/v2/_next/static/chunks/1901-e370805f386c219f.js)
 continues only when the raw `feeds[]` is nonempty and `key.lastRecommendId` is

@@ -292,6 +292,8 @@ def _http_error_message(exc: urllib.error.HTTPError, method: str, path: str) -> 
     # Error pages can echo credentials or contain untrusted markup. Do not read
     # or emit them; status and the validated request identify the failed lookup.
     message = f"TossInvest API returned HTTP {exc.code} for {method} {path}"
+    if exc.code == 400:
+        message += "; verify the inputs and check the matching logged-out web page"
     if 300 <= exc.code < 400:
         message += "; redirect blocked; stop and reverify the public endpoint"
     if exc.code in {403, 429}:

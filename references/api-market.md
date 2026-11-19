@@ -34,6 +34,11 @@ adds targeted KOSPI daily-quote and KR ranking observations.
 
 ## Index And Market Indicator APIs
 
+On 2026-11-19 the USD/KRW page rendered 1일, 3개월, 1년 and 5년 controls.
+Selecting 3개월 made a GET to `/api/v1/r-chart/fx/EXCHANGE_RATE/3m/day:1` with
+`last`, `useAdjustedRate` and `currency` parameters. The HTTP 200 result held
+`code`, `exchangeRate` and 63 `candles` in this sample.
+
 Observed from `/indices/KGG01P` and the index/FX dashboard widgets. These are market context APIs rather than single-stock APIs, but they are useful alongside stock lookups.
 
 | Purpose | Status | Method | URL/path | Params and notes |
@@ -238,6 +243,10 @@ or unchecked nested sections are emitted.
 
 ### Current Industry Dashboard And Sector Behavior
 
+The November 19 industry detail response included `analystOpinion`, `signal` and
+`signalId` on stock rows, and `topHolding`, `detailName` and `symbol` on ETF rows.
+The stock-comparison action opened a login dialog.
+
 The 2026-08-04 industry-page check established three different paging models:
 
 - the home industry ranking returns the full ranked `tics[]` snapshot and has no server page field;
@@ -381,6 +390,11 @@ snapshot; ranking membership and exact counts change with the market.
 For the user-provided top100 URLs checked on 2026-04-20, `market=kr`/`us` maps to `tag=kr`/`us`. The `biggest_total_amount`, `biggest_total_volume`, `heavy_soar`, and `heavy_descent` combinations returned `products[]` with 100 rows for both markets in direct response checks.
 
 ### Live Price Updates And Page Observations
+
+On 2026-11-19, a 25-second observation of the visible home tab recorded two
+HTTP 200 indicator responses 10.01 seconds apart. Four ranking responses on
+the same path arrived in two pairs (gaps 0.10, 9.89 and 0.08 seconds).
+These are browser HTTP response times. WebSocket message timing was not measured.
 
 The 2026-07-10 logged-out bundle and page check confirmed that top100 is a
 hybrid rather than a dedicated ranking WebSocket channel:

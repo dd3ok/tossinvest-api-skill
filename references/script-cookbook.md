@@ -49,7 +49,9 @@ python3 scripts/news.py --code A005930 --page 2 --order-by latest --size 20
 python3 scripts/news.py --code A005930 --page 2 --order-by relevant --size 5
 ```
 
-News and filings use numbered pages. In JSON output, check `news.lastPage` for
+The news and filings CLIs use numbered pages. The browser's latest-news list
+also has a separate [cursor contract](api-stock.md#filings-and-news-apis).
+In CLI JSON output, check `news.lastPage` for
 `news.py` and `result.lastPage` for `filings.py`; stop when that value is `true`.
 For both scripts, `--key` accepts a paging key returned by the previous response;
 omit it when none is provided, and never invent a key.

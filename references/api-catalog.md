@@ -1,10 +1,8 @@
 # TossInvest Web API Catalog
 
-Latest bounded update: **2026-09-16**, web build `FNTsN5Z21hJmsl3Sh71hB`.
-The [public-page audit](public-pages-audit-2026-09-16.md) accounts for all **62**
-route templates and separates browser, static-source and direct-API evidence.
-It records representative tabs, links and continuations, implemented fixes and
-unverified/gated states; it is not a claim that every product/filter combination works.
+Latest bounded update: **2026-11-19**. See the [November public-page check](#november-2026-public-page-check)
+for the current route inventory, paging and standalone availability. The
+[September audit](public-pages-audit-2026-09-16.md) records the previous 62 templates.
 Stock comments use metadata **`guid`** as `subjectId`; news and filings use metadata
 **`companyCode`**. Earlier dated checks below remain historical evidence.
 
@@ -273,6 +271,40 @@ Use this table as the first stop for endpoint drift or lookup failures. Open the
 | `https://www.tossinvest.com/feed/news` | Dashboard news categories and news detail |
 | `https://www.tossinvest.com/news` | Redirects to `/feed/news`; browser-confirmed 2026-09-16; source preserves the existing `asPath` query |
 
+### November 2026 public-page check
+
+On 2026-11-19 the [deployed manifest](https://www.tossinvest.com/assets/v3/_next/static/_NOeVjT0RkMReHiskvOes/_buildManifest.js)
+listed **63 templates**. Relative to the [September inventory](public-pages-audit-2026-09-16.md#complete-route-disposition),
+it added `/account/profit/product/[productCode]`, `/mo-auth`, `/mo-auth/bridge` and `/signin/blocked`,
+and dropped `/test/community`, `/test/community/comment-item` and `/test/community/info-banner`.
+All seven changes fall outside public market data. The inventory has 16 public
+content templates, two aliases, three unresolved candidates, three gated templates
+(including two previously classified event templates), five framework/status templates
+and 34 excluded templates. The logged-out `/cheetah` entry redirected to sign-in.
+
+**Standalone availability.** The logged-out browser displayed Samsung stock metadata and news,
+the KOSPI and the monthly calendar. Independent requests using the bundled REST transport
+returned HTTP 400 for these resources across the info and cert hosts. The KOSPI response
+identified `invalid-client-state`. For these lookups, use the matching public page when a
+browser is available and record the display time. Keep credentials and browser state out of the CLI.
+
+Representative instances of all 16 public content templates and both aliases were opened.
+
+| Surface | Public data, navigation and paging observed on November 19 |
+|---|---|
+| Home and search | Ranking grid with 100 data rows; KR/US industry and change/turnover sorts; investor buy/sell controls. Searches for 삼성전자, 반도체 and 국고채 returned stock, industry and index links. Search groups were 전체, 종목, 산업, 뉴스 and 지수. |
+| Industry | On `/sector/87?nation=US`, stock and ETF page 2 each held 10 rows. The news section requested `number=2` and returned five items. The sidebar's first industry link also changed on page 2. Opening 종목 비교하기 displayed a sign-in dialog. |
+| Stock detail | `/stocks/A005930` resolved to the chart/quote page. KR shares exposed five main tabs, NVIDIA news and SPY analytics four. SPY resolved to `US19930122001`. The Samsung analytics overview, financials, earnings, dividends, peers and analyst sections could be selected. |
+| Stock news, filings and transaction status | Latest-news scrolling used an opaque cursor. Relevant news and filings returned numbered envelopes. A010170 showed program, credit, lending, short-sale and CFD data. Its first CFD page returned two rows with `lastPage=false`. The next two requests carried `number` and `key` and returned 50 each. [Stock contracts](api-stock.md#filings-and-news-apis) |
+| Screener | The default preset returned five stocks and `lastPage=true`. Selecting 저평가 성장주 opened `/screener/4` and loaded `page=1` and `page=2`, each with 50 stocks. Counts came from the response, since only part of the table rendered at once. |
+| Indices and FX | Checked KOSPI, S&P 500, BTC and a Korean government-bond yield. The BTC daily table sent `from` when advancing. The FX 3개월 selector loaded daily candles. The index sidebar offered indices/FX, bonds, commodities and crypto. Gold led to sign-in. |
+| Calendar | Operated the previous-month control and economic, overseas and monthly selectors. A published indicator link supplied `date` and `ric`. Its detail returned historical observations, related news/articles and upcoming indicators. |
+| Feed and community | `/news` resolved to `/feed/news`. A news detail overlay offered related stocks and major news. Recommended feed → lounge and home → post links opened without login. [Feed and lounge continuation](api-community.md#feed-and-news-apis) |
+
+The bond search sample yielded index and ETF links. Individual bond GUID pages, cheetah detail,
+stock options, live-event contents, every filter combination, reply continuation and
+WebSocket delivery remain outside this run's verified coverage.
+
 ### Route-manifest scope review
 
 The 2026-09-16 manifest contains 62 routes: the prior September 7 set minus
@@ -284,7 +316,7 @@ Route presence alone is not evidence of a usable public API.
 |---|---|---|
 | `/bonds/[guid]` | Public page bundle contains the two read-only bond-info calls above | `observed`; recheck with a visible GUID before scripting |
 | `/news` | Current source redirects to `/feed${asPath}`; direct browser navigation reaches `/feed/news` | Alias of the existing public news flow |
-| `/cheetah`, `/cheetah/[code]` | Logged-out pages were blank; only `/api/v1/reasoning-news/count` was visible in the checked bundle | `needs-recheck`; no script or broader endpoint claim |
+| `/cheetah`, `/cheetah/[code]` | September logged-out pages were blank; on November 19 the root redirected to sign-in | Root gated; detail remains `needs-recheck` |
 | `/stocks/[code]/option` | Route module rendered no public content and loaded order-adjacent feature metadata | `excluded` until a logged-out public market-data surface is verified |
 | `/community/posts/[post-id]` | Logged-out permalink rendered a bounded post plus v1 reply cursor | `public-social-sensitive` / `script-backed` through the sanitizer |
 | `/community/lounges/[subjectId]` | Logged-out lounge rendered public description and comment tabs | `public-social-sensitive` / `script-backed` through the sanitizer |

@@ -8,12 +8,12 @@ license: MIT
 
 ## Overview
 
-Use the bundled scripts for public data visible on `tossinvest.com`. Choose the task and its references from the routing table below.
+Look up public data visible on `tossinvest.com`. Choose the script or browser workflow from the routing table and availability notes below.
 
 Use Python 3.14.7, the sole supported runtime, with network access.
 
-When checking page coverage, observed tabs, paging or remaining verification gaps,
-read the [2026-09-16 public-page audit](references/public-pages-audit-2026-09-16.md).
+For page coverage, tabs, paging and standalone availability, read the
+[November public-page check](references/api-catalog.md#november-2026-public-page-check).
 News and filings resolve metadata `companyCode`; stock comments resolve metadata
 `guid`. Neither identifier can be inferred safely from a product code.
 
@@ -81,7 +81,7 @@ host rules, or page evidence, start with the
 
 ## Workflow
 
-1. For normal lookups, choose a bundled script from the routing table.
+1. For normal lookups, choose a bundled script from the routing table. For the standalone failures in the November public-page check, use the matching logged-out page when a browser is available. Report the displayed values and label their source.
 2. Prefer `wts-info-api.tossinvest.com` read-only endpoints. Use `wts-cert-api.tossinvest.com` only for unauthenticated public page data or metadata in cataloged or script-backed endpoint families.
 3. For WebSocket questions or implementation, read [references/websocket-api-reference.md](references/websocket-api-reference.md) and follow its evidence labels, supported destinations, and runtime limits. Do not promote `observed-code`, experimental, login-gated, or unverified channels to client-supported status. For API-reference or client work, cover the server, STOMP lifecycle, channel/destination, receive operation, message envelope, payload fields, and evidence status; distinguish protocol standards from site observations. Explain repeated STOMP `MESSAGE` events using its [HTTP snapshot and stream semantics](references/websocket-api-reference.md#http-snapshot-and-stream-semantics).
 4. When explicitly asked to re-verify missing or drifted endpoints, start from [Known Observed Pages](references/api-catalog.md#known-observed-pages), then follow [references/capture-workflow.md](references/capture-workflow.md). Catalog only useful public stock, market, news, feed, or community calls; exclude telemetry and personalization. The memory-only guest bootstrap above is the sole session-metadata exception.

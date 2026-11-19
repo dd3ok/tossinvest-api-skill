@@ -107,13 +107,16 @@ an already observed `--company-code`. Checked mappings on 2026-09-16 included
 news and filings requests each returned two rows. Their output `companyCode` is
 the resolved identifier; missing metadata causes an error without a guessed request.
 
-For company news, continue with the returned `pagingParam.number` and optional
+For the numbered company-news endpoint, continue with the returned `pagingParam.number` and optional
 `pagingParam.key`, preserving code/size/order. `news.py --key` accepts the opaque
 key without interpreting its contents; omit it when null. The 2026-09-16
 `A005930` latest-news check returned two disjoint two-row pages with null keys.
 Its row keys included `id`, `createdAt`, `updatedAt`, `source`, `title`, `summary`,
 `contentText`, `stockCodes`, `stockInfo`, `ticsIds`, `ticsTitles`, `relatedNews`,
 `newsType`, `imageUrls`, and `resolvedNewsMetaLabels`.
+
+Latest news scrolling in the November web UI also uses a separate
+[cursor endpoint](api-stock.md#filings-and-news-apis) with `items` and `nextCursor`.
 
 ## Calendar Shapes
 
