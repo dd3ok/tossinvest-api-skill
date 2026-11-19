@@ -221,6 +221,7 @@ Observed from stock detail, analytics bundles, and direct response checks.
 | Company filings list | `script-backed` | GET | `/api/v1/stock-detail/companies/{companyCode}/filings` | Query: `number`, `size`, optional `key`; observed result includes `pagingParam`, `body[]`, `lastPage` |
 | Filing detail | `observed` | GET | `/api/v1/stock-infos/filings/companies/{companyCode}/report/{reportId}` | Query may include `reportItem`; observed in bundle for filing detail modal |
 | Company news | `script-backed` | GET | `/api/v2/news/companies/{companyCode}` | Query can include `size`, `number`, optional opaque `key`, and `orderBy=latest\|relevant`; result includes `pagingParam`, `body[]`, `lastPage`; `news.py --key` carries a returned key forward |
+| Latest company news in the browser | `observed-drift` | GET | `/api/v2/news/companies/{companyCode}/cursor` | On 2026-11-19 Samsung Electronics loaded `size=20&orderBy=latest`. Response: `items[]`, `hasNext`, `nextCursor`. Scrolling sent `cursor` with the same size and order and returned another 20 items. Stop at the end of the list or a missing/repeated cursor. |
 | News detail | `script-backed` | GET | `/api/v2/news/{newsId}` | Detail payload for a news item |
 | Exclude headline news | `observed` | GET | `/api/v2/forum/news/headline/exclude/{newsId}` | Related/headline news excluding a selected item |
 
@@ -237,7 +238,14 @@ rows. Low-level path builders remain pure and accept a known company ID, retaini
 the numeric KR shorthand for existing callers. The KR `page_api_check.py` CLI
 also resolves company metadata before its news/filings and company analytics checks.
 
-The deployed company-news caller continues with both `pagingParam.number` and
+On 2026-11-19, the logged-out page loaded **both** news paths on entry. Choosing
+관련도순 used the numbered path with `orderBy=relevant`. Opening 공시 used the
+filings path with `number` and `size`; scrolling requested page 2 and returned 20 filings.
+Keep `nextCursor` on the cursor path;
+`news.py --key` is for the numbered path. Both news paths returned HTTP 400
+in standalone checks with the same company ID, size and ordering as the page.
+
+The numbered company-news caller continues with both `pagingParam.number` and
 `pagingParam.key` while `lastPage` is false. Preserve company, size, and ordering;
 omit a null key and pass a non-null key unchanged through `--key`. The script
 URL-encodes the value and applies a 512-character client bound. On 2026-09-16,
